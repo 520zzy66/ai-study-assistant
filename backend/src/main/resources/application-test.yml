@@ -1,0 +1,38 @@
+# ============================================================
+# 测试环境配置
+# 使用 H2 内存数据库，避免影响开发/生产数据库
+# 每次启动自动初始化表结构和测试数据
+# ============================================================
+
+# ---- H2 内存数据库（兼容 MySQL 语法） ----
+spring:
+  datasource:
+    url: jdbc:h2:mem:ai_study_test;MODE=MYSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  # ---- DeepSeek API（测试环境使用占位 Key） ----
+  ai:
+    openai:
+      api-key: ${DEEPSEEK_API_KEY:sk-placeholder}
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-v4-pro
+          temperature: 0.7
+
+  # ---- SQL 初始化（每次启动执行 schema.sql / data.sql） ----
+  sql:
+    init:
+      mode: always
+
+# ---- MyBatis-Plus（测试环境关闭 SQL 日志，减少输出噪音） ----
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# ---- 日志级别（DEBUG 便于排查测试问题） ----
+logging:
+  level:
+    com.study: DEBUG

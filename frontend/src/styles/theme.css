@@ -1,0 +1,246 @@
+/* ============================================
+   AI Study Assistant — Design System Tokens
+   Version: 2.0 Deep Craft
+   Primary: Teal 600   Neutral: Zinc
+   Grid: 4px   References: Apple HIG / MD3 / Ant Design
+   ============================================ */
+
+:root {
+  /* ---------- Primary Teal Tonal Palette ---------- */
+  --teal-0: #ffffff;
+  --teal-50: #f0fdfa;
+  --teal-100: #ccfbf1;
+  --teal-200: #99f6e4;
+  --teal-300: #5eead4;
+  --teal-400: #2dd4bf;
+  --teal-500: #14b8a6;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+  --teal-900: #134e4a;
+
+  /* ---------- Neutral Zinc Tonal Palette ---------- */
+  --zinc-0: #ffffff;
+  --zinc-50: #fafafa;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #a1a1aa;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-700: #3f3f46;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+
+  /* ---------- Surface & On-Color ---------- */
+  --surface-page: var(--zinc-50);
+  --surface-card: var(--zinc-0);
+  --surface-container-low: var(--zinc-50);
+  --surface-container: var(--zinc-100);
+  --surface-container-high: var(--zinc-0);
+  --surface-container-highest: var(--teal-50);
+  --surface-hover: var(--zinc-100);
+  --surface-active: var(--teal-50);
+
+  --on-surface: var(--zinc-900);
+  --on-surface-variant: var(--zinc-600);
+  --on-primary: var(--zinc-0);
+  --outline: var(--zinc-200);
+  --outline-variant: var(--zinc-100);
+
+  /* ---------- Text ---------- */
+  --color-text-primary: var(--zinc-900);
+  --color-text-secondary: var(--zinc-600);
+  --color-text-tertiary: var(--zinc-400);
+  --color-text-disabled: var(--zinc-300);
+
+  /* ---------- Primary & Semantic ---------- */
+  --color-primary: var(--teal-600);
+  --color-primary-hover: var(--teal-700);
+  --color-primary-light: var(--teal-50);
+  --color-primary-ring: rgba(13, 148, 136, 0.12);
+
+  --color-success: #10b981;
+  --color-success-bg: #ecfdf5;
+  --color-success-on: #065f46;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fffbeb;
+  --color-warning-on: #92400e;
+  --color-error: #ef4444;
+  --color-error-bg: #fef2f2;
+  --color-error-on: #991b1b;
+  --color-info: #6366f1;
+  --color-info-bg: #eef2ff;
+  --color-info-on: #3730a3;
+
+  /* ---------- State Layers ---------- */
+  --state-hover: rgba(0, 0, 0, 0.08);
+  --state-pressed: rgba(0, 0, 0, 0.12);
+  --state-focus: rgba(13, 148, 136, 0.12);
+  --state-drag: rgba(0, 0, 0, 0.16);
+  --state-disabled-opacity: 0.38;
+
+  /* ---------- Spacing (4px grid) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ---------- Shadows ---------- */
+  --shadow-none: none;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-3: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-4: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-5: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* ---------- Z-Index ---------- */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-drawer: 300;
+  --z-modal-backdrop: 350;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* ---------- Typography ---------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+
+  --text-hero: 32px;
+  --text-display: 28px;
+  --text-heading-1: 22px;
+  --text-heading-2: 18px;
+  --text-heading-3: 15px;
+  --text-heading-4: 13px;
+  --text-body-large: 15px;
+  --text-body: 14px;
+  --text-ui: 13px;
+  --text-small: 12px;
+  --text-micro: 11px;
+
+  --line-hero: 40px;
+  --line-display: 36px;
+  --line-heading-1: 28px;
+  --line-heading-2: 24px;
+  --line-heading-3: 20px;
+  --line-heading-4: 16px;
+  --line-body-large: 24px;
+  --line-body: 22px;
+  --line-ui: 18px;
+  --line-small: 16px;
+  --line-micro: 14px;
+
+  /* ---------- Layout ---------- */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+
+  /* ---------- Motion ---------- */
+  --duration-instant: 0ms;
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-emphasis: 200ms;
+  --duration-complex: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---------- Icon ---------- */
+  --icon-xs: 12px;
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+  --icon-xl: 24px;
+  --icon-2xl: 32px;
+  --icon-3xl: 48px;
+
+  /* ---------- Legacy aliases (for backward compatibility during migration) ---------- */
+  --color-bg-page: var(--surface-page);
+  --color-bg-card: var(--surface-card);
+  --color-bg-hover: var(--surface-hover);
+  --color-border: var(--outline);
+  --color-border-light: var(--outline-variant);
+  --color-danger: var(--color-error);
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-6);
+  --spacing-xl: var(--space-8);
+  --spacing-2xl: var(--space-12);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-4);
+  --font-family: var(--font-sans);
+  --sidebar-bg: var(--surface-card);
+  --sidebar-border: var(--outline-variant);
+  --sidebar-item-hover: var(--surface-hover);
+  --sidebar-item-active: var(--surface-active);
+  --sidebar-indicator: var(--color-primary);
+  --header-bg: rgba(255, 255, 255, 0.85);
+}
+
+/* ============================================
+   Element Plus Theme Overrides
+   ============================================ */
+
+:root {
+  --el-color-primary: var(--teal-600);
+  --el-color-primary-light-3: var(--teal-400);
+  --el-color-primary-light-5: var(--teal-300);
+  --el-color-primary-light-7: var(--teal-200);
+  --el-color-primary-light-8: var(--teal-100);
+  --el-color-primary-light-9: var(--teal-50);
+  --el-color-primary-dark-2: var(--teal-700);
+
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-error);
+  --el-color-info: var(--color-info);
+
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-secondary);
+  --el-text-color-secondary: var(--color-text-tertiary);
+  --el-text-color-placeholder: var(--color-text-disabled);
+
+  --el-bg-color: var(--surface-card);
+  --el-bg-color-page: var(--surface-page);
+
+  --el-border-color: var(--outline);
+  --el-border-color-light: var(--outline-variant);
+  --el-border-color-lighter: var(--outline-variant);
+
+  --el-fill-color: var(--surface-container);
+  --el-fill-color-light: var(--surface-container-low);
+  --el-fill-color-lighter: var(--surface-card);
+
+  --el-border-radius-base: var(--radius-md);
+  --el-border-radius-small: var(--radius-sm);
+  --el-border-radius-round: var(--radius-full);
+
+  --el-menu-active-color: var(--color-primary);
+  --el-menu-hover-bg-color: var(--surface-hover);
+
+  --el-card-border-color: var(--outline);
+  --el-card-border-radius: var(--radius-lg);
+
+  --el-tag-border-radius: var(--radius-sm);
+  --el-message-close-hover-color: var(--color-primary);
+}

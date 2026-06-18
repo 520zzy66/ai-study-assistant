@@ -1,0 +1,7 @@
+# Backend .dockerignore
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.log
+uploads/
+.idea/
+*.iml

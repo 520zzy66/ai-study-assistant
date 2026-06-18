@@ -1,0 +1,422 @@
+/* ============================================
+   AI Study Assistant — Element Plus Overrides
+   ============================================ */
+
+/* ---- Card ---- */
+.el-card {
+  border: 1px solid var(--outline);
+  box-shadow: var(--shadow-1);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  transition: box-shadow var(--duration-normal) var(--ease-default),
+              transform var(--duration-normal) var(--ease-default);
+}
+
+.el-card.is-hover-shadow:hover,
+.el-card.is-hover-shadow:focus {
+  box-shadow: var(--shadow-2);
+}
+
+.el-card__header {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.el-card__body {
+  padding: var(--space-5);
+}
+
+.el-card__footer {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--outline-variant);
+}
+
+/* ---- Button ---- */
+.el-button {
+  font-weight: 500;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.el-button:active {
+  transform: scale(0.98);
+}
+
+.el-button--default {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-ui);
+}
+
+.el-button--small {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+}
+
+.el-button--large {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: var(--text-ui);
+}
+
+.el-button.is-circle {
+  border-radius: var(--radius-md);
+}
+
+.el-button.is-round {
+  border-radius: var(--radius-full);
+}
+
+/* ---- Input / Textarea ---- */
+.el-input__wrapper,
+.el-textarea__inner {
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 0 0 1px var(--outline) inset !important;
+  transition: box-shadow var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default);
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--zinc-300) inset !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--color-primary) inset,
+              0 0 0 3px var(--color-primary-ring) !important;
+}
+
+.el-input__inner {
+  font-size: var(--text-body);
+  color: var(--color-text-primary);
+}
+
+.el-input__inner::placeholder {
+  color: var(--color-text-disabled);
+}
+
+.el-input--small .el-input__wrapper {
+  border-radius: var(--radius-sm) !important;
+}
+
+.el-input--large .el-input__wrapper {
+  border-radius: 10px !important;
+}
+
+/* ---- Form ---- */
+.el-form-item__label {
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.el-form-item__error {
+  font-size: var(--text-small);
+  color: var(--color-error);
+  padding-top: var(--space-1);
+}
+
+/* ---- Table ---- */
+.el-table {
+  --el-table-border-color: var(--outline-variant);
+  --el-table-header-bg-color: transparent;
+  font-size: var(--text-body);
+  background: transparent;
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600;
+  font-size: var(--text-micro);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: transparent;
+  height: 44px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.el-table td.el-table__cell {
+  height: 48px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.el-table .cell {
+  line-height: var(--line-ui);
+}
+
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--surface-hover);
+}
+
+.el-table__row.current-row > td.el-table__cell {
+  background-color: var(--surface-active) !important;
+}
+
+/* ---- Menu ---- */
+.el-menu {
+  border-right: none;
+  background: transparent;
+}
+
+.el-menu-item {
+  height: 40px;
+  line-height: 40px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+  padding: 0 var(--space-3) !important;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.el-menu-item:hover {
+  background-color: var(--surface-hover);
+  color: var(--color-text-primary);
+}
+
+.el-menu-item.is-active {
+  background-color: var(--surface-active);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.el-sub-menu__title {
+  height: 40px;
+  line-height: 40px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+  padding: 0 var(--space-3) !important;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.el-sub-menu__title:hover {
+  background-color: var(--surface-hover);
+  color: var(--color-text-primary);
+}
+
+.el-sub-menu .el-menu-item {
+  height: 36px;
+  line-height: 36px;
+  padding-left: 44px !important;
+}
+
+/* ---- Tag ---- */
+.el-tag {
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  border: none;
+}
+
+/* ---- Dialog ---- */
+.el-dialog {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-4);
+}
+
+.el-dialog__header {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  margin-right: 0;
+}
+
+.el-dialog__title {
+  font-size: var(--text-heading-2);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.el-dialog__body {
+  padding: 0 var(--space-6) var(--space-4);
+}
+
+.el-dialog__footer {
+  padding: var(--space-3) var(--space-6) var(--space-6);
+}
+
+/* ---- Drawer ---- */
+.el-drawer {
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  box-shadow: var(--shadow-4);
+}
+
+.el-drawer__header {
+  padding: var(--space-4) var(--space-6);
+  margin-bottom: 0;
+}
+
+.el-drawer__header span {
+  font-size: var(--text-heading-2);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.el-drawer__body {
+  padding: var(--space-6);
+}
+
+/* ---- Pagination ---- */
+.el-pagination {
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
+/* ---- Message / Notification ---- */
+.el-message {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-4);
+  padding: var(--space-4);
+}
+
+.el-notification {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-4);
+  padding: var(--space-4);
+}
+
+/* ---- Dropdown ---- */
+.el-dropdown__popper.el-popper {
+  border-radius: 10px;
+  box-shadow: var(--shadow-3);
+  border: 1px solid var(--outline);
+}
+
+.el-dropdown-menu {
+  padding: var(--space-2);
+}
+
+.el-dropdown-menu__item {
+  height: 36px;
+  line-height: 36px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-ui);
+  padding: 0 var(--space-3);
+}
+
+.el-dropdown-menu__item:hover {
+  background-color: var(--surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* ---- Select / Dropdown Panel ---- */
+.el-select__popper.el-popper {
+  border-radius: 10px;
+  box-shadow: var(--shadow-3);
+  border: 1px solid var(--outline);
+}
+
+.el-select-dropdown__item {
+  height: 36px;
+  line-height: 36px;
+  font-size: var(--text-body);
+  padding: 0 var(--space-3);
+}
+
+.el-select-dropdown__item:hover {
+  background-color: var(--surface-hover);
+}
+
+.el-select-dropdown__item.selected {
+  background-color: var(--surface-active);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ---- Tabs ---- */
+.el-tabs__item {
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.el-tabs__item.is-active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.el-tabs__active-bar {
+  background-color: var(--color-primary);
+  height: 2px;
+}
+
+/* ---- Progress ---- */
+.el-progress-bar__outer {
+  background-color: var(--surface-container);
+  border-radius: 3px;
+}
+
+.el-progress-bar__inner {
+  background-color: var(--color-primary);
+  border-radius: 3px;
+}
+
+/* ---- Checkbox / Radio / Switch ---- */
+.el-checkbox__inner {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.el-radio__inner {
+  width: 16px;
+  height: 16px;
+}
+
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* ---- Avatar ---- */
+.el-avatar {
+  background: var(--surface-active);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ---- Upload ---- */
+.el-upload-dragger {
+  border: 2px dashed var(--outline);
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-low);
+  transition: border-color var(--duration-fast) var(--ease-default),
+              background-color var(--duration-fast) var(--ease-default);
+}
+
+.el-upload-dragger:hover {
+  border-color: var(--color-primary);
+  background: var(--surface-active);
+}
+
+/* ---- Skeleton ---- */
+.el-skeleton__item {
+  background: var(--surface-container);
+  border-radius: var(--radius-sm);
+}
+
+/* ---- DatePicker / Popover ---- */
+.el-popper.is-light {
+  border: 1px solid var(--outline);
+  box-shadow: var(--shadow-3);
+  border-radius: 10px;
+}

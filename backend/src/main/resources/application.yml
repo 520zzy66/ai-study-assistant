@@ -1,0 +1,59 @@
+# ============================================================
+# 应用主配置（公共配置）
+# 敏感信息通过环境变量注入，开发环境覆盖配置见 application-dev.yml
+# ============================================================
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}           # 激活的配置文件，默认 dev
+  application:
+    name: ai-study-assistant                         # 应用名称
+  servlet:
+    multipart:
+      max-file-size: 50MB                            # 单文件上传大小限制
+      max-request-size: 50MB                         # 单次请求大小限制
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}                  # Redis 地址
+      port: ${REDIS_PORT:3002}                       # Redis 端口
+      password: ${REDIS_PASSWORD:}                   # Redis 密码（可选）
+  ai:
+    openai:
+      client:
+        connect-timeout: ${AI_CONNECT_TIMEOUT:10000} # AI 接口连接超时（ms）
+        read-timeout: ${AI_READ_TIMEOUT:60000}       # AI 接口读取超时（ms）
+
+server:
+  port: 3001                                         # 服务端口
+  servlet:
+    context-path: /api                               # 统一接口前缀
+
+# ---- JWT 认证 ----
+jwt:
+  secret: ${JWT_SECRET}                                # JWT 签名密钥（Base64），必须通过环境变量设置
+  expiration: 86400000                               # Token 有效期（ms），24 小时
+
+# ---- 文件上传 ----
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:./uploads}           # 文件存储目录
+  allowed-types: pdf,doc,docx,txt                    # 允许的文件类型
+  max-size: 52428800                                 # 单文件大小上限（50MB）
+
+# ---- AI 模型配置 ----
+ai:
+  provider: deepseek                                 # AI 服务商
+  chat:
+    model: deepseek-v4-pro                           # 默认对话模型
+    temperature: 0.7                                 # 温度参数（0.0~2.0）
+    # timeout 已通过 spring.ai.openai.client.read-timeout 配置，此处不重复定义
+  embedding:
+    provider: ${EMBEDDING_PROVIDER:local}            # Embedding 服务（local = 本地 bge 模型）
+    model: bge-small-zh                              # Embedding 模型名称
+    dimension: 512                                   # 向量维度
+  rag:
+    enable-bm25: true                                # 是否启用 BM25 关键词检索
+    enable-reranking: false                          # 是否启用 Reranking 重排序
+    vector-top-k: 10                                 # 向量检索返回候选数
+    bm25-top-k: 10                                   # BM25 检索返回候选数
+    final-top-k: 5                                   # 最终送入 LLM 的切片数
+    similarity-threshold: 0.7                        # 向量相似度阈值（低于此值丢弃）
