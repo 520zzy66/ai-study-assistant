@@ -247,6 +247,9 @@ public class AiClient {
             return call.get();
         } catch (BusinessException e) {
             throw e;
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            log.error("AI 服务连接超时", e);
+            throw new BusinessException(3004, "AI 服务响应超时，请稍后重试");
         } catch (Exception e) {
             log.error("AI 调用失败: {}", e.getMessage(), e);
             throw new BusinessException(3003, "AI 服务暂时不可用，请稍后重试");

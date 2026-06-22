@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * 学习资料控制器
  */
@@ -90,5 +92,50 @@ public class MaterialController {
     public Result<Void> retry(@PathVariable Long id) {
         materialService.retryProcess(id);
         return Result.successMsg("已加入处理队列");
+    }
+
+    /**
+     * 查询系统资料库（公共预置资料）
+     *
+     * @param keyword  搜索关键词（可选）
+     * @param category 分类筛选（可选）
+     * @param page     页码
+     * @param size     每页大小
+     * @return 分页结果
+     */
+    @Operation(summary = "系统资料库", description = "查询系统预置的公共学习资料")
+    @GetMapping("/library")
+    public Result<Page<MaterialVO>> library(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<MaterialVO> result = materialService.listLibrary(keyword, category, page, size);
+        return Result.success(result);
+    }
+
+    /**
+     * 将系统资料添加到我的资料库
+     *
+     * @param id 系统资料ID
+     * @return 新资料ID
+     */
+    @Operation(summary = "添加到我的资料库", description = "将系统资料库的资料复制到当前用户的资料库")
+    @PostMapping("/library/{id}/copy")
+    public Result<Long> copyToMyLibrary(@PathVariable Long id) {
+        Long newId = materialService.copyToMyLibrary(id);
+        return Result.success("添加成功", newId);
+    }
+
+    /**
+     * 获取所有可用资料（用户自己的 + 系统资料库），用于 AI 功能下拉选择
+     *
+     * @return 资料列表
+     */
+    @Operation(summary = "获取所有可用资料", description = "获取当前用户的资料和系统资料库，用于 AI 功能选择")
+    @GetMapping("/available")
+    public Result<List<MaterialVO>> available() {
+        List<MaterialVO> list = materialService.listAvailable();
+        return Result.success(list);
     }
 }

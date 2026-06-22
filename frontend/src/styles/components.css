@@ -18,16 +18,16 @@
 }
 
 .el-card__header {
-  padding: var(--space-5);
+  padding: var(--space-6);
   border-bottom: 1px solid var(--outline-variant);
 }
 
 .el-card__body {
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 
 .el-card__footer {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--outline-variant);
 }
 
@@ -42,24 +42,24 @@
 }
 
 .el-button--default {
-  height: 36px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 20px;
   border-radius: var(--radius-md);
   font-size: var(--text-ui);
 }
 
 .el-button--small {
-  height: 28px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 14px;
   border-radius: var(--radius-sm);
   font-size: var(--text-small);
 }
 
 .el-button--large {
   height: 44px;
-  padding: 0 20px;
-  border-radius: 10px;
-  font-size: var(--text-ui);
+  padding: 0 24px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
 }
 
 .el-button.is-circle {

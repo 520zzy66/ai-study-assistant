@@ -36,6 +36,9 @@ public class MaterialVO {
     /** 切片数量 */
     private Integer chunkCount;
 
+    /** 资料来源 user/system */
+    private String source;
+
     /** 错误信息（status=failed 时有值） */
     private String errorMsg;
 

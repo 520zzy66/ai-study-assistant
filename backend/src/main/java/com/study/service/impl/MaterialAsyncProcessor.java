@@ -43,10 +43,15 @@ public class MaterialAsyncProcessor {
      * 异步处理文档：解析 → 切片 → 保存切片
      * 不使用 @Transactional：切片逐条 auto-commit，失败时部分切片可残留（status=failed 标记）。
      *
+     * <p><b>⚠️ 重要提醒：</b>
+     * 本方法在 @Async 线程中执行，UserContext.HOLDER 为空，
+     * 不得在此方法内部调用 UserContext.getCurrentUserId()。
+     * userId 必须作为参数传入。
+     *
      * @param materialId 资料ID
      * @param filePath   文件磁盘路径
      * @param fileType   文件类型
-     * @param userId     用户ID（直接传入，避免事务竞态读不到数据）
+     * @param userId     用户ID（必须直接传入，避免事务竞态读不到数据）
      */
     @Async
     public void processMaterial(Long materialId, String filePath, String fileType, Long userId) {

@@ -45,4 +45,4 @@
 - [x] 联调测试（启动前后端，验证完整流程）
 - [x] Profile/Settings 功能完善（修改密码 API + 偏好持久化）
 - [x] Docker 部署（docker-compose + Nginx 反向代理）
-- [ ] 完善 README
+- [x] 完善 README

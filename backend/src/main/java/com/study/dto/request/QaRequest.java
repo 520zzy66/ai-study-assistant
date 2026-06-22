@@ -10,8 +10,7 @@ import lombok.Data;
 @Data
 public class QaRequest {
 
-    /** 资料ID */
-    @NotNull(message = "资料ID不能为空")
+    /** 资料ID（可选，不传则进行通用对话） */
     private Long materialId;
 
     /** 用户问题 */

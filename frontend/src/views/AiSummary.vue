@@ -8,14 +8,13 @@
     <div class="summary-layout">
       <!-- Left Panel -->
       <div class="summary-sidebar">
-        <el-card shadow="never" class="sidebar-card">
+        <BaseCard title="选择资料" class="sidebar-card">
           <div class="material-selector">
-            <label class="selector-label">选择资料</label>
             <el-select
               v-model="selectedMaterialId"
               placeholder="请选择资料"
               filterable
-              class="material-select"
+              style="width:100%;"
             >
               <el-option
                 v-for="item in materialList"
@@ -41,7 +40,7 @@
             </div>
             <div class="meta-item">
               <span class="meta-label">状态</span>
-              <el-tag :type="getStatusType(selectedMaterial.status)" size="small">
+              <el-tag :type="getStatusType(selectedMaterial.status)" size="small" effect="light">
                 {{ getStatusLabel(selectedMaterial.status) }}
               </el-tag>
             </div>
@@ -57,12 +56,12 @@
             <el-icon><MagicStick /></el-icon>
             生成总结
           </el-button>
-        </el-card>
+        </BaseCard>
       </div>
 
       <!-- Right Panel -->
       <div class="summary-main">
-        <el-card shadow="never" class="content-card">
+        <BaseCard class="content-card" :padding="'none'">
           <!-- Toolbar -->
           <div v-if="summary || generating" class="content-toolbar">
             <div class="toolbar-left">
@@ -106,7 +105,7 @@
               description="AI 将自动提取核心知识点、重要概念和学习建议"
             />
           </div>
-        </el-card>
+        </BaseCard>
       </div>
     </div>
   </div>
@@ -119,7 +118,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { CopyDocument, Refresh, Download, MagicStick, Loading, CircleCheck, CircleCheckFilled } from '@element-plus/icons-vue'
 import { useMarkdown } from '@/composables/useMarkdown'
 import { generateSummary } from '@/api/ai'
-import { loadReadyMaterials } from '@/api/material'
+import { loadAvailableMaterials } from '@/api/material'
+import BaseCard from '@/components/common/BaseCard.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const route = useRoute()
@@ -229,7 +229,7 @@ function handleDownload() {
 }
 
 async function loadMaterials() {
-  materialList.value = await loadReadyMaterials()
+  materialList.value = await loadAvailableMaterials()
   const queryId = route.query.materialId
   if (queryId) {
     selectedMaterialId.value = Number(queryId)

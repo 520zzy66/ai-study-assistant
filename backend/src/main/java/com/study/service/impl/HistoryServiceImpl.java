@@ -77,7 +77,17 @@ public class HistoryServiceImpl implements HistoryService {
         Map<String, List<AiQuestionBank>> grouped = questions.stream()
                 .collect(Collectors.groupingBy(AiQuestionBank::getBatchId, LinkedHashMap::new, Collectors.toList()));
 
-        // 3. 构建批次列表（保持分页顺序）
+        // 3. 批量预加载所有关联的材料，避免 N+1 查询
+        Set<Long> materialIds = questions.stream()
+                .map(AiQuestionBank::getMaterialId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, LearningMaterial> materialMap = materialIds.isEmpty()
+                ? Map.of()
+                : materialMapper.selectBatchIds(materialIds).stream()
+                .collect(Collectors.toMap(LearningMaterial::getId, m -> m));
+
+        // 4. 构建批次列表（保持分页顺序）
         List<Map<String, Object>> batches = new ArrayList<>();
         for (String batchId : batchIds) {
             List<AiQuestionBank> batchQuestions = grouped.get(batchId);
@@ -90,7 +100,7 @@ public class HistoryServiceImpl implements HistoryService {
             batch.put("questionCount", batchQuestions.size());
             batch.put("createTime", first.getCreateTime());
 
-            LearningMaterial material = materialMapper.selectById(first.getMaterialId());
+            LearningMaterial material = materialMap.get(first.getMaterialId());
             batch.put("materialName", material != null ? material.getOriginalName() : "未知资料");
 
             batches.add(batch);

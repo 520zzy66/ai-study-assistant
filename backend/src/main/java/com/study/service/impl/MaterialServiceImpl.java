@@ -3,6 +3,7 @@ package com.study.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.study.common.BusinessException;
+import com.study.common.Constants;
 import com.study.common.UserContext;
 import com.study.dto.request.MaterialListRequest;
 import com.study.entity.LearningMaterial;
@@ -152,6 +153,7 @@ public class MaterialServiceImpl implements MaterialService {
         material.setCategory(category);
         material.setStatus("processing");
         material.setChunkCount(0);
+        material.setSource(Constants.SOURCE_USER);
         materialMapper.insert(material);
         return material.getId();
     }
@@ -163,6 +165,8 @@ public class MaterialServiceImpl implements MaterialService {
         Page<LearningMaterial> page = new Page<>(request.getPage(), request.getSize());
         LambdaQueryWrapper<LearningMaterial> wrapper = new LambdaQueryWrapper<LearningMaterial>()
                 .eq(LearningMaterial::getUserId, userId)
+                .and(w -> w.isNull(LearningMaterial::getSource)
+                        .or().ne(LearningMaterial::getSource, Constants.SOURCE_SYSTEM))
                 .eq(StringUtils.hasText(request.getStatus()),
                         LearningMaterial::getStatus, request.getStatus())
                 .eq(StringUtils.hasText(request.getCategory()),
@@ -190,7 +194,8 @@ public class MaterialServiceImpl implements MaterialService {
         if (material == null) {
             throw new BusinessException(404, "资料不存在");
         }
-        if (!material.getUserId().equals(userId)) {
+        // 系统资料允许所有用户访问，用户资料仅本人可访问
+        if (!Constants.SOURCE_SYSTEM.equals(material.getSource()) && !material.getUserId().equals(userId)) {
             throw new BusinessException(403, "无权访问该资源");
         }
 
@@ -206,6 +211,9 @@ public class MaterialServiceImpl implements MaterialService {
         LearningMaterial material = materialMapper.selectById(id);
         if (material == null) {
             throw new BusinessException(404, "资料不存在");
+        }
+        if (Constants.SOURCE_SYSTEM.equals(material.getSource())) {
+            throw new BusinessException(403, "系统预置资料不可删除");
         }
         if (!material.getUserId().equals(userId)) {
             throw new BusinessException(403, "无权删除该资源");
@@ -299,6 +307,95 @@ public class MaterialServiceImpl implements MaterialService {
             sb.append(String.format("%02X", b));
         }
         return sb.toString();
+    }
+
+    @Override
+    public Page<MaterialVO> listLibrary(String keyword, String category, int page, int size) {
+        Page<LearningMaterial> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<LearningMaterial> wrapper = new LambdaQueryWrapper<LearningMaterial>()
+                .eq(LearningMaterial::getSource, Constants.SOURCE_SYSTEM)
+                .eq(LearningMaterial::getStatus, Constants.STATUS_READY)
+                .like(StringUtils.hasText(keyword), LearningMaterial::getOriginalName, keyword)
+                .eq(StringUtils.hasText(category), LearningMaterial::getCategory, category)
+                .orderByDesc(LearningMaterial::getCreateTime);
+
+        Page<LearningMaterial> result = materialMapper.selectPage(pageParam, wrapper);
+
+        Page<MaterialVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
+        List<MaterialVO> voList = result.getRecords().stream().map(m -> {
+            MaterialVO vo = new MaterialVO();
+            BeanUtils.copyProperties(m, vo);
+            return vo;
+        }).toList();
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    @Override
+    @Transactional
+    public Long copyToMyLibrary(Long libraryId) {
+        Long userId = UserContext.getCurrentUserId();
+
+        // 查询系统资料
+        LearningMaterial source = materialMapper.selectById(libraryId);
+        if (source == null) {
+            throw new BusinessException(404, "资料不存在");
+        }
+        if (!Constants.SOURCE_SYSTEM.equals(source.getSource())) {
+            throw new BusinessException(400, "仅系统资料库的资料可添加");
+        }
+
+        // 检查是否已添加过（避免重复）
+        LambdaQueryWrapper<LearningMaterial> existWrapper = new LambdaQueryWrapper<LearningMaterial>()
+                .eq(LearningMaterial::getUserId, userId)
+                .eq(LearningMaterial::getOriginalName, source.getOriginalName())
+                .eq(LearningMaterial::getSource, Constants.SOURCE_SYSTEM);
+        Long existCount = materialMapper.selectCount(existWrapper);
+        if (existCount > 0) {
+            throw new BusinessException(400, "该资料已在你的资料库中");
+        }
+
+        // 复制记录到当前用户名下
+        LearningMaterial copy = new LearningMaterial();
+        copy.setUserId(userId);
+        copy.setOriginalName(source.getOriginalName());
+        copy.setStoredName(source.getStoredName());
+        copy.setFileType(source.getFileType());
+        copy.setFileSize(source.getFileSize());
+        copy.setFilePath(source.getFilePath());
+        copy.setCategory(source.getCategory());
+        copy.setSummary(source.getSummary());
+        copy.setStatus(Constants.STATUS_READY);
+        copy.setChunkCount(source.getChunkCount());
+        copy.setSource(Constants.SOURCE_SYSTEM);  // 保持 system 来源标记
+        copy.setDeleted(0);
+        materialMapper.insert(copy);
+
+        log.info("资料复制成功: sourceId={}, newId={}, userId={}", libraryId, copy.getId(), userId);
+        return copy.getId();
+    }
+
+    @Override
+    public List<MaterialVO> listAvailable() {
+        Long userId = UserContext.getCurrentUserId();
+
+        // 查询用户自己的可用资料 + 系统资料库
+        LambdaQueryWrapper<LearningMaterial> wrapper = new LambdaQueryWrapper<LearningMaterial>()
+                .eq(LearningMaterial::getStatus, Constants.STATUS_READY)
+                .and(w -> w
+                        .eq(LearningMaterial::getUserId, userId)
+                        .or()
+                        .eq(LearningMaterial::getSource, Constants.SOURCE_SYSTEM)
+                )
+                .orderByDesc(LearningMaterial::getCreateTime);
+
+        List<LearningMaterial> list = materialMapper.selectList(wrapper);
+
+        return list.stream().map(m -> {
+            MaterialVO vo = new MaterialVO();
+            BeanUtils.copyProperties(m, vo);
+            return vo;
+        }).toList();
     }
 
 }

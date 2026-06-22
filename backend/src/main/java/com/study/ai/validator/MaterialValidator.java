@@ -30,7 +30,8 @@ public class MaterialValidator {
         if (material == null) {
             throw new BusinessException(404, "资料不存在");
         }
-        if (!material.getUserId().equals(userId)) {
+        // 系统资料允许所有用户访问，用户资料仅本人可访问
+        if (!Constants.SOURCE_SYSTEM.equals(material.getSource()) && !material.getUserId().equals(userId)) {
             throw new BusinessException(403, "无权访问该资源");
         }
         if (!Constants.STATUS_READY.equals(material.getStatus())) {
@@ -53,7 +54,8 @@ public class MaterialValidator {
         if (material == null) {
             throw new BusinessException(404, "资料不存在");
         }
-        if (!material.getUserId().equals(userId)) {
+        // 系统资料允许所有用户访问，用户资料仅本人可访问
+        if (!Constants.SOURCE_SYSTEM.equals(material.getSource()) && !material.getUserId().equals(userId)) {
             throw new BusinessException(403, "无权访问该资源");
         }
         return material;

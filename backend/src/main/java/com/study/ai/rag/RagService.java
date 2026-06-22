@@ -5,6 +5,7 @@ import com.study.entity.MaterialChunk;
 import com.study.mapper.MaterialChunkMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -22,8 +23,9 @@ public class RagService {
 
     private final MaterialChunkMapper chunkMapper;
 
-    /** 相似度阈值 */
-    private static final double SIMILARITY_THRESHOLD = 0.1;
+    /** 相似度阈值（从配置读取，默认 0.7） */
+    @Value("${ai.rag.similarity-threshold:0.7}")
+    private double similarityThreshold;
 
     /** 默认 Top-K */
     private static final int DEFAULT_TOP_K = 5;
@@ -80,7 +82,7 @@ public class RagService {
         List<ChunkSearchResult> results = new ArrayList<>();
         for (MaterialChunk chunk : chunks) {
             double score = calculateKeywordScore(queryTokens, chunk.getContent());
-            if (score > SIMILARITY_THRESHOLD) {
+            if (score > similarityThreshold) {
                 results.add(new ChunkSearchResult(
                         chunk.getId(),
                         chunk.getChunkIndex(),

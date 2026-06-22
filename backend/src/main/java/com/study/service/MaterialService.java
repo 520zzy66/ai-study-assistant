@@ -6,6 +6,8 @@ import com.study.vo.MaterialUploadVO;
 import com.study.vo.MaterialVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * 学习资料服务接口
  */
@@ -49,4 +51,30 @@ public interface MaterialService {
      * @param id 资料ID
      */
     void retryProcess(Long id);
+
+    /**
+     * 查询系统资料库（公共资料）
+     *
+     * @param keyword  搜索关键词（可选）
+     * @param category 分类筛选（可选）
+     * @param page     页码
+     * @param size     每页大小
+     * @return 分页结果
+     */
+    Page<MaterialVO> listLibrary(String keyword, String category, int page, int size);
+
+    /**
+     * 将系统资料库的资料复制到当前用户的资料库
+     *
+     * @param libraryId 系统资料ID
+     * @return 复制后的新资料ID
+     */
+    Long copyToMyLibrary(Long libraryId);
+
+    /**
+     * 获取所有可用资料（用户自己的 + 系统资料库），用于 AI 功能下拉选择
+     *
+     * @return 资料列表
+     */
+    List<MaterialVO> listAvailable();
 }

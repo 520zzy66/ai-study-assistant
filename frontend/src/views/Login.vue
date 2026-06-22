@@ -1,65 +1,72 @@
 <template>
   <div class="login-page">
-    <!-- Left Brand -->
-    <div class="login-brand">
-      <div class="brand-content">
-        <div class="brand-icon">AI</div>
-        <h1 class="brand-title">智能学习助手</h1>
-        <p class="brand-desc">
-          上传学习资料，AI 帮你总结知识、生成题目、制定计划。<br />
-          让学习更高效，让知识更有条理。
-        </p>
-        <div class="brand-features">
-          <div class="feature-item">
-            <el-icon :size="18"><Document /></el-icon>
-            <span>文档智能总结</span>
+    <!-- Background Decorations -->
+    <div class="bg-decoration">
+      <div class="bg-blob bg-blob-1" />
+      <div class="bg-blob bg-blob-2" />
+      <div class="bg-blob bg-blob-3" />
+      <div class="bg-grid" />
+    </div>
+
+    <!-- Login Card -->
+    <div class="login-card">
+      <!-- Left: Brand -->
+      <div class="login-brand">
+        <div class="brand-content">
+          <div class="brand-mark">
+            <el-icon :size="32"><Reading /></el-icon>
           </div>
-          <div class="feature-item">
-            <el-icon :size="18"><ChatDotRound /></el-icon>
-            <span>RAG 知识问答</span>
-          </div>
-          <div class="feature-item">
-            <el-icon :size="18"><Edit /></el-icon>
-            <span>AI 自动出题</span>
+          <h1 class="brand-title">AI Study<br />Assistant</h1>
+          <p class="brand-desc">
+            上传学习资料，AI 帮你总结知识、生成题目、制定计划。让学习更高效，让知识更有条理。
+          </p>
+          <div class="brand-features">
+            <div class="feature-item">
+              <div class="feature-dot" />
+              <span>AI 智能总结文档</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot" />
+              <span>基于资料的问答</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-dot" />
+              <span>自动出题与判分</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Right Form -->
-    <div class="login-form-area">
-      <div class="login-form-wrapper">
-        <div class="form-header">
-          <h2 class="form-title">欢迎回来</h2>
-          <p class="form-subtitle">登录你的账号继续学习</p>
-        </div>
+      <!-- Right: Form -->
+      <div class="login-form-area">
+        <div class="form-content">
+          <div class="form-header">
+            <h2 class="form-title">欢迎回来</h2>
+            <p class="form-subtitle">登录你的账号继续学习</p>
+          </div>
 
-        <el-form :model="form" :rules="rules" ref="formRef" class="login-form">
-          <el-form-item prop="username">
-            <el-input
-              v-model="form.username"
-              placeholder="用户名"
-              size="large"
-            >
-              <template #prefix>
-                <el-icon><User /></el-icon>
-              </template>
-            </el-input>
-          </el-form-item>
-          <el-form-item prop="password">
-            <el-input
-              v-model="form.password"
-              type="password"
-              placeholder="密码"
-              show-password
-              size="large"
-            >
-              <template #prefix>
-                <el-icon><Lock /></el-icon>
-              </template>
-            </el-input>
-          </el-form-item>
-          <el-form-item>
+          <el-form :model="form" :rules="rules" ref="formRef" class="login-form" @keyup.enter="handleLogin">
+            <el-form-item prop="username">
+              <el-input
+                v-model="form.username"
+                placeholder="用户名"
+                size="large"
+                :prefix-icon="User"
+              />
+            </el-form-item>
+            <el-form-item prop="password">
+              <el-input
+                v-model="form.password"
+                type="password"
+                placeholder="密码"
+                show-password
+                size="large"
+                :prefix-icon="Lock"
+              />
+            </el-form-item>
+            <div class="form-options">
+              <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+            </div>
             <el-button
               type="primary"
               size="large"
@@ -69,12 +76,12 @@
             >
               登录
             </el-button>
-          </el-form-item>
-        </el-form>
+          </el-form>
 
-        <div class="login-footer">
-          <span class="footer-text">没有账号？</span>
-          <el-link type="primary" :underline="false" @click="showRegister = true">立即注册</el-link>
+          <div class="login-footer">
+            <span class="footer-text">没有账号？</span>
+            <el-link type="primary" :underline="false" @click="showRegister = true">立即注册</el-link>
+          </div>
         </div>
       </div>
     </div>
@@ -107,6 +114,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { User, Lock, Reading } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -117,6 +125,7 @@ const registerFormRef = ref(null)
 const loading = ref(false)
 const registerLoading = ref(false)
 const showRegister = ref(false)
+const rememberMe = ref(false)
 
 const form = reactive({
   username: '',
@@ -179,159 +188,254 @@ async function handleRegister() {
 .login-page {
   min-height: 100vh;
   display: flex;
-  background: var(--surface-page);
-}
-
-/* Brand */
-.login-brand {
-  flex: 1;
-  background: linear-gradient(135deg, var(--teal-50) 0%, var(--teal-100) 50%, var(--teal-200) 100%);
-  display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12);
+  padding: 32px;
+  background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 40%, #eff6ff 100%);
   position: relative;
   overflow: hidden;
 }
 
-.login-brand::before {
-  content: '';
+/* ---- Background Decoration ---- */
+.bg-decoration {
   position: absolute;
-  top: -30%;
-  right: -20%;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Soft glowing orbs */
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+}
+
+.bg-blob-1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(5, 150, 105, 0.08) 0%, transparent 70%);
-  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
+  top: -15%;
+  right: -8%;
+  animation: float-blob 20s ease-in-out infinite;
 }
 
-.brand-content {
-  max-width: 400px;
+.bg-blob-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+  bottom: -12%;
+  left: -6%;
+  animation: float-blob 24s ease-in-out infinite reverse;
+}
+
+.bg-blob-3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: float-blob 18s ease-in-out infinite 5s;
+}
+
+@keyframes float-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.05); }
+  50% { transform: translate(-15px, 25px) scale(0.95); }
+  75% { transform: translate(-25px, -15px) scale(1.02); }
+}
+
+/* Subtle geometric grid */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(37, 99, 235, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
+}
+
+/* Card */
+.login-card {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  min-height: 700px;
+  background: var(--surface-card);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
   position: relative;
+  z-index: 1;
 }
 
-.brand-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  border-radius: var(--radius-lg);
+/* ---- Left Brand ---- */
+.login-brand {
+  flex: 1;
+  background: linear-gradient(135deg, var(--blue-50) 0%, #dbeafe 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-heading-3);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: var(--space-6);
+  padding: 80px 72px;
+  position: relative;
+}
+
+.brand-content {
+  max-width: 340px;
+}
+
+.brand-mark {
+  width: 64px;
+  height: 64px;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
 }
 
 .brand-title {
-  font-size: var(--text-hero);
+  font-size: 42px;
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
-  line-height: 1.2;
-  margin-bottom: var(--space-4);
+  line-height: 1.15;
+  margin-bottom: 20px;
 }
 
 .brand-desc {
-  font-size: var(--text-body-large);
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--color-text-secondary);
-  margin-bottom: var(--space-8);
+  margin-bottom: 32px;
 }
 
 .brand-features {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 12px;
 }
 
 .feature-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-body);
+  gap: 10px;
+  font-size: var(--text-ui);
   color: var(--color-text-secondary);
   font-weight: 500;
 }
 
-.feature-item .el-icon {
-  color: var(--color-primary);
+.feature-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-/* Form */
+/* ---- Right Form ---- */
 .login-form-area {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12);
+  padding: 80px 72px;
   background: var(--surface-card);
 }
 
-.login-form-wrapper {
+.form-content {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
+}
+
+.form-content {
+  width: 100%;
+  max-width: 340px;
+}
+
+.form-header {
+  margin-bottom: 32px;
 }
 
 .form-title {
-  font-size: var(--text-heading-1);
+  font-size: var(--text-hero);
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
-  margin-bottom: var(--space-1);
+  margin-bottom: 6px;
 }
 
 .form-subtitle {
   font-size: var(--text-body);
   color: var(--color-text-secondary);
-  margin-bottom: var(--space-8);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 16px;
+}
+
+.login-form :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.form-options {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: -4px;
 }
 
 .login-btn {
   width: 100%;
-  margin-top: var(--space-2);
+  height: 48px !important;
+  font-size: var(--text-body) !important;
+  font-weight: 600 !important;
+  margin-top: 4px;
 }
 
 .login-footer {
   text-align: center;
-  margin-top: var(--space-6);
-  font-size: var(--text-small);
+  margin-top: 24px;
+  font-size: var(--text-ui);
 }
 
 .footer-text {
   color: var(--color-text-secondary);
-  margin-right: var(--space-1);
+  margin-right: 4px;
 }
 
-/* Responsive */
+/* ---- Responsive ---- */
 @media (max-width: 768px) {
   .login-page {
-    flex-direction: column;
+    padding: 16px;
+    background-image: none;
   }
 
-  .login-brand {
-    padding: var(--space-8) var(--space-6);
+  .login-card {
+    flex-direction: column;
+    max-width: 420px;
     min-height: auto;
   }
 
-  .brand-title {
-    font-size: var(--text-display);
+  .login-brand {
+    padding: 32px 24px 16px;
+    background: var(--surface-card);
   }
 
-  .brand-features {
-    display: none;
-  }
+  .brand-mark { width: 44px; height: 44px; margin-bottom: 16px; }
+  .brand-title { font-size: 24px; }
+  .brand-desc { font-size: var(--text-ui); margin-bottom: 20px; }
+  .brand-features { display: none; }
 
   .login-form-area {
-    padding: var(--space-8) var(--space-6);
+    padding: 16px 24px 32px;
   }
 }
 </style>

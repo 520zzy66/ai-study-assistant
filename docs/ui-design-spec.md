@@ -1,2124 +1,3027 @@
-# AI Study Assistant — UI/UX Design Specification
+# AI Study Assistant UI Design Specification
 
-> Version: 2.0 — Deep Craft Edition  
-> Role: Senior UI Designer + SaaS Product Design Expert  
-> References: Apple Human Interface Guidelines, Material Design 3, Ant Design Design Values  
-> Goal: Define a Figma Community-grade, professional, modern, minimal, enterprise-level learning platform.  
-> Constraint: AI is a capability, not the visual subject. The first impression must be "professional learning platform", not "AI chatbot".
+Version: 1.0
 
----
+Author: ChatGPT
 
-## 1. Design Principles
-
-### 1.1 Product Vision
-
-Build a calm, focused, and credible learning workspace. The UI should feel like a tool that serious learners and professionals want to use every day — clean like Notion, precise like Linear, reliable like GitHub, and polished like Apple.
-
-### 1.2 Design References
-
-| Reference | What to Learn |
-|-----------|---------------|
-| **Linear** | Minimal chrome, density, subtle borders, fast feel, keyboard-first hints, refined typography. |
-| **Notion** | Neutral canvas, content-first, generous whitespace, collapsible sidebars, block-based clarity. |
-| **GitHub** | Functional tables, muted color accents, clear metadata, issue-like list patterns. |
-| **Apple** | Tactile feedback, consistent spacing, readable typography, subtle depth, 44pt touch targets. |
-| **飞书 (Lark)** | Clear information hierarchy, friendly but enterprise-ready, consistent icon language. |
-| **Material Design 3** | Tonal color, elevation tokens, shape scale, state layers, purposeful motion. |
-| **Ant Design** | Certainty, meaning, growth, naturalness; 8-point grid; enterprise clarity. |
-
-### 1.3 Anti-Patterns (Do NOT Use)
-
-- ChatGPT / Claude / Kimi / 豆包 style chat-centric layouts as the default home.
-- Purple / blue gradient "tech" hero backgrounds.
-- Glowing AI orb icons, robot mascots, sparkles as primary visuals.
-- Centered single-column chat UIs for non-chat pages.
-- Dark mode as default (support optional later; default is light and paper-like).
-- Arbitrary values (random pixels, random colors, random timings).
-
-### 1.4 Core UX Mantras
-
-1. **Content first, chrome second.** Navigation and decoration should recede; learning content is the star.
-2. **One page, one job.** Each page has a clear primary action and clear hierarchy.
-3. **Progressive disclosure.** Hide advanced options until needed; default views are simple.
-4. **Consistent feedback.** Every action gives immediate, calm feedback (loading, success, empty, error).
-5. **Respect the user's attention.** No pop-ups, no bouncing elements, no auto-playing animations.
-6. **Every pixel is intentional.** Spacing, color, motion, and typography all serve meaning.
+Status: Draft
 
 ---
 
-## 2. Design System — Deep Craft
-
-### 2.1 Color Tokens
-
-Color follows a **tonal palette** philosophy (Material 3) applied to a single primary hue (Teal) and a neutral Zinc scale. The system uses surface containers, on-colors, and state layers rather than flat hex values.
-
-#### 2.1.1 Primary — Teal Tonal Palette
-
-| Token | Hex | HSL | Usage |
-|-------|-----|-----|-------|
-| `--teal-0` | `#ffffff` | 168 100% 100% | On-primary text / white |
-| `--teal-50` | `#f0fdfa` | 168 80% 98% | Surface container highest, active bg |
-| `--teal-100` | `#ccfbf1` | 168 75% 90% | Hover state layer on primary |
-| `--teal-200` | `#99f6e4` | 168 70% 78% | Focus ring glow |
-| `--teal-300` | `#5eead4` | 168 75% 64% | Decorative highlights |
-| `--teal-400` | `#2dd4bf` | 168 70% 50% | Links hover |
-| `--teal-500` | `#14b8a6` | 168 75% 40% | Links, secondary accents |
-| `--teal-600` | `#0d9488` | 168 80% 31% | **Primary brand / Primary button** |
-| `--teal-700` | `#0f766e` | 168 78% 26% | Primary hover / pressed |
-| `--teal-800` | `#115e59` | 168 75% 22% | Strong emphasis |
-| `--teal-900` | `#134e4a` | 168 70% 18% | Text on light teal surfaces |
-
-#### 2.1.2 Neutral — Zinc Tonal Palette
-
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--zinc-0` | `#ffffff` | Cards, dialogs, inputs |
-| `--zinc-50` | `#fafafa` | Page background |
-| `--zinc-100` | `#f4f4f5` | Hover surfaces, dividers |
-| `--zinc-200` | `#e4e4e7` | Borders, separators |
-| `--zinc-300` | `#d4d4d8` | Disabled borders, placeholder icons |
-| `--zinc-400` | `#a1a1aa` | Tertiary text, inactive icons |
-| `--zinc-500` | `#71717a` | Secondary text, metadata |
-| `--zinc-600` | `#52525b` | Body text, labels |
-| `--zinc-700` | `#3f3f46` | Strong secondary text |
-| `--zinc-800` | `#27272a` | Primary text, headings |
-| `--zinc-900` | `#18181b` | Maximum emphasis text |
-
-#### 2.1.3 Surface & On-Color Tokens
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--surface-page` | `--zinc-50` | App canvas |
-| `--surface-card` | `--zinc-0` | Cards, panels |
-| `--surface-container-low` | `--zinc-50` | Subtle grouped backgrounds |
-| `--surface-container` | `--zinc-100` | Chips, tags, hover rows |
-| `--surface-container-high` | `--zinc-0` | Elevated cards, modals |
-| `--surface-container-highest` | `--teal-50` | Active/selected rows |
-| `--on-surface` | `--zinc-900` | Text on surfaces |
-| `--on-surface-variant` | `--zinc-600` | Secondary text on surfaces |
-| `--on-primary` | `--zinc-0` | Text on primary buttons |
-| `--outline` | `--zinc-200` | Borders, dividers |
-| `--outline-variant` | `--zinc-100` | Subtle separators |
-
-#### 2.1.4 Semantic Colors
-
-| Token | Hex | On-Color | Usage |
-|-------|-----|----------|-------|
-| `--success` | `#10b981` | `#ffffff` | Success, mastered |
-| `--success-container` | `#ecfdf5` | `#065f46` | Success backgrounds |
-| `--warning` | `#f59e0b` | `#ffffff` | Pending, warning |
-| `--warning-container` | `#fffbeb` | `#92400e` | Warning backgrounds |
-| `--error` | `#ef4444` | `#ffffff` | Errors, wrong answers |
-| `--error-container` | `#fef2f2` | `#991b1b` | Error backgrounds |
-| `--info` | `#6366f1` | `#ffffff` | Informational |
-| `--info-container` | `#eef2ff` | `#3730a3` | Info backgrounds |
-
-#### 2.1.5 State Layer Opacity
-
-Following Material 3 state layers, overlays are applied on hover/press/focus rather than changing the base color directly.
-
-| State | Opacity | Usage |
-|-------|---------|-------|
-| Hover | 8% black overlay | `--state-hover: rgba(0,0,0,0.08)` |
-| Pressed / Active | 12% black overlay | `--state-pressed: rgba(0,0,0,0.12)` |
-| Focus | 12% primary overlay | `--state-focus: rgba(13,148,136,0.12)` |
-| Drag | 16% black overlay | `--state-drag: rgba(0,0,0,0.16)` |
-| Disabled | 38% opacity | `opacity: 0.38` |
-
-> On primary-colored surfaces, use **white** overlays instead of black.
+# Part 1 Product Foundation
 
 ---
 
-### 2.2 Typography
+# 1. Product Overview
 
-Type is the primary carrier of hierarchy. We use a harmonious scale based on a 1.125 (major second) ratio with rounding to the nearest pixel for clean implementation.
+## 1.1 Project Name
 
-#### 2.2.1 Font Family
-
-```css
---font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-  "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
---font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
-```
-
-#### 2.2.2 Type Scale
-
-| Token | Size | Line Height | Weight | Letter Spacing | Usage |
-|-------|------|-------------|--------|----------------|-------|
-| `--text-hero` | 32px | 40px | 700 | -0.03em | Login title, empty state hero |
-| `--text-display` | 28px | 36px | 700 | -0.02em | Page hero title |
-| `--text-heading-1` | 22px | 28px | 600 | -0.02em | Page title |
-| `--text-heading-2` | 18px | 24px | 600 | -0.01em | Section title |
-| `--text-heading-3` | 15px | 20px | 600 | -0.01em | Card title |
-| `--text-heading-4` | 13px | 16px | 600 | 0 | Sub-section, label |
-| `--text-body-large` | 15px | 24px | 400 | 0 | Lead paragraphs |
-| `--text-body` | 14px | 22px | 400 | 0 | Body text, table content |
-| `--text-ui` | 13px | 18px | 500 | 0 | Buttons, menu items, tabs |
-| `--text-small` | 12px | 16px | 400 | 0.01em | Captions, timestamps, helper |
-| `--text-micro` | 11px | 14px | 600 | 0.02em | Badges, tags, table headers |
-
-#### 2.2.3 Typography Rules
-
-- Headings use **negative letter-spacing** for tighter, more editorial feel.
-- Chinese body text minimum weight is **400**; never use 300 for Chinese.
-- Line-height for headings: **1.25–1.3**; for body: **1.55–1.6**.
-- Maximum readable line length: **65ch** for body text (Apple HIG readability).
-- Monospace is reserved for code, file names, batch IDs, file sizes, timestamps.
-- **Never use purely uppercase Chinese text.** Uppercase styling is allowed only for English micro labels (table headers, badges).
-
-#### 2.2.4 Font Weight Usage
-
-| Weight | Usage |
-|--------|-------|
-| 400 | Body text, descriptions, table content |
-| 500 | UI labels, buttons, menu items, tabs, emphasized body |
-| 600 | Headings, card titles, section labels, table headers |
-| 700 | Page hero, display numbers, brand emphasis |
+AI Study Assistant
 
 ---
 
-### 2.3 Spacing — The 4-Point Grid
+## 1.2 Product Positioning
 
-The entire UI is built on a **4-point grid** (Ant Design / Material baseline). Every dimension — margin, padding, gap, height, width — must be divisible by 4. This creates visual rhythm and makes handoff effortless.
+AI Study Assistant 是一款面向高校学生的 AI 学习平台。
 
-#### 2.3.1 Spacing Tokens
+它不是聊天机器人。
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-1` | 4px | Icon-text gap, tight inline spacing |
-| `--space-2` | 8px | Compact gaps, small internal padding |
-| `--space-3` | 12px | Default internal gaps, form label margin |
-| `--space-4` | 16px | Card padding, section gaps, list item padding |
-| `--space-5` | 20px | Medium section padding |
-| `--space-6` | 24px | Page content padding, dialog padding |
-| `--space-8` | 32px | Large section gaps, card grids |
-| `--space-10` | 40px | Hero spacing, major section breaks |
-| `--space-12` | 48px | Empty state padding, modal large padding |
-| `--space-16` | 64px | Maximum page spacing |
+它也不是传统的在线教育平台。
 
-#### 2.3.2 Spacing Hierarchy
+它更像是一款帮助学生完成整个学习流程的 Productivity Tool（效率工具）。
 
-| Layer | Rule |
-|-------|------|
-| **Micro** | 4–8px between related items (icon + label, inline buttons). |
-| **Component** | 12–16px inside a card or form group. |
-| **Section** | 24–32px between distinct sections on a page. |
-| **Page** | 48–64px for major page-level vertical rhythm. |
+AI 在产品中属于一种能力，而不是产品本身。
 
-#### 2.3.3 Whitespace Rules
+用户真正使用的是：
 
-- **Equal breathing room:** card padding should equal or exceed internal element gaps.
-- **Proximity law:** related elements are closer together than unrelated groups.
-- **Measure twice:** when in doubt, use more whitespace, never less.
-- **No 1px or 2px gaps.** Minimum intentional gap is 4px.
+学习资料
 
----
+↓
 
-### 2.4 Radius — Shape Scale
+AI 总结
 
-Shape is consistent and purposeful. Use larger radius for larger surfaces.
+↓
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--radius-sm` | 6px | Small buttons, tags, input fields, checkboxes |
-| `--radius-md` | 8px | Default buttons, cards, small panels, menu items |
-| `--radius-lg` | 12px | Cards, dialogs, large panels, dropdowns |
-| `--radius-xl` | 16px | Modals, feature cards, drawers |
-| `--radius-2xl` | 20px | Large modals, empty state cards |
-| `--radius-full` | 9999px | Pills, avatars, status dots, badges |
+文档问答
 
-#### 2.4.1 Shape Rules
+↓
 
-- Container radius should relate to its size: small inputs get 6–8px, cards get 12px, modals get 16px.
-- Never use `border-radius: 50%` for avatars; use `--radius-full` (9999px).
-- Inner elements should have a smaller radius than their container by 4px (e.g. 12px card contains 8px buttons).
+自动练习
+
+↓
+
+错题整理
+
+↓
+
+学习计划
+
+↓
+
+持续学习
+
+因此，整个产品应该围绕学习效率展开，而不是围绕 AI 聊天展开。
 
 ---
 
-### 2.5 Shadows & Elevation
+## 1.3 Product Goal
 
-Elevation is expressed through subtle shadows and z-index layers. We use 5 levels.
+帮助学生：
 
-| Level | Token | Shadow | Usage |
-|-------|-------|--------|-------|
-| 0 | `--shadow-none` | none | Resting surfaces (page bg) |
-| 1 | `--shadow-1` | `0 1px 2px rgba(0,0,0,0.04)` | Resting cards, buttons |
-| 2 | `--shadow-2` | `0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)` | Card hover, dropdowns |
-| 3 | `--shadow-3` | `0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04)` | Popovers, drawers |
-| 4 | `--shadow-4` | `0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04)` | Modals, toasts |
-| 5 | `--shadow-5` | `0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04)` | Full-screen overlays |
+- 更快理解知识
+- 更快整理资料
+- 更快查找答案
+- 更快完成复习
+- 更科学安排学习计划
 
-#### 2.5.1 Elevation Rules
-
-- **Content surfaces** (cards, panels) rest at Level 1.
-- **Hover** elevates to Level 2.
-- **Floating surfaces** (menus, dropdowns) start at Level 3.
-- **Blocking surfaces** (modals, drawers) use Level 4 or 5.
-- Shadows always use **black** with low opacity; never colored shadows.
-
-#### 2.5.2 Z-Index Scale
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--z-base` | 0 | Page content |
-| `--z-sticky` | 100 | Sticky header |
-| `--z-dropdown` | 200 | Dropdowns, popovers |
-| `--z-drawer` | 300 | Drawers |
-| `--z-modal` | 400 | Modals, dialogs |
-| `--z-toast` | 500 | Notifications, toasts |
-| `--z-tooltip` | 600 | Tooltips |
+最终提高学习效率。
 
 ---
 
-### 2.6 Grid & Layout — Page Proportions
+## 1.4 Design Goal
 
-#### 2.6.1 App Layout
+整个产品需要体现：
 
-```
-┌─────────────────┬──────────────────────────────────────────────────────────┐
-│                 │                                                          │
-│   Sidebar       │                    Header (56px)                         │
-│   (240px)       │                                                          │
-│                 ├──────────────────────────────────────────────────────────┤
-│                 │                                                          │
-│                 │                                                          │
-│                 │              Content Area (fluid)                        │
-│                 │              padding: 24px                               │
-│                 │              max-width: 1200px (optional)                │
-│                 │                                                          │
-│                 │                                                          │
-└─────────────────┴──────────────────────────────────────────────────────────┘
-```
+Professional
 
-#### 2.6.2 Layout Measurements
+Minimal
 
-| Element | Value | Notes |
-|---------|-------|-------|
-| Sidebar width (expanded) | 240px | Fixed, non-scrollable horizontally |
-| Sidebar width (collapsed) | 64px | Icon-only mode on tablet |
-| Header height | 56px | Sticky top, z-index `--z-sticky` |
-| Header horizontal padding | 24px | Desktop; 16px on mobile |
-| Content padding | 24px | Desktop; 20px tablet; 16px mobile |
-| Content max-width | 1200px | Centered for reading-heavy pages |
-| Content full-width | 100% | Tables, dashboards |
-| Minimum page height | 100vh | Layout fills viewport |
+Elegant
 
-#### 2.6.3 12-Column Content Grid
+Reliable
 
-Inside the content area, use a **12-column grid**:
+Focused
 
-| Property | Value |
-|----------|-------|
-| Columns | 12 |
-| Gutter | 16px (default), 24px (loose), 12px (tight) |
-| Margin | 0 (content area padding already provides it) |
-| Column min-width | ~72px at 1200px container |
+Calm
 
-Common grid patterns:
+Trustworthy
 
-| Pattern | Columns | Usage |
-|---------|---------|-------|
-| 1-column | 12 | Forms, reading, single card |
-| 2-column | 6 + 6 | Summary page, plan detail |
-| 3-column | 4 + 4 + 4 | Stats cards, feature cards |
-| 4-column | 3 + 3 + 3 + 3 | Stats, quick actions |
-| 1/3 + 2/3 | 4 + 8 | Plan list + detail, sidebar + main |
-| 2/3 + 1/3 | 8 + 4 | Dashboard content + side panel |
+AI 不应该成为页面视觉中心。
 
-#### 2.6.4 Breakpoints
-
-| Name | Range | Sidebar | Content Padding | Notes |
-|------|-------|---------|-----------------|-------|
-| Mobile | < 768px | Hidden, slide-over | 16px | Single column |
-| Tablet | 768px – 1279px | Collapsible icon-only | 20px | 1–2 columns |
-| Desktop | 1280px – 1535px | Expanded 240px | 24px | Full layout |
-| Large Desktop | ≥ 1536px | Expanded 240px | 32px | Centered max-width |
+学习内容才是页面核心。
 
 ---
 
-### 2.7 Iconography
-
-Icons are functional, not decorative. They must be clear at small sizes and consistent in weight.
-
-#### 2.7.1 Icon Library
-
-- Use **Element Plus Icons Vue** (`@element-plus/icons-vue`).
-- Prefer **outlined / stroke-style** icons. Avoid filled icons unless indicating active state.
-- Default stroke weight in Element Plus is consistent; do not override.
-
-#### 2.7.2 Icon Sizes
-
-| Token | Size | Usage |
-|-------|------|-------|
-| `--icon-xs` | 12px | Inline text icons, tags |
-| `--icon-sm` | 14px | Small buttons, form suffixes |
-| `--icon-md` | 16px | Default button icons, list items, table actions |
-| `--icon-lg` | 20px | Navigation menu items, page headers |
-| `--icon-xl` | 24px | Empty state icons, feature illustrations |
-| `--icon-2xl` | 32px | Large empty states, hero icons |
-| `--icon-3xl` | 48px | Empty state hero, success/error states |
-
-#### 2.7.3 Icon Color Rules
-
-| Context | Color |
-|---------|-------|
-| Default inline | `--text-secondary` |
-| Primary action | `--color-primary` |
-| Active / selected | `--color-primary` |
-| Disabled | `--text-disabled` |
-| Danger | `--color-error` |
-| Success | `--color-success` |
-| Warning | `--color-warning` |
-
-#### 2.7.4 Icon + Text Alignment
-
-- Icon and text baseline-aligned.
-- Gap between icon and text: **8px** (`--space-2`).
-- Icon must be vertically centered within the line box.
+# 2. Design Philosophy
 
 ---
 
-### 2.8 Layout Components — Header & Sidebar
+## 2.1 Content First
 
-#### 2.8.1 Header
+所有页面都必须突出内容。
 
-| Property | Value |
-|----------|-------|
-| Height | 56px |
-| Background | `--surface-card` with `backdrop-filter: blur(12px)` |
-| Border bottom | 1px solid `--outline-variant` |
-| Horizontal padding | 24px desktop, 16px mobile |
-| Z-index | `--z-sticky` |
-| Shadow on scroll | `--shadow-1` (appears after 1px scroll) |
+不是突出按钮。
 
-**Header structure:**
+不是突出动画。
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ [Menu]  Page Title                    [Search?] [Notify] [Avatar Name ▼]   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+不是突出 AI。
 
-- **Left:** hamburger toggle (tablet/mobile), page title (`--text-heading-1`).
-- **Right:** optional global search, notification bell, user dropdown.
-- User dropdown trigger: avatar (32px) + nickname + chevron-down (12px).
-- Header title uses `--text-heading-1` (22px / 600).
+内容永远排第一。
 
-#### 2.8.2 Sidebar
+例如：
 
-| Property | Value |
-|----------|-------|
-| Width | 240px expanded, 64px collapsed |
-| Background | `--surface-card` |
-| Right border | 1px solid `--outline-variant` |
-| Vertical padding | 16px top, 16px bottom |
-| Horizontal padding | 16px |
+学习资料
 
-**Sidebar structure:**
+Markdown
 
-```
-┌────────────────────────┐
-│  [Logo] AI Study       │  ← 56px height
-├────────────────────────┤
-│                        │
-│  ◆ 首页                │
-│  📄 学习资料            │
-│                        │
-│  AI 功能               │  ← group label
-│    📝 AI 总结           │
-│    💬 AI 问答           │
-│    ✏️ AI 出题           │
-│    📅 学习计划          │
-│                        │
-│  📕 错题本              │
-│  🕐 历史记录            │
-│                        │
-├────────────────────────┤
-│  [Avatar] Mini Profile │  ← optional bottom area
-└────────────────────────┘
-```
+题目
 
-**Menu item specs:**
+学习计划
 
-| Property | Value |
-|----------|-------|
-| Height | 40px |
-| Padding | 0 12px |
-| Border radius | 8px |
-| Gap (icon ↔ text) | 12px |
-| Font | `--text-ui` (13px / 500) |
-| Icon size | 20px |
-
-**Menu item states:**
-
-| State | Background | Text | Icon |
-|-------|------------|------|------|
-| Default | transparent | `--text-secondary` | `--text-secondary` |
-| Hover | `--surface-container` | `--text-primary` | `--text-primary` |
-| Active | `--surface-container-highest` | `--color-primary` | `--color-primary` |
-| Active indicator | 3px primary bar, 20px height, left edge | — | — |
-| Disabled | transparent | `--text-disabled` | `--text-disabled` |
-
-**Sub-menu item:**
-- Height: 36px
-- Padding-left: 44px (indent under group icon)
-- Font: `--text-ui`
-
-**Group label:**
-- Font: `--text-micro` (11px / 600)
-- Color: `--text-tertiary`
-- Uppercase (English) or normal (Chinese)
-- Padding: 16px 12px 8px
+应该拥有最大的视觉权重。
 
 ---
 
-### 2.9 Motion & Transition
+## 2.2 Simplicity
 
-Motion should be fast, purposeful, and never attention-seeking. Animations are used to explain state changes, not to decorate.
+减少视觉噪音。
 
-#### 2.9.1 Duration Scale
+避免：
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--duration-instant` | 0ms | No animation (preferred for snappy tools) |
-| `--duration-fast` | 100ms | Micro-interactions: color change, border change |
-| `--duration-normal` | 150ms | Hover, focus, button press, opacity |
-| `--duration-emphasis` | 200ms | Card hover, dropdown open, sidebar collapse |
-| `--duration-complex` | 300ms | Modal open, drawer slide, page transition |
+过多颜色
 
-#### 2.9.2 Easing Curves
+渐变
 
-| Token | Curve | Usage |
-|-------|-------|-------|
-| `--ease-default` | `cubic-bezier(0.4, 0, 0.2, 1)` | Default transitions (Material standard) |
-| `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Exiting elements |
-| `--ease-out` | `cubic-bezier(0, 0, 0.2, 1)` | Entering elements |
-| `--ease-elastic` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Subtle bounce (rare, e.g. toggle) |
+发光
 
-#### 2.9.3 Transition Property Rules
+复杂背景
 
-- Prefer animating only `transform` and `opacity` for 60fps performance.
-- For color/border/shadow changes, use `--duration-fast` or `--duration-normal`.
-- Avoid animating `width`, `height`, `top`, `left`, `margin`.
+炫酷动画
 
-#### 2.9.4 Common Transition Patterns
-
-| Element | Transition |
-|---------|------------|
-| Button hover | `background-color 150ms var(--ease-default)` |
-| Button active | `transform: scale(0.98)` + `background-color 100ms` |
-| Card hover | `transform: translateY(-1px)` + `box-shadow 150ms` |
-| Input focus | `border-color 100ms, box-shadow 100ms` |
-| Menu item hover | `background-color 100ms` |
-| Modal open | `opacity 200ms var(--ease-out), transform 200ms var(--ease-out)` |
-| Drawer open | `transform 200ms var(--ease-out)` |
-| Dropdown open | `opacity 100ms, transform 100ms` |
-| Skeleton shimmer | `opacity 1.5s infinite` |
+每一个元素都应该具有存在价值。
 
 ---
 
-### 2.10 Button
+## 2.3 Consistency
 
-Buttons are the primary call-to-action surfaces. They must be immediately recognizable, tactile, and consistent.
+整个系统必须保持一致。
 
-#### 2.10.1 Button Sizes
+包括：
 
-| Size | Height | Padding | Font | Icon Size | Radius |
-|------|--------|---------|------|-----------|--------|
-| Small | 28px | 0 12px | `--text-small` (12px) | 12px | 6px |
-| Default | 36px | 0 16px | `--text-ui` (13px) | 16px | 8px |
-| Large | 44px | 0 20px | `--text-ui` (13px) | 18px | 10px |
+颜色
 
-#### 2.10.2 Button Variants
+字体
 
-| Variant | Background | Border | Text | Hover (state layer) | Active |
-|---------|------------|--------|------|---------------------|--------|
-| Primary | `--color-primary` | none | `--on-primary` | white overlay 8% | scale 0.98, white overlay 12% |
-| Secondary | `--surface-card` | 1px `--outline` | `--text-primary` | black overlay 8% | scale 0.98 |
-| Tertiary / Text | transparent | none | `--text-secondary` | `--surface-container` | scale 0.98 |
-| Ghost | transparent | none | `--color-primary` | `--teal-50` | scale 0.98 |
-| Danger | `--color-error` | none | `--on-primary` | white overlay 8% | scale 0.98 |
-| Danger Secondary | `--surface-card` | 1px `--color-error` | `--color-error` | `--color-error-bg` | scale 0.98 |
+按钮
 
-#### 2.10.3 Icon Button
+圆角
 
-| Size | Dimensions | Radius | Icon Size |
-|------|------------|--------|-----------|
-| Small | 28px × 28px | 6px | 14px |
-| Default | 32px × 32px | 8px | 16px |
-| Large | 40px × 40px | 10px | 20px |
+卡片
 
-#### 2.10.4 Button States
+输入框
 
-| State | Rule |
-|-------|------|
-| Default | Resting at elevation 1 if on page bg. |
-| Hover | State layer + optional shadow-2 for cards. |
-| Active / Pressed | `transform: scale(0.98)` + deeper state layer. |
-| Focus | 2px ring `--color-primary` with 2px offset. |
-| Disabled | `opacity: 0.38`, `cursor: not-allowed`, no hover. |
-| Loading | Spinner replaces left icon (or appears left), button stays same size, disabled interactions. |
+弹窗
 
-#### 2.10.5 Button Group
+表格
 
-- Gap between grouped buttons: **8px**.
-- Primary action on the **right** (destructive actions on the far right with confirmation).
-- In dialogs: primary right-aligned, secondary to its left.
+所有页面保持统一语言。
 
 ---
 
-### 2.11 Input / Form
+## 2.4 Predictability
 
-Form controls must feel responsive and accessible. Every input is a clear invitation to act.
+用户应该知道：
 
-#### 2.11.1 Input Sizes
+点击以后会发生什么。
 
-| Size | Height | Padding | Font | Radius |
-|------|--------|---------|------|--------|
-| Small | 32px | 0 12px | `--text-small` | 6px |
-| Default | 36px | 0 12px | `--text-body` | 8px |
-| Large | 44px | 0 16px | `--text-body` | 10px |
+页面应该符合现代 SaaS 产品的交互习惯。
 
-#### 2.11.2 Input States
-
-| State | Border | Background | Shadow |
-|-------|--------|------------|--------|
-| Default | 1px `--outline` | `--surface-card` | none |
-| Hover | 1px `--zinc-300` | `--surface-card` | none |
-| Focus | 1px `--color-primary` | `--surface-card` | `0 0 0 3px var(--color-primary-ring)` |
-| Error | 1px `--color-error` | `--surface-card` | `0 0 0 3px rgba(239,68,68,0.1)` |
-| Disabled | 1px `--outline` | `--surface-container-low` | none |
-| Filled | 1px `--outline` | `--surface-card` | none |
-
-#### 2.11.3 Textarea
-
-- Min-height: 80px.
-- Padding: 12px.
-- Border radius: 8px.
-- Auto-resize up to 240px, then scroll.
-- Line-height: 1.6.
-
-#### 2.11.4 Label & Helper Text
-
-| Element | Font | Color | Margin |
-|---------|------|-------|--------|
-| Label | `--text-ui` (13px / 500) | `--text-secondary` | bottom 6px |
-| Required marker | `--text-error` | `--color-error` | left 2px |
-| Helper text | `--text-small` | `--text-tertiary` | top 6px |
-| Error text | `--text-small` | `--color-error` | top 6px |
-
-#### 2.11.5 Prefix / Suffix
-
-- Prefix/suffix icon color: `--text-tertiary`.
-- Padding-left/right when icon present: 36px.
-- Suffix text (e.g. unit): `--text-small` `--text-secondary`.
-
-#### 2.11.6 Checkbox / Radio / Switch
-
-- Checkbox size: 16px × 16px, radius 4px.
-- Radio size: 16px × 16px, full radius.
-- Switch width: 44px, height: 24px, radius full.
-- Checked: `--color-primary` background with white check/knob.
-- Focus ring: 2px `--color-primary`.
-
-#### 2.11.7 Select / Dropdown
-
-- Same height/padding as input.
-- Dropdown panel: radius 10px, shadow-3.
-- Item height: 36px.
-- Item hover: `--surface-container`.
-- Item selected: `--surface-container-highest` + `--color-primary` text.
+不要创造新的交互方式。
 
 ---
 
-### 2.12 Card
-
-Cards are the primary content containers. They must be uniform, scannable, and tactile.
-
-#### 2.12.1 Card Sizes
-
-| Token | Padding | Min Height | Usage |
-|-------|---------|------------|-------|
-| `--card-compact` | 16px | auto | List items, small stats |
-| `--card-default` | 20px | auto | Standard content cards |
-| `--card-comfortable` | 24px | auto | Feature cards, modals |
-| `--card-spacious` | 32px | auto | Empty states, hero cards |
-
-#### 2.12.2 Card Structure
-
-```
-┌─────────────────────────────────────┐
-│ [Icon] Card Title          [Action] │  ← Header (optional)
-│ Description line                    │
-├─────────────────────────────────────┤
-│                                     │
-│           Card Content              │
-│                                     │
-├─────────────────────────────────────┤
-│ [Secondary]        [Primary]        │  ← Footer (optional)
-└─────────────────────────────────────┘
-```
-
-#### 2.12.3 Card Specs
-
-| Property | Value |
-|----------|-------|
-| Background | `--surface-card` |
-| Border | 1px solid `--outline` |
-| Border radius | 12px |
-| Shadow | `--shadow-1` |
-| Hover shadow (if clickable) | `--shadow-2` |
-| Hover transform (if clickable) | `translateY(-1px)` |
-| Transition | `box-shadow 150ms, transform 150ms` |
-
-#### 2.12.4 Card Header
-
-- Padding-bottom: 16px.
-- Border-bottom: 1px solid `--outline-variant` (only if content follows).
-- Title: `--text-heading-3`.
-- Action area: right-aligned, gap 8px.
-
-#### 2.12.5 Card Footer
-
-- Padding-top: 16px.
-- Border-top: 1px solid `--outline-variant`.
-- Actions right-aligned by default.
+# 3. Target Users
 
 ---
 
-### 2.13 Table
+## Primary Users
 
-Tables are for dense, scannable data. They must be readable and actionable.
+大学本科学生
 
-#### 2.13.1 Table Dimensions
+研究生
 
-| Property | Value |
-|----------|-------|
-| Header height | 44px |
-| Row height | 48px |
-| Cell padding | 12px 16px |
-| Header padding | 12px 16px |
-| Font (header) | `--text-micro` (11px / 600 / uppercase English) |
-| Font (cell) | `--text-body` (14px / 400) |
-| Header color | `--text-tertiary` |
-| Row border | 1px solid `--outline-variant` (bottom only) |
-| Header border | 1px solid `--outline` (bottom only) |
+考研学生
 
-#### 2.13.2 Table Header
-
-- Background: transparent or `--surface-container-low`.
-- Text: uppercase for English column titles, normal for Chinese.
-- Sort icon: 12px, `--text-tertiary`, active state `--color-primary`.
-- Checkbox column width: 44px.
-
-#### 2.13.3 Table Row States
-
-| State | Background |
-|-------|------------|
-| Default | transparent |
-| Hover | `--surface-hover` |
-| Selected | `--surface-active` |
-| Selected hover | blend of active + hover state layer |
-| Disabled | `--surface-container-low`, opacity 0.6 |
-
-#### 2.13.4 Table Cells
-
-- Primary text left-aligned.
-- Numbers and dates right-aligned or centered based on context.
-- Status tags centered or left-aligned.
-- Actions column right-aligned, icons with 8px gap.
-
-#### 2.13.5 Table Empty State
-
-- Rendered inside table body.
-- Padding: 48px.
-- Icon 48px, title, description, optional action.
-
-#### 2.13.6 Pagination
-
-- Height: 36px.
-- Position: right-aligned below table.
-- Margin-top: 16px.
-- Use Element Plus pagination with primary color `--color-primary`.
+职业资格考试学习者
 
 ---
 
-### 2.14 Tag / Badge / Chip
+## User Characteristics
 
-Small labels for status, categories, and metadata.
+年龄：
 
-#### 2.14.1 Tag Specs
+18~28 岁
 
-| Property | Value |
-|----------|-------|
-| Height | 22px |
-| Padding | 0 8px |
-| Border radius | 6px |
-| Font | `--text-micro` (11px / 600) |
-| Gap in group | 8px |
+使用设备：
 
-#### 2.14.2 Tag Variants
+Notebook
 
-| Variant | Background | Border | Text |
-|---------|------------|--------|------|
-| Default | `--surface-container` | none | `--text-secondary` |
-| Primary | `--teal-50` | none | `--teal-700` |
-| Success | `--color-success-bg` | none | `--color-success` |
-| Warning | `--color-warning-bg` | none | `--color-warning` |
-| Error | `--color-error-bg` | none | `--color-error` |
-| Info | `--color-info-bg` | none | `--color-info` |
-| Outlined | transparent | 1px `--outline` | `--text-secondary` |
+Desktop
 
-#### 2.14.3 Badge
+学习时间：
 
-- Dot size: 8px.
-- Count badge: min-width 18px, height 18px, radius full.
-- Font: `--text-micro` (11px / 600), white text.
-- Background: `--color-error` for notifications, `--color-primary` for counts.
+每天 1~5 小时
+
+特点：
+
+需要管理大量 PDF
+
+需要快速查找知识
+
+希望 AI 帮助学习
+
+而不是聊天。
 
 ---
 
-### 2.15 Empty State
+# 4. User Journey
 
-Empty states must be helpful, never punitive. They guide the user to the next action.
+用户典型流程：
 
-#### 2.15.1 Empty State Layout
+登录
 
-```
-┌──────────────────────────────────────────┐
-│                                          │
-│              [ Icon 48px ]               │
-│                                          │
-│           暂无学习资料                   │
-│     上传你的第一份资料，开始学习之旅       │
-│                                          │
-│         [ + 上传资料 ]                   │
-│                                          │
-└──────────────────────────────────────────┘
-```
+↓
 
-#### 2.15.2 Empty State Specs
+进入 Dashboard
 
-| Property | Value |
-|----------|-------|
-| Container padding | 48px (compact), 64px (spacious) |
-| Icon size | 48px default, 64px for page-level |
-| Icon color | `--text-tertiary` |
-| Title | `--text-heading-3` |
-| Description | `--text-small`, `--text-secondary`, max-width 320px |
-| Action margin-top | 20px |
+↓
 
-#### 2.15.3 Empty State Variants
+上传学习资料
 
-| Context | Icon | Action |
-|---------|------|--------|
-| No materials | Document | Upload button |
-| No chat history | ChatDotRound | Start chat button |
-| No quiz results | EditPen | Generate quiz button |
-| No wrong questions | CircleCheck | Celebrate / back to quiz |
-| No plan | Calendar | Create plan button |
-| Search no results | Search | Clear filters link |
+↓
 
-#### 2.15.4 Rules
+AI 自动解析
 
-- Always explain **why it's empty** and **what to do next**.
-- Use the same icon library; no custom illustrations unless provided.
-- Action is optional but preferred when a clear next step exists.
+↓
 
----
+阅读 AI 总结
 
-### 2.16 Loading
+↓
 
-Loading states must reduce perceived wait time and prevent layout shift.
+提出问题
 
-#### 2.16.1 Loading Patterns
+↓
 
-| Pattern | Usage |
-|---------|-------|
-| Skeleton | Page initial load, card lists, tables. |
-| Spinner | Inline button loading, small area refresh. |
-| Progress bar | File upload, AI generation, plan creation. |
-| Inline shimmer | Search suggestions, dynamic content. |
+生成练习
 
-#### 2.16.2 Skeleton Specs
+↓
 
-| Property | Value |
-|----------|-------|
-| Base color | `--surface-container` |
-| Shimmer color | `--surface-hover` |
-| Border radius | 4px for lines, 8px for cards, full for avatars |
-| Line height | 14px (body), 20px (heading) |
-| Animation | `opacity 0.5 ↔ 1` or translateX shimmer |
-| Duration | 1.5s infinite |
+完成练习
 
-#### 2.16.3 Spinner Specs
+↓
 
-| Size | Usage |
-|------|-------|
-| 12px | Inline text loading |
-| 16px | Button spinner, small areas |
-| 20px | Card loading overlay |
-| 32px | Page section loading |
-| 48px | Full-page loading |
+加入错题本
 
-#### 2.16.4 Progress Bar
+↓
 
-| Property | Value |
-|----------|-------|
-| Height | 6px |
-| Radius | 3px (full if capped) |
-| Track color | `--surface-container` |
-| Fill color | `--color-primary` |
-| Buffer / striped | Optional for indeterminate state |
+制定学习计划
 
-#### 2.16.5 Loading Button
+↓
 
-- Show spinner left of label.
-- Keep button width stable (reserve spinner space).
-- Disable clicks during loading.
-- Spinner color: white on primary, `--text-secondary` on secondary.
+持续学习
 
-#### 2.16.6 AI Generation Loading
-
-For AI summary / quiz / plan generation, show a **multi-step progress indicator**:
-
-```
-[====>          ]  35%  正在分析文档...
-步骤：读取文档 → 提取重点 → 生成内容 → 格式化输出
-```
-
-- Use progress bar + status text + optional step list.
-- Disable the generate button during generation.
-- Show skeleton preview of the result area.
+整个流程应该尽量减少页面跳转。
 
 ---
 
-### 2.17 Dialog / Drawer / Notification
+# 5. Product Information Architecture
 
-#### 2.17.1 Dialog
+Dashboard
 
-| Property | Value |
-|----------|-------|
-| Background | `--surface-card` |
-| Border radius | 16px |
-| Padding | 24px |
-| Shadow | `--shadow-4` |
-| Backdrop | `rgba(0,0,0,0.35)` + `backdrop-filter: blur(2px)` |
-| Max width | 360px small, 480px default, 640px large |
-| Header font | `--text-heading-2` |
+├── 学习资料
 
-#### 2.17.2 Drawer
+│ ├── 上传
 
-| Property | Value |
-|----------|-------|
-| Position | right |
-| Width | 420px default, 560px wide, 360px narrow |
-| Background | `--surface-card` |
-| Border radius | 16px 0 0 16px |
-| Shadow | `--shadow-4` |
-| Header height | 56px |
-| Content padding | 24px |
+│ ├── 管理
 
-#### 2.17.3 Notification / Toast
+│ └── 删除
 
-| Property | Value |
-|----------|-------|
-| Position | top-right, 16px offset |
-| Width | 360px max |
-| Border radius | 12px |
-| Padding | 16px |
-| Shadow | `--shadow-4` |
-| Icon size | 20px |
-| Auto-dismiss | 4s (success/info), persistent (error) |
+│
 
----
+├── AI 总结
 
-### 2.18 Focus & Accessibility
+│ ├── Markdown
 
-- **Minimum touch target:** 36 × 36px (Apple HIG recommendation; 44px ideal).
-- **Focus ring:** 2px solid `--color-primary`, 2px offset.
-- **Focus visible:** only show focus ring on keyboard navigation, not mouse click.
-- **Color contrast:** minimum 4.5:1 for normal text, 3:1 for large text/UI components.
-- **Don't rely on color alone:** pair status colors with icons or text.
-- **Reduced motion:** respect `prefers-reduced-motion: reduce` and disable non-essential animations.
+│ └── 导出
 
----
+│
 
-## 3. Information Architecture
+├── AI 问答
 
-### 3.1 Navigation Structure
+│ ├── 提问
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Logo                                                       │
-├─────────────────────────────────────────────────────────────┤
-│  首页              /dashboard                                │
-│  学习资料          /material                                 │
-│  ─────────────────────────────────────────                  │
-│  AI 功能                                                    │
-│    AI 总结         /ai/summary                              │
-│    AI 问答         /ai/chat                                 │
-│    自动出题         /ai/quiz                                │
-│    学习计划         /ai/plan                                │
-│  ─────────────────────────────────────────                  │
-│  错题本            /quiz/wrong                              │
-│  历史记录          /history                                 │
-└─────────────────────────────────────────────────────────────┘
-```
+│ ├── 引用
 
-Top-right user menu:
+│ └── 历史记录
 
-```
-用户头像 + 昵称
-├─ 用户中心   /profile
-├─ 设置      /settings
-└─ 退出登录
-```
+│
 
-### 3.2 Page Relationship Diagram
+├── AI 自动出题
 
-```
-                      ┌─────────────┐
-                      │   /login    │
-                      └──────┬──────┘
-                             │ 登录成功
-                             ▼
-                      ┌─────────────┐
-                      │  App Shell  │
-                      │   Layout    │
-                      └──────┬──────┘
-                             │
-        ┌────────┬───────────┼───────────┬────────┐
-        ▼        ▼           ▼           ▼        ▼
-   /dashboard  /material   /ai/*     /quiz/wrong /history
-        │           │       │            │          │
-        │           ▼       ▼            │          │
-        │       /material/:id (drawer)   │          │
-        │       /ai/summary              │          │
-        │       /ai/chat                 │          │
-        │       /ai/quiz                 │          │
-        │       /ai/plan                 │          │
-        │                                │          │
-        ▼                                ▼          ▼
-   /profile (user menu)            /settings (user menu)
-```
+│ ├── 单选
 
-### 3.3 Page Hierarchy
+│ ├── 判断
 
-| Level | Page | Description |
-|-------|------|-------------|
-| L0 | Login | Public entry, no sidebar. |
-| L1 | Layout | Authenticated shell: sidebar + header + router-view. |
-| L2 | Dashboard | Home, overview, quick actions. |
-| L2 | Material | List + upload + detail drawer. |
-| L2 | AI Summary | Generate and read summaries. |
-| L2 | AI Chat | RAG Q&A conversation. |
-| L2 | AI Quiz | Generate quiz + take quiz + review. |
-| L2 | Study Plan | Plan list + plan detail. |
-| L2 | Wrong Question | Filterable wrong-question bank. |
-| L2 | History | Cross-module activity history. |
-| L2 | Profile | User info, edit profile. |
-| L2 | Settings | Preferences, password, notifications. |
+│ ├── 简答
 
-### 3.4 Key User Flows
+│ └── 自动评分
 
-#### Flow A: First-time user uploads a document and summarizes it
+│
 
-1. `/login` → `/dashboard`
-2. Click "上传资料" (or navigate `/material`)
-3. Upload file → see processing status → file becomes "Ready"
-4. Click "AI 总结" on the material row → navigate `/ai/summary?materialId={id}`
-5. Click "生成总结" → see loading → read summary
+├── 错题本
 
-#### Flow B: User asks questions about a document
+│ ├── 标签
 
-1. Navigate `/ai/chat`
-2. Select material from dropdown
-3. Type question → submit
-4. Receive streaming answer with source citations
-5. Continue conversation or start new
+│ ├── 收藏
 
-#### Flow C: User takes a quiz
+│ └── 重做
 
-1. Navigate `/ai/quiz`
-2. Select material → click "生成练习"
-3. Answer questions (single-choice / judge / short-answer)
-4. Submit → see score + explanations
-5. Wrong questions auto-added to `/quiz/wrong`
+│
 
-#### Flow D: User reviews wrong questions
+├── 学习计划
 
-1. Navigate `/quiz/wrong`
-2. Filter by material / mastered status
-3. Review question + explanation
-4. Mark as mastered → card removed or badge updated
+│ ├── Timeline
+
+│ ├── Calendar
+
+│ └── 今日任务
+
+│
+
+└── 用户中心
 
 ---
 
-## 4. Page Designs
+# 6. Navigation Structure
 
-### 4.1 Login Page (`/login`)
+Sidebar Navigation
 
-#### Purpose
-Authenticate the user. Set a calm, premium first impression.
+Dashboard
 
-#### Layout
-- Full viewport, light gray background (`--surface-page`).
-- Centered card, max-width 400px.
-- Left side (≥1280px): optional abstract illustration / product value panel, 40% width.
-- Card contains: logo, title, tabs (login/register), form, submit button, forgot password link.
+学习资料
 
-#### Components
-- Logo mark + product name at top of card.
-- Tabs: 登录 / 注册.
-- Form fields: 邮箱 / 用户名, 密码, 确认密码 (register only).
-- Primary button: "登录" / "注册".
-- Inline validation under each field.
+AI 总结
 
-#### Interactions
-- Press Enter in password field submits form.
-- Tab switch resets validation but preserves email.
-- Login success: toast + redirect to `/dashboard`.
-- Login failure: inline error below button.
+AI 问答
 
-#### Information Hierarchy
-1. Logo + product name (top, small).
-2. Title "欢迎回来" (large).
-3. Tabs (medium).
-4. Form fields (primary content).
-5. Submit button.
-6. Secondary links (small).
+自动出题
 
-#### Why This Design
-A centered login card is familiar and task-focused. Light background keeps it professional. No AI visual cues — just a clean SaaS login.
+错题本
+
+学习计划
+
+设置
+
+Header
+
+Logo
+
+Search
+
+Notification
+
+Avatar
+
+页面深度最多两级。
+
+禁止三层菜单。
 
 ---
 
-### 4.2 Dashboard (`/dashboard`)
+# 7. Design References
 
-#### Purpose
-Give the user an at-a-glance overview of their learning state and the fastest path to action.
+本产品参考以下产品：
 
-#### Layout
-- Page header: greeting + date/subtitle.
-- Stats row: 4 cards in a grid.
-- Content grid below: 2/3 + 1/3 split.
-  - Left (2/3): Quick actions + Recent activity / Continue learning.
-  - Right (1/3): Today's plan + Shortcuts.
+Apple
 
-#### Components
-- **Welcome header**: dynamic greeting based on time of day.
-- **Stat cards**: 资料数, 问答次数, 练习数, 错题数. Each with icon, value, label, trend indicator (optional).
-- **Quick actions**: 4 action cards (上传资料, AI 问答, AI 出题, 学习计划).
-- **Continue learning**: list of recent materials with progress bars.
-- **Today's tasks**: from current study plan, checkable mini-list.
-- **Recent activity**: timeline of recent AI actions.
+Notion
 
-#### Interactions
-- Click stat card → navigate to corresponding page.
-- Click quick action card → navigate.
-- Click recent material → open material detail drawer or navigate `/ai/chat?materialId={id}`.
-- Task checkbox → mark plan task complete (API call).
+Linear
 
-#### Information Hierarchy
-1. Greeting (personal, high).
-2. Stats (scannable numbers).
-3. Quick actions (primary tasks).
-4. Recent / Continue learning (context).
-5. Today's plan (motivation).
+GitHub
 
-#### Why This Design
-Dashboards fail when they become busy. By separating "state" (stats) from "action" (quick actions) and "context" (recent/plan), the user immediately knows where to go. The design avoids a chat-first layout.
+Arc Browser
 
----
+Stripe Dashboard
 
-### 4.3 学习资料 (`/material`)
+飞书
 
-#### Purpose
-Manage learning materials: upload, browse, search, delete, and select materials for AI features.
+设计目标：
 
-#### Layout
-- Page header: title + description + "上传资料" primary button.
-- Toolbar: search input (left), filter tags/status (center), view toggle list/grid (right).
-- Main area:
-  - List view: table with columns (文件名, 类型, 状态, 上传时间, 操作).
-  - Grid view: cards with file icon, name, status badge, actions.
-- Right drawer for material detail / preview.
+不是复制。
 
-#### Components
-- Upload button → opens dialog or drag-and-drop zone.
-- Status tags: 处理中 (warning), 可用 (success), 失败 (error).
-- Row actions: 查看, AI 总结, AI 问答, 删除.
-- Empty state for no materials.
-- Drag-and-drop upload zone: dashed border, centered icon + text.
+而是吸收：
 
-#### Interactions
-- Upload: select file or drag file → show progress → show processing → update to ready.
-- Click row → open detail drawer.
-- Click "AI 总结" → navigate `/ai/summary?materialId={id}`.
-- Click "AI 问答" → navigate `/ai/chat?materialId={id}`.
-- Delete → confirm dialog → remove row.
-- Search debounced 300ms.
+Apple 的留白
 
-#### Information Hierarchy
-1. Page title + primary action.
-2. Search / filters.
-3. Material list (filename is primary).
-4. Status + metadata.
-5. Actions (secondary).
+Notion 的阅读体验
 
-#### Why This Design
-The material page is a file management surface. Table view is scannable; grid view is friendly for fewer files. Keeping AI actions one click away makes the material the center of the workflow, not the chat.
+Linear 的信息层级
+
+GitHub 的列表
+
+飞书的效率工具设计
+
+最终形成统一的设计语言。
 
 ---
 
-### 4.4 AI 总结 (`/ai/summary`)
+# 8. Design Keywords
 
-#### Purpose
-Generate and read AI-powered summaries of learning materials.
+Professional
 
-#### Layout
-- Page header: title + description.
-- Two-column layout (when material selected):
-  - Left (320px): material selector + metadata.
-  - Right (fluid): summary content area.
-- If no material selected: empty state with selector.
+Minimal
 
-#### Components
-- Material selector: dropdown or compact list.
-- "生成总结" primary button (disabled if no material or already generating).
-- Summary output: rendered Markdown in a clean reading card.
-- Regenerate / copy / download actions (secondary toolbar above content).
-- Skeleton while generating.
+Clean
 
-#### Interactions
-- Select material → load existing summary if available.
-- Click "生成总结" → show progress → render Markdown.
-- Regenerate → confirm if overwriting existing.
-- Copy → clipboard toast.
-- Download → export Markdown file.
+Modern
 
-#### Information Hierarchy
-1. Material selector (context).
-2. Summary content (primary).
-3. Action toolbar (secondary).
-4. Metadata / tags (tertiary).
+Elegant
 
-#### Why This Design
-The summary page is a reading experience. By placing the material selector on the left and the content on the right, it feels like a document editor / reader rather than a chat. Markdown is rendered cleanly with good typography.
+Readable
+
+Productivity
+
+Enterprise
+
+Content First
 
 ---
 
-### 4.5 AI 问答 (`/ai/chat`)
+# 9. Success Metrics
 
-#### Purpose
-Have a focused, RAG-powered Q&A conversation about a selected material.
+用户进入 Dashboard
 
-#### Layout
-- Three-panel layout:
-  - Left sidebar (260px): conversation history list + "新对话" button.
-  - Center (fluid): chat thread.
-  - Right context panel (280px, collapsible): selected material info + cited sources.
-- Or simplified two-panel: left history + center chat, with source citations inline.
+3 秒内知道今天要做什么。
 
-#### Components
-- Conversation list item: title + last message preview + timestamp.
-- Chat thread: alternating user / assistant bubbles.
-- User message: right-aligned, subtle background.
-- Assistant message: left-aligned, white card, Markdown rendering.
-- Source citations: small chip buttons below assistant message, clickable → highlight source in right panel.
-- Input box: fixed bottom, textarea + send button. Auto-resize up to 5 lines.
-- Material selector at top of chat.
+上传资料
 
-#### Interactions
-- Select material → start new conversation context.
-- Type question → Enter to send (Shift+Enter for newline).
-- Streaming response: word-by-word reveal.
-- Click citation → open source snippet in right panel.
-- New conversation → clear thread but keep material.
-- Delete conversation from history list.
+10 秒内找到上传按钮。
 
-#### Information Hierarchy
-1. Chat thread (content is king).
-2. Input box (always accessible).
-3. Material context (top bar).
-4. History (left, collapsible).
-5. Source citations (inline, secondary).
+AI 回答
 
-#### Why This Design
-This is the only chat-like page in the app. By framing it with a material selector and source citations, it feels like "research Q&A" rather than "AI chatbot". The design is closer to a document research tool than a messaging app.
+阅读时间不超过 30 秒。
+
+学习计划
+
+一眼知道今天任务。
+
+整个系统学习成本应小于 5 分钟。
 
 ---
 
-### 4.6 自动出题 (`/ai/quiz`)
+# 10. Global UX Principles
 
-#### Purpose
-Generate practice questions from a material, take the quiz, and review results.
+页面应保持：
 
-#### Layout
-- Page header: title + description.
-- Step-based flow:
-  - Step 1: Select material + configure question counts (default 5单选, 3判断, 2简答) + difficulty.
-  - Step 2: Answer questions (single page with numbered list).
-  - Step 3: Review results (score circle + per-question breakdown).
-- State is managed within the page.
+留白充分
 
-#### Components
-- Material selector.
-- Question count inputs (number steppers).
-- Difficulty segmented control: 简单 / 中等 / 困难.
-- "生成练习" button.
-- Question card: number badge, question text, options (radio / checkbox for multi-select if added / text area for short answer).
-- Submit button at bottom.
-- Result header: score circle, correct/incorrect counts.
-- Explanation panel per question after submit.
+操作简单
 
-#### Interactions
-- Generate → loading → render questions.
-- Answer radio/text → enable submit when all required answered.
-- Submit → show scoring animation → switch to review mode.
-- Wrong answers auto-sync to错题本.
-- "再来一组" → regenerate or reset.
-- "查看错题本" link.
+颜色克制
 
-#### Information Hierarchy
-1. Configuration (step 1).
-2. Question list (step 2).
-3. Score + explanations (step 3).
+按钮明确
 
-#### Why This Design
-Quizzes are task-based. A clear step flow reduces cognitive load. Showing explanations immediately after submission supports learning. Keeping configuration on the same page makes iteration fast.
+反馈及时
+
+避免：
+
+复杂动画
+
+隐藏入口
+
+不明确状态
+
+所有 AI 相关功能必须明确显示：
+
+正在生成
+
+生成完成
+
+失败原因
+
+引用来源
+
+提高用户信任感。
+
+# Part 2 Design System
 
 ---
 
-### 4.7 错题本 (`/quiz/wrong`)
+# 11. Design Language
 
-#### Purpose
-Help users review and master questions they answered incorrectly.
+## 11.1 Overall Style
 
-#### Layout
-- Page header: title + "今日复习" count.
-- Toolbar: filter by material, filter by status (全部 / 未掌握 / 已掌握).
-- Main area: card grid or list.
-- Each card: question preview, your answer, correct answer, explanation, source material, "标记已掌握" button.
+整个产品采用 **Modern Enterprise SaaS** 风格。
 
-#### Components
-- Filter dropdowns.
-- Wrong question card with:
-  - Status badge.
-  - Question text (truncated).
-  - Your answer vs correct answer.
-  - "查看解析" expand button.
-  - "标记已掌握" ghost button.
-- Empty state when all mastered.
+设计理念：
 
-#### Interactions
-- Filter change → reload list.
-- Expand card → show full explanation.
-- Mark mastered → card fades / badge changes / moves to "已掌握" tab.
-- Click material name → navigate to material or chat.
+- 少即是多（Less is More）
+- Content First
+- Information Hierarchy
+- High Readability
+- Calm Interface
+- Professional Experience
 
-#### Information Hierarchy
-1. Header + progress indicator.
-2. Filters.
-3. Question cards (question first).
-4. Answer comparison.
-5. Explanation.
-6. Actions.
+本产品不是 AI 聊天软件。
 
-#### Why This Design
-Wrong questions are learning content, not just records. Cards make each question feel self-contained. Answer comparison is visually distinct (red vs green) to reinforce learning.
+因此：
+
+AI 不作为视觉主体。
+
+页面的重点永远是：
+
+学习内容
+
+而不是：
+
+聊天窗口。
 
 ---
 
-### 4.8 学习计划 (`/ai/plan`)
+## 11.2 Design Characteristics
 
-#### Purpose
-Create and track AI-generated study plans.
+整个系统应具有以下特征：
 
-#### Layout
-- Page header: title + "新建计划" button.
-- Two-column layout:
-  - Left (360px): plan list (card selector).
-  - Right (fluid): plan detail view.
-- Plan detail:
-  - Goal header + exam date + daily hours.
-  - Progress bar (overall completion).
-  - Task list grouped by day/week.
-  - Each task: checkbox, title, estimated time, source material link.
+✓ 大面积留白
 
-#### Components
-- Plan list card: title, date range, progress bar, status.
-- "新建计划" dialog: goal input, exam date picker, daily hours slider, material multi-select.
-- Generate loading state with progress steps.
-- Task checkbox.
-- Empty state when no plan selected.
+✓ 简洁配色
 
-#### Interactions
-- Click plan in list → load detail.
-- New plan → fill form → generate → add to list → select it.
-- Check task → update progress.
-- Delete plan → confirm.
-- Regenerate plan → replace tasks.
+✓ 圆角卡片
 
-#### Information Hierarchy
-1. Current plan goal (context).
-2. Overall progress.
-3. Task groups (days/weeks).
-4. Individual tasks.
-5. Plan list (left, navigation).
+✓ 浅阴影
 
-#### Why This Design
-Study plans need both overview (progress) and detail (tasks). A two-column layout mirrors email/calendar apps, making it familiar. Task checkboxes provide immediate satisfaction and progress tracking.
+✓ 信息密度适中
 
----
+✓ 优秀排版
 
-### 4.9 历史记录 (`/history`)
+✓ 清晰层级
 
-#### Purpose
-Provide a unified timeline of user activity across AI features.
+✓ 企业级 SaaS 风格
 
-#### Layout
-- Page header: title + tabs (全部 / AI 问答 / AI 出题 / AI 总结 / 学习计划).
-- Filter bar: material selector, date range.
-- Main area: timeline or table.
-- Each item: icon (feature type), title, material, timestamp, action link.
+禁止：
 
-#### Components
-- Tabs for feature type.
-- Timeline items with left icon rail.
-- "查看详情" link per item (opens relevant page).
-- Empty state.
+✕
 
-#### Interactions
-- Tab change → filter list.
-- Click item → navigate to relevant detail (chat, quiz result, summary, plan).
-- Pagination or infinite scroll.
+霓虹
 
-#### Information Hierarchy
-1. Tabs (filter).
-2. Timeline entries (time descending).
-3. Action links.
+✕
 
-#### Why This Design
-History is for lookup. A timeline is scannable and naturally chronological. Linking each entry back to its source page keeps it useful.
+发光
+
+✕
+
+科技粒子
+
+✕
+
+机器人头像
+
+✕
+
+复杂背景
+
+✕
+
+赛博朋克
+
+✕
+
+过度渐变
 
 ---
 
-### 4.10 用户中心 (`/profile`)
+# 12. Color System
 
-#### Purpose
-View and edit user profile information.
+整个系统使用 Neutral + Blue。
 
-#### Layout
-- Page header: title.
-- Card with profile form.
-- Sections: 头像, 昵称, 邮箱, 用户名, 注册时间.
+蓝色仅用于强调。
 
-#### Components
-- Avatar upload (click to change).
-- Editable nickname.
-- Read-only email/username.
-- "保存" primary button.
-
-#### Interactions
-- Edit nickname → save → toast success.
-- Upload avatar → preview → save.
-
-#### Information Hierarchy
-1. Avatar + name (identity).
-2. Form fields.
-3. Save action.
-
-#### Why This Design
-A simple, focused profile page. No unnecessary fields. Edit-in-place keeps interaction minimal.
+不要出现多个主题色。
 
 ---
 
-### 4.11 设置 (`/settings`)
+## 12.1 Primary
 
-#### Purpose
-Manage account preferences and security.
+Primary 500
 
-#### Layout
-- Page header: title.
-- Settings list card with sections:
-  - 账号安全 (change password).
-  - 通知偏好.
-  - 外观 (light/dark/auto — optional).
-  - 关于 / 版本.
+#2563EB
 
-#### Components
-- Section headers.
-- Form fields for password change.
-- Toggle switches for preferences.
-- "保存" buttons per section.
+主要按钮
 
-#### Interactions
-- Password change: old + new + confirm → save.
-- Toggles immediate save or batch save.
+链接
 
-#### Information Hierarchy
-1. Account security (most important).
-2. Preferences.
-3. About.
+当前菜单
 
-#### Why This Design
-Settings is a standard SaaS page. Grouping by concern keeps it scannable. We do not overload it with AI-specific settings.
+Progress
+
+Primary Hover
+
+#1D4ED8
+
+Primary Active
+
+#1E40AF
 
 ---
 
-## 5. Desktop Wireframes (ASCII)
+## 12.2 Neutral
 
-### 5.1 Login Page
+Background
+
+#F8FAFC
+
+Page
+
+Card
+
+#FFFFFF
+
+Border
+
+#E5E7EB
+
+Divider
+
+#F1F5F9
+
+Title
+
+#111827
+
+Body
+
+#374151
+
+Secondary
+
+#6B7280
+
+Placeholder
+
+#9CA3AF
+
+Disabled
+
+#D1D5DB
+
+---
+
+## 12.3 Functional
+
+Success
+
+#16A34A
+
+Warning
+
+#F59E0B
+
+Danger
+
+#DC2626
+
+Info
+
+#0EA5E9
+
+---
+
+## 12.4 Usage Rules
+
+整个系统：
+
+80%
+
+Neutral
+
+15%
+
+Blue
+
+5%
+
+Success / Warning / Error
+
+禁止出现：
+
+红绿蓝紫同时大量存在。
+
+---
+
+# 13. Typography
+
+推荐字体：
+
+Inter
+
+PingFang SC
+
+font-weight：
+
+400
+
+500
+
+600
+
+700
+
+不要使用：
+
+艺术字体
+
+科技字体
+
+等宽字体。
+
+---
+
+## 13.1 Text Hierarchy
+
+Display
+
+36
+
+Bold
+
+H1
+
+32
+
+Bold
+
+H2
+
+24
+
+Bold
+
+H3
+
+20
+
+SemiBold
+
+Title
+
+18
+
+SemiBold
+
+Body
+
+16
+
+Regular
+
+Secondary
+
+14
+
+Regular
+
+Caption
+
+12
+
+Regular
+
+---
+
+## 13.2 Line Height
+
+Display
+
+48
+
+Title
+
+40
+
+Body
+
+28
+
+Caption
+
+20
+
+阅读体验优先。
+
+---
+
+# 14. Spacing System
+
+采用：
+
+8pt Grid
+
+所有间距：
+
+必须是：
+
+4
+
+8
+
+12
+
+16
+
+24
+
+32
+
+40
+
+48
+
+64
+
+禁止：
+
+17px
+
+23px
+
+37px
+
+等随机值。
+
+---
+
+## 14.1 Card Padding
+
+Small
+
+16
+
+Medium
+
+24
+
+Large
+
+32
+
+---
+
+## 14.2 Section Gap
+
+Section
+
+32
+
+Card
+
+24
+
+Content
+
+16
+
+Label
+
+8
+
+---
+
+# 15. Radius
+
+统一圆角。
+
+Small
+
+8px
+
+Medium
+
+12px
+
+Large
+
+16px
+
+Dialog
+
+20px
+
+禁止：
+
+每个组件使用不同圆角。
+
+---
+
+# 16. Shadow
+
+保持轻量。
+
+Shadow XS
+
+0 1px 2px rgba(0,0,0,.04)
+
+Shadow SM
+
+0 2px 6px rgba(0,0,0,.06)
+
+Shadow MD
+
+0 8px 24px rgba(0,0,0,.08)
+
+整个系统不要超过：
+
+MD
+
+Hover 时：
+
+SM → MD
+
+即可。
+
+---
+
+# 17. Grid System
+
+Desktop
+
+12 Columns
+
+Max Width
+
+1440px
+
+Content Width
+
+1280px
+
+Sidebar
+
+240px
+
+Header
+
+64px
+
+Content Padding
+
+32px
+
+Card Gap
+
+24px
+
+---
+
+## Responsive
+
+Desktop
+
+>=1440
+
+Large Desktop
+
+1200~1440
+
+Laptop
+
+992~1200
+
+Tablet
+
+768~992
+
+Mobile
+
+<768
+
+---
+
+# 18. Icon System
+
+使用：
+
+Element Plus Icons
+
+保持统一。
+
+大小：
+
+Small
+
+16
+
+Normal
+
+20
+
+Large
+
+24
+
+Extra
+
+32
+
+图标颜色：
+
+默认：
+
+#6B7280
+
+Hover：
+
+Primary
+
+禁止：
+
+彩色 Icon。
+
+---
+
+# 19. Motion
+
+动画必须克制。
+
+Duration
+
+Fast
+
+150ms
+
+Normal
+
+200ms
+
+Slow
+
+300ms
+
+Timing
+
+ease
+
+ease-in-out
+
+---
+
+Hover
+
+Card
+
+translateY(-2px)
+
+Button
+
+Background
+
+Color
+
+Shadow
+
+Input
+
+Border Color
+
+禁止：
+
+Bounce
+
+Rotate
+
+Zoom
+
+大范围动画。
+
+---
+
+# 20. Accessibility
+
+所有文字：
+
+对比度符合 WCAG AA。
+
+按钮：
+
+高度不少于：
+
+40px
+
+Input：
+
+高度：
+
+40px
+
+Primary Button：
+
+44px
+
+所有点击区域：
+
+>=40px。
+
+支持：
+
+Keyboard Navigation
+
+Focus
+
+Screen Reader
+
+---
+
+# 21. Theme
+
+当前版本：
+
+Light Theme
+
+后续预留：
+
+Dark Theme
+
+Dark Theme 不影响组件结构。
+
+仅修改：
+
+Color Tokens。
+
+---
+
+# 22. Design Tokens
+
+整个项目所有颜色不得写死。
+
+统一定义：
+
+Primary
+
+Primary Hover
+
+Primary Active
+
+Background
+
+Card
+
+Border
+
+Text
+
+Secondary
+
+Success
+
+Warning
+
+Danger
+
+所有间距：
+
+统一变量。
+
+所有圆角：
+
+统一变量。
+
+所有阴影：
+
+统一变量。
+
+禁止：
+
+组件内部直接写：
+
+#409EFF
+
+16px
+
+24px
+
+等 Magic Number。
+
+必须引用 Design Token。
+
+# Part 3 Component Library
+
+---
+
+# 23. Component Design Principles
+
+整个系统所有组件遵循以下原则：
+
+## Consistency（一致性）
+
+所有组件必须：
+
+- 使用统一圆角
+- 使用统一阴影
+- 使用统一颜色
+- 使用统一间距
+- 使用统一动画
+
+整个系统不允许出现：
+
+- 两种不同风格 Button
+- 两种不同风格 Card
+- 两种不同风格 Dialog
+
+所有组件必须来自同一 Design System。
+
+---
+
+## Simplicity（简洁）
+
+一个组件只负责一件事情。
+
+例如：
+
+Button
+
+负责点击。
+
+Card
+
+负责承载信息。
+
+不要让一个组件承担多个职责。
+
+---
+
+## Predictability（可预期）
+
+Hover
+
+Focus
+
+Loading
+
+Disabled
+
+所有状态必须统一。
+
+例如：
+
+所有 Button Hover：
+
+背景颜色加深。
+
+所有 Card Hover：
+
+轻微上浮。
+
+---
+
+# 24. Button
+
+## Purpose
+
+用于触发操作。
+
+按钮必须让用户明确知道：
+
+点击后会发生什么。
+
+---
+
+## Types
+
+Primary
+
+用于：
+
+主要操作
+
+例如：
+
+上传资料
+
+保存
+
+提交
+
+生成 AI 总结
+
+颜色：
+
+Primary Blue
+
+---
+
+Secondary
+
+白底
+
+灰边
+
+用于：
+
+取消
+
+返回
+
+普通操作
+
+---
+
+Danger
+
+红色
+
+仅用于：
+
+删除
+
+清空
+
+危险操作
+
+---
+
+Text Button
+
+无背景。
+
+用于：
+
+查看更多
+
+跳转
+
+辅助操作。
+
+---
+
+Icon Button
+
+仅图标。
+
+用于：
+
+搜索
+
+刷新
+
+设置
+
+收藏
+
+通知
+
+---
+
+## Size
+
+Small
+
+32px
+
+Medium
+
+40px
+
+Large
+
+44px
+
+Padding：
+
+16~24px
+
+---
+
+## States
+
+Default
+
+Hover
+
+Active
+
+Disabled
+
+Loading
+
+所有状态必须统一。
+
+Loading：
+
+显示 Spinner。
+
+禁止重复点击。
+
+---
+
+## Usage Rules
+
+一个页面：
+
+最多一个 Primary Button。
+
+不要出现多个蓝色按钮竞争视觉焦点。
+
+---
+
+# 25. Card
+
+## Purpose
+
+承载信息。
+
+整个系统大量采用 Card。
+
+---
+
+## Radius
+
+16px
+
+---
+
+## Padding
+
+24px
+
+---
+
+## Shadow
+
+默认：
+
+Shadow XS
+
+Hover：
+
+Shadow MD
+
+TranslateY(-2px)
+
+---
+
+## Types
+
+Statistic Card
+
+Information Card
+
+Action Card
+
+Document Card
+
+Answer Card
+
+---
+
+## Usage
+
+Dashboard
+
+Learning Materials
+
+Quiz
+
+Study Plan
+
+全部使用 Card。
+
+---
+
+# 26. Input
+
+统一使用：
+
+Element Plus Input
+
+---
+
+## Height
+
+40px
+
+---
+
+## Radius
+
+12px
+
+---
+
+## Placeholder
+
+Secondary Color
+
+---
+
+## States
+
+Default
+
+Hover
+
+Focus
+
+Disabled
+
+Error
+
+---
+
+Focus：
+
+Border：
+
+Primary
+
+禁止：
+
+发光。
+
+---
+
+# 27. Search Bar
+
+Search 是整个系统重要入口。
+
+布局：
+
+🔍
+
+Input
+
+Clear
+
+Search
+
+支持：
+
+Enter
+
+实时搜索
+
+搜索历史（预留）
+
+---
+
+# 28. Select
+
+统一：
+
+40px
+
+支持：
+
+Search
+
+Clear
+
+Disabled
+
+Multiple
+
+不要：
+
+自定义奇怪样式。
+
+---
+
+# 29. Upload
+
+学习资料上传属于核心组件。
+
+支持：
+
+PDF
+
+Word
+
+Markdown
+
+TXT
+
+---
+
+上传状态：
+
+Waiting
+
+Uploading
+
+Processing
+
+Completed
+
+Failed
+
+---
+
+上传成功：
+
+绿色提示。
+
+上传失败：
+
+显示原因。
+
+---
+
+# 30. Table
+
+整个系统：
+
+优先 Card。
+
+其次 Table。
+
+---
+
+Table Header：
+
+浅灰背景。
+
+Row Hover：
+
+Background：
+
+#F8FAFC
+
+支持：
+
+分页
+
+排序
+
+筛选
+
+固定列
+
+---
+
+# 31. Dialog
+
+用于：
+
+删除确认
+
+编辑
+
+AI 设置
+
+---
+
+Width
+
+600px
+
+Radius
+
+20px
+
+支持：
+
+ESC
+
+点击外部关闭（可配置）
+
+---
+
+# 32. Drawer
+
+用于：
+
+详情
+
+文档信息
+
+用户资料
+
+移动端菜单
+
+宽度：
+
+480px
+
+---
+
+# 33. Sidebar
+
+整个产品导航中心。
+
+Width：
+
+240px
+
+包含：
+
+Logo
+
+Menu
+
+Bottom Area
+
+---
+
+Menu：
+
+Dashboard
+
+学习资料
+
+AI 总结
+
+AI 问答
+
+自动出题
+
+错题本
+
+学习计划
+
+设置
+
+---
+
+Active：
+
+蓝色背景
+
+左侧 Indicator
+
+---
+
+# 34. Header
+
+Height：
+
+64px
+
+左：
+
+Logo
+
+标题
+
+中：
+
+Search
+
+右：
+
+Notification
+
+Avatar
+
+Dropdown
+
+---
+
+# 35. Statistic Card
+
+Dashboard 专用。
+
+显示：
+
+Icon
+
+Title
+
+Value
+
+Trend
+
+支持：
+
+同比增长
+
+本周变化
+
+Hover：
+
+轻微阴影。
+
+---
+
+# 36. AI Answer Card
+
+AI 专属组件。
+
+包含：
+
+回答
+
+引用来源
+
+文档
+
+页码
+
+置信度
+
+生成时间
+
+复制按钮
+
+重新生成
+
+导出 Markdown
+
+不要做成聊天气泡。
+
+采用文档阅读卡片。
+
+---
+
+# 37. Markdown Viewer
+
+整个系统：
+
+Markdown 阅读体验必须优秀。
+
+支持：
+
+标题
+
+代码
+
+表格
+
+引用
+
+数学公式（预留）
+
+图片
+
+目录（可选）
+
+字体：
+
+16px
+
+阅读宽度：
+
+800px
+
+---
+
+# 38. Timeline
+
+Study Plan 使用。
+
+节点：
+
+Today
+
+Tomorrow
+
+Next Week
+
+Completed
+
+颜色：
+
+蓝色
+
+完成：
+
+绿色
+
+---
+
+# 39. Progress
+
+用于：
+
+学习进度
+
+Quiz
+
+上传
+
+AI 分析
+
+高度：
+
+8px
+
+圆角：
+
+999px
+
+---
+
+# 40. Tag
+
+用于：
+
+知识点
+
+难度
+
+状态
+
+标签
+
+不要超过：
+
+4种颜色。
+
+推荐：
+
+Blue
+
+Green
+
+Orange
+
+Gray
+
+---
+
+# 41. Empty State
+
+所有页面必须设计 Empty State。
+
+包括：
+
+无资料
+
+无学习计划
+
+无错题
+
+无 AI 回答
+
+包含：
+
+Illustration（简约）
+
+Title
+
+Description
+
+Primary Action
+
+---
+
+# 42. Skeleton
+
+所有异步页面：
+
+必须 Skeleton。
+
+不要：
+
+Loading Spinner 覆盖整个页面。
+
+Skeleton 优先。
+
+---
+
+# 43. Notification
+
+统一：
+
+右上角。
+
+支持：
+
+Success
+
+Warning
+
+Error
+
+Info
+
+自动消失：
+
+3 秒。
+
+---
+
+# 44. Loading
+
+按钮：
+
+Spinner。
+
+页面：
+
+Skeleton。
+
+AI：
+
+Progress。
+
+禁止：
+
+页面一直空白等待。
+
+---
+
+# 45. Component Mapping
+
+推荐与 Element Plus 对应关系：
+
+| Design Component | Element Plus |
+|------------------|-------------|
+| Button | ElButton |
+| Input | ElInput |
+| Select | ElSelect |
+| Upload | ElUpload |
+| Table | ElTable |
+| Dialog | ElDialog |
+| Drawer | ElDrawer |
+| Progress | ElProgress |
+| Timeline | ElTimeline |
+| Tag | ElTag |
+| Notification | ElNotification |
+| Skeleton | ElSkeleton |
+
+所有业务组件应基于 Element Plus 二次封装，禁止在页面中直接堆砌原始组件。
+
+例如：
+
+components/base/
+├── BaseButton.vue
+├── BaseCard.vue
+├── BaseInput.vue
+├── BaseDialog.vue
+├── BaseTable.vue
+├── BasePageHeader.vue
+├── BaseStatisticCard.vue
+
+这样可以保证整个系统视觉统一，并方便后续维护。
+
+# Part 4 Page Specification
+
+---
+
+# 46. Login
+
+## Purpose
+
+用户身份认证。
+
+整个登录页应该给人：
+
+Professional
+
+Simple
+
+Trustworthy
+
+而不是：
+
+科技感
+
+AI感
+
+登录页应该像：
+
+Notion
+
+GitHub
+
+Linear
+
+而不是：
+
+ChatGPT。
+
+---
+
+## Layout
+
+Desktop
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                                                                              │
-│                                                                              │
-│                          ┌─────────────────────────────┐                     │
-│                          │  ◆  AI Study Assistant      │                     │
-│                          │                             │                     │
-│                          │  欢迎回来                    │                     │
-│                          │  登录后继续你的学习           │                     │
-│                          │                             │                     │
-│                          │  [ 登录 ] [ 注册 ]          │                     │
-│                          │                             │                     │
-│                          │  邮箱 / 用户名               │                     │
-│                          │  ┌─────────────────────┐    │                     │
-│                          │  │                     │    │                     │
-│                          │  └─────────────────────┘    │                     │
-│                          │                             │                     │
-│                          │  密码                        │                     │
-│                          │  ┌─────────────────────┐    │                     │
-│                          │  │                     │    │                     │
-│                          │  └─────────────────────┘    │                     │
-│                          │                             │                     │
-│                          │  [        登录        ]    │                     │
-│                          │                             │                     │
-│                          │  忘记密码？                  │                     │
-│                          └─────────────────────────────┘                     │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
 
-### 5.2 App Shell (Layout)
+┌──────────────────────────────────────────────┐
+│                                              │
+│                Logo                          │
+│          AI Study Assistant                  │
+│                                              │
+│     ┌────────────────────────────┐           │
+│     │                            │           │
+│     │    Username                │           │
+│     │                            │           │
+│     │    Password                │           │
+│     │                            │           │
+│     │ [ Login ]                  │           │
+│     │                            │           │
+│     └────────────────────────────┘           │
+│                                              │
+└──────────────────────────────────────────────┘
 
-```
-┌────────┬─────────────────────────────────────────────────────────────────────┐
-│ Logo   │  页面标题                              [🔔] [头像 昵称 ▼]         │
-├────────┤                                                                     │
-│ 首页   │                                                                     │
-│ 学习资料│                                                                     │
-├────────┤                                                                     │
-│ AI 功能│                                                                     │
-│   总结 │                                                                     │
-│   问答 │                        [ Router View ]                            │
-│   出题 │                                                                     │
-│   计划 │                                                                     │
-├────────┤                                                                     │
-│ 错题本 │                                                                     │
-│ 历史记录│                                                                     │
-└────────┴─────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.3 Dashboard
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 欢迎回来，Alex                                    2026年6月18日 星期三       │
-│ 今天也要好好学习，继续加油吧                                                   │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                       │
-│ │ 📄 12    │  │ 💬 48    │  │ ✏️ 86    │  │ 📕 7     │                       │
-│ │ 学习资料  │  │ AI 对话   │  │ 练习题目  │  │ 待复习错题│                       │
-│ └──────────┘  └──────────┘  └──────────┘  └──────────┘                       │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ ┌──────────────────────────────────────┐  ┌──────────────────────────────┐   │
-│ │ 快速开始                              │  │ 今日计划                      │   │
-│ │                                      │  │                              │   │
-│ │ [📤 上传资料] [💬 AI 问答]           │  │ □ 复习第三章                 │   │
-│ │ [✏️ AI 出题]  [📅 学习计划]          │  │ □ 完成 5 道错题              │   │
-│ │                                      │  │ □ 阅读总结文档               │   │
-│ └──────────────────────────────────────┘  └──────────────────────────────┘   │
-│ ┌──────────────────────────────────────┐  ┌──────────────────────────────┐   │
-│ │ 继续学习                              │  │ 最近动态                      │   │
-│ │                                      │  │                              │   │
-│ │ ▶ 高等数学.pdf            [━━━─]     │  │ 14:32 生成了 AI 总结          │   │
-│ │ ▶ 数据结构笔记.md         [━━━━]     │  │ 13:10 完成了一次练习          │   │
-│ │ ▶ 英语阅读材料.pdf        [━━──]     │  │ 11:05 提问了 3 个问题         │   │
-│ │                                      │  │                              │   │
-│ └──────────────────────────────────────┘  └──────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.4 学习资料 (`/material`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 学习资料                              [搜索资料...] [状态▼] [⬜/☰] [+ 上传资料]│
-├──────────────────────────────────────────────────────────────────────────────┤
-│ 文件名              类型      状态        上传时间            操作             │
-│ ───────────────────────────────────────────────────────────────────────────  │
-│ 📄 高等数学.pdf      PDF      可用       2026-06-17        [总结][问答][⋯]   │
-│ 📄 数据结构.md       Markdown 可用       2026-06-16        [总结][问答][⋯]   │
-│ 📄 英语听力.mp3      Audio    处理中      2026-06-15        [─]               │
-│ 📄 旧笔记.txt        Text     失败       2026-06-10        [重试][删除]       │
-│                                                                              │
-│                      [  1  2  3  ... 10  >  ]                                │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.5 AI 总结 (`/ai/summary`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ AI 知识总结                                                                   │
-│ 选择资料，生成结构化的知识总结                                                 │
-├──────────────┬───────────────────────────────────────────────────────────────┤
-│              │                                                               │
-│ 选择资料 ▼   │   [复制] [重新生成] [下载]                                    │
-│              │                                                               │
-│ ◉ 高等数学.pdf│ ┌─────────────────────────────────────────────────────────┐   │
-│ ○ 数据结构.md  │ │ # 高等数学 · 核心知识点                                    │   │
-│ ○ 英语听力.mp3 │ │                                                         │   │
-│              │ │ ## 1. 极限与连续                                          │   │
-│ 资料信息      │ │ ...                                                       │   │
-│ 页数: 120     │ │                                                         │   │
-│ 大小: 2.4MB   │ │ ## 2. 导数与微分                                          │   │
-│ 状态: 可用    │ │ ...                                                       │   │
-│              │ │                                                         │   │
-│ [生成总结]   │ │ ### 学习建议                                               │   │
-│              │ │ ...                                                       │   │
-│              │ └─────────────────────────────────────────────────────────┘   │
-└──────────────┴───────────────────────────────────────────────────────────────┘
-```
-
-### 5.6 AI 问答 (`/ai/chat`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ AI 文档问答                                       当前资料: [高等数学.pdf ▼]  │
-├──────────────┬───────────────────────────────────────────────┬───────────────┤
-│ 新对话        │                                               │ 资料信息       │
-│              │  User: 请解释泰勒公式                            │ 高等数学.pdf   │
-│ 今天的讨论    │                                               │ 120 页         │
-│  ─ 泰勒公式  │  ─────────────────────────────────────────    │ 状态: 可用     │
-│  ─ 极限应用  │  Assistant:                                    │                │
-│              │  泰勒公式是用多项式逼近函数...                    │ 引用来源       │
-│ 昨天的讨论    │                                               │ [1] 第 45 页   │
-│  ─ 导数定义  │  [1] 相关内容来自资料第 45 页                   │ [2] 第 52 页   │
-│              │                                               │                │
-│              │  User: 能举个例子吗？                            ├───────────────┤
-│              │                                               │                │
-│              │  Assistant:                                    │                │
-│              │  例如 sin(x) 在 x=0 附近...                     │                │
-│              │                                               │                │
-│              ├───────────────────────────────────────────────┤                │
-│              │ [ 输入你的问题...                 ] [发送]     │                │
-│              └───────────────────────────────────────────────┘                │
-└──────────────┴───────────────────────────────────────────────┴───────────────┘
-```
-
-### 5.7 自动出题 (`/ai/quiz`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 自动出题                                                                      │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ 步骤 1: 选择资料与配置                                                         │
-│                                                                              │
-│ 选择资料       [高等数学.pdf ▼]                                               │
-│ 单选题数量     [ 5 ▲▼]                                                        │
-│ 判断题数量     [ 3 ▲▼]                                                        │
-│ 简答题数量     [ 2 ▲▼]                                                        │
-│ 难度           [ 简单 | 中等 | 困难 ]                                         │
-│                                                                              │
-│              [      生成练习      ]                                           │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ 步骤 2: 答题                                                                  │
-│                                                                              │
-│ Q1. 下列哪个函数在 x=0 处连续？                                               │
-│   ○ A. f(x)=1/x                                                               │
-│   ● B. f(x)=sin(x)                                                            │
-│   ○ C. f(x)=1/x²                                                              │
-│                                                                              │
-│ Q2. 判断: 可导一定连续。                                                      │
-│   ● 正确  ○ 错误                                                              │
-│                                                                              │
-│ Q3. 简述拉格朗日中值定理。                                                    │
-│   ┌────────────────────────────────────────┐                                  │
-│   │ ...                                    │                                  │
-│   └────────────────────────────────────────┘                                  │
-│                                                                              │
-│              [      提交答案      ]                                           │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.8 错题本 (`/quiz/wrong`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 错题本                                  [全部资料▼] [全部状态▼]               │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────────────┐  │
-│ │ ❌ 未掌握   高等数学.pdf                                                  │  │
-│ │                                                                         │  │
-│ │ Q: 下列哪个函数在 x=0 处不可导？                                          │  │
-│ │ 你的答案: A                正确答案: C                                    │  │
-│ │                                                                         │  │
-│ │ [查看解析]                                              [标记已掌握]      │  │
-│ └─────────────────────────────────────────────────────────────────────────┘  │
-│ ┌─────────────────────────────────────────────────────────────────────────┐  │
-│ │ ✅ 已掌握   数据结构.md                                                   │  │
-│ │                                                                         │  │
-│ │ Q: 二叉树的高度定义是什么？                                               │  │
-│ │ 你的答案: 正确           正确答案: 正确                                   │  │
-│ │                                                                         │  │
-│ │ [查看解析]                                              [取消掌握]        │  │
-│ └─────────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.9 学习计划 (`/ai/plan`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 学习计划                                          [+ 新建计划]               │
-├──────────────────────┬───────────────────────────────────────────────────────┤
-│ 我的计划              │ 考研数学复习计划                                       │
-│                      │ 考试日期: 2026-12-25   每日学习: 3 小时              │
-│ ● 考研数学复习计划   │                                                      │
-│    ████████░░ 65%    │ 总体进度 [████████████░░░░] 65%                      │
-│ ○ 英语词汇冲刺       │                                                      │
-│    ████░░░░░░ 30%    │ 第 1 周                                              │
-│ ○ 数据结构复习       │   □ 完成极限与连续章节                                │
-│    ██░░░░░░░░ 15%    │   ☑ 导数基础练习                                    │
-│                      │   □ 错题回顾                                          │
-│                      │                                                      │
-│                      │ 第 2 周                                              │
-│                      │   □ 微分中值定理                                      │
-│                      │   □ 完成 20 道选择题                                  │
-│                      │                                                      │
-│                      │ [重新生成] [删除计划]                                │
-└──────────────────────┴───────────────────────────────────────────────────────┘
-```
-
-### 5.10 历史记录 (`/history`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 历史记录                                          [全部 ▼] [资料▼] [日期▼]  │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  今天                                                                        │
-│  💬  你提问了 "泰勒公式应用场景"          高等数学.pdf    14:32  [查看]      │
-│  ✏️  完成了一次练习 (8/10)                数据结构.md     13:10  [查看]      │
-│                                                                              │
-│  昨天                                                                        │
-│  📝  生成了 AI 总结                        英语听力.mp3   16:45  [查看]      │
-│  📅  创建了学习计划 "考研数学复习"         高等数学.pdf    09:20  [查看]      │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.11 用户中心 (`/profile`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 用户中心                                                                      │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────────────┐  │
-│ │                                                                         │  │
-│ │                         [ 👤 头像 ]                                     │  │
-│ │                       点击更换头像                                      │  │
-│ │                                                                         │  │
-│ │  昵称              ┌─────────────────┐                                  │  │
-│ │                    │ Alex            │                                  │  │
-│ │                    └─────────────────┘                                  │  │
-│ │  邮箱              alex@example.com   (不可修改)                        │  │
-│ │  用户名            alex2024           (不可修改)                        │  │
-│ │  注册时间          2026-01-15                                         │  │
-│ │                                                                         │  │
-│ │                       [  保存修改  ]                                    │  │
-│ │                                                                         │  │
-│ └─────────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.12 设置 (`/settings`)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ 设置                                                                          │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────────────┐  │
-│ │ 账号安全                                                                 │  │
-│ │ 当前密码    ┌─────────────────┐                                          │  │
-│ │ 新密码      ┌─────────────────┐                                          │  │
-│ │ 确认密码    ┌─────────────────┐                                          │  │
-│ │                           [ 修改密码 ]                                   │  │
-│ ├─────────────────────────────────────────────────────────────────────────┤  │
-│ │ 通知偏好                                                                 │  │
-│ │  [开关] 学习提醒                                                         │  │
-│ │  [开关] 每周学习报告                                                     │  │
-│ │                           [ 保存偏好 ]                                   │  │
-│ ├─────────────────────────────────────────────────────────────────────────┤  │
-│ │ 外观                                                                     │  │
-│ │ 主题  [浅色 ○] [自动 ○] [深色 ○]                                        │  │
-│ ├─────────────────────────────────────────────────────────────────────────┤  │
-│ │ 关于                                                                     │  │
-│ │ AI Study Assistant v0.0.1                                                │  │
-│ └─────────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. Implementation Spec for Claude Code
+## Component Tree
 
-### 6.1 Constraints
+LoginPage
 
-- **Framework:** Vue 3 + Vite + Element Plus.
-- **State:** Pinia.
-- **HTTP:** Axios (existing `/api` instance).
-- **Icons:** Element Plus Icons Vue (already installed).
-- **No new major dependencies.** Use existing markdown-it for rendering.
-- **Preserve all existing backend API contracts.** Do not change request/response shapes.
-- **Reuse existing `api/` modules** (`ai.js`, `material.js`, `quiz.js`, `history.js`) and add new ones only if needed.
+Logo
 
-### 6.2 File Structure
+Login Card
 
-```
-frontend/src/
-├── api/                    # keep existing
-├── assets/                 # add logo, empty-state illustrations
-├── components/
-│   ├── common/
-│   │   ├── AppButton.vue
-│   │   ├── AppCard.vue
-│   │   ├── AppEmpty.vue
-│   │   ├── AppLoading.vue
-│   │   ├── AppModal.vue
-│   │   ├── AppTag.vue
-│   │   └── AppToast.vue
-│   ├── layout/
-│   │   ├── AppSidebar.vue
-│   │   ├── AppHeader.vue
-│   │   └── AppShell.vue
-│   └── business/
-│       ├── MaterialTable.vue
-│       ├── MaterialCard.vue
-│       ├── MaterialUploader.vue
-│       ├── ChatThread.vue
-│       ├── ChatInput.vue
-│       ├── QuizQuestion.vue
-│       ├── QuizResult.vue
-│       ├── WrongQuestionCard.vue
-│       ├── StudyPlanDetail.vue
-│       ├── StudyPlanList.vue
-│       └── ActivityTimeline.vue
-├── composables/            # keep existing useMarkdown.js
-├── router/
-│   └── index.js            # add /profile, /settings
-├── stores/
-│   ├── user.js             # keep existing
-│   └── ui.js               # optional sidebar collapse, theme
-├── styles/
-│   ├── theme.css           # replace with new tokens
-│   ├── global.css          # keep utility classes
-│   └── components.css      # component overrides
-└── views/
-    ├── Login.vue
-    ├── Dashboard.vue
-    ├── Material.vue
-    ├── AiSummary.vue
-    ├── AiChat.vue
-    ├── AiQuiz.vue
-    ├── AiPlan.vue
-    ├── WrongQuestion.vue
-    ├── History.vue
-    ├── Profile.vue
-    └── Settings.vue
-```
+Input
 
-### 6.3 CSS Variables
+Input
 
-Replace `theme.css` with the following root variables. Map Element Plus variables to these tokens.
+Button
 
-```css
-:root {
-  /* Primary Teal */
-  --color-primary: #0d9488;
-  --color-primary-hover: #0f766e;
-  --color-primary-light: #f0fdfa;
-  --color-primary-ring: rgba(13, 148, 136, 0.12);
-
-  /* Neutrals */
-  --color-text-primary: #18181b;
-  --color-text-secondary: #52525b;
-  --color-text-tertiary: #a1a1aa;
-  --color-text-disabled: #d4d4d8;
-
-  --surface-page: #fafafa;
-  --surface-card: #ffffff;
-  --surface-container-low: #fafafa;
-  --surface-container: #f4f4f5;
-  --surface-container-high: #ffffff;
-  --surface-active: #f0fdfa;
-  --surface-hover: #f4f4f5;
-
-  --outline: #e4e4e7;
-  --outline-variant: #f4f4f5;
-
-  /* State layers */
-  --state-hover: rgba(0, 0, 0, 0.08);
-  --state-pressed: rgba(0, 0, 0, 0.12);
-  --state-focus: rgba(13, 148, 136, 0.12);
-
-  /* Semantic */
-  --color-success: #10b981;
-  --color-success-bg: #ecfdf5;
-  --color-warning: #f59e0b;
-  --color-warning-bg: #fffbeb;
-  --color-error: #ef4444;
-  --color-error-bg: #fef2f2;
-  --color-info: #6366f1;
-  --color-info-bg: #eef2ff;
-
-  /* Spacing */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
-
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
-  --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-1: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-2: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-3: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04);
-  --shadow-4: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
-  --shadow-5: 0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04);
-
-  /* Z-index */
-  --z-base: 0;
-  --z-sticky: 100;
-  --z-dropdown: 200;
-  --z-drawer: 300;
-  --z-modal: 400;
-  --z-toast: 500;
-  --z-tooltip: 600;
-
-  /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
-
-  /* Layout */
-  --sidebar-width: 240px;
-  --sidebar-collapsed-width: 64px;
-  --header-height: 56px;
-
-  /* Motion */
-  --duration-fast: 100ms;
-  --duration-normal: 150ms;
-  --duration-emphasis: 200ms;
-  --duration-complex: 300ms;
-  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-```
-
-### 6.4 Element Plus Overrides
-
-Apply these overrides globally to align Element Plus with the Design System.
-
-```css
-:root {
-  --el-color-primary: #0d9488;
-  --el-color-primary-light-3: #14b8a6;
-  --el-color-primary-light-5: #5eead4;
-  --el-color-primary-light-7: #99f6e4;
-  --el-color-primary-light-8: #ccfbf1;
-  --el-color-primary-light-9: #f0fdfa;
-  --el-color-primary-dark-2: #0f766e;
-
-  --el-text-color-primary: #18181b;
-  --el-text-color-regular: #52525b;
-  --el-text-color-secondary: #a1a1aa;
-  --el-text-color-placeholder: #d4d4d8;
-
-  --el-bg-color: #ffffff;
-  --el-bg-color-page: #fafafa;
-
-  --el-border-color: #e4e4e7;
-  --el-border-color-light: #f4f4f5;
-  --el-border-color-lighter: #f4f4f5;
-
-  --el-fill-color: #f4f4f5;
-  --el-fill-color-light: #fafafa;
-  --el-fill-color-lighter: #ffffff;
-
-  --el-border-radius-base: 8px;
-  --el-border-radius-small: 6px;
-  --el-border-radius-round: 9999px;
-
-  --el-menu-active-color: #0d9488;
-  --el-menu-hover-bg-color: #f4f4f5;
-
-  --el-card-border-color: #e4e4e7;
-  --el-card-border-radius: 12px;
-
-  --el-tag-border-radius: 6px;
-}
-```
-
-### 6.5 Route Additions
-
-Add to `router/index.js`:
-
-```js
-{
-  path: 'profile',
-  name: 'Profile',
-  component: () => import('@/views/Profile.vue'),
-  meta: { title: '用户中心' }
-},
-{
-  path: 'settings',
-  name: 'Settings',
-  component: () => import('@/views/Settings.vue'),
-  meta: { title: '设置' }
-}
-```
-
-Connect the user dropdown in `AppHeader` to `/profile` and `/settings`.
-
-### 6.6 Responsive Behavior
-
-| Breakpoint | Sidebar | Content Padding | Notes |
-|------------|---------|-----------------|-------|
-| ≥1280px | Fixed 240px | 24px | Full desktop layout. |
-| 768–1279px | Collapsible icon-only | 20px | Hamburger toggle in header. |
-| <768px | Hidden slide-over | 16px | Single-column stack. |
-
-For MVP, prioritize desktop. Tablet/mobile can be a single-column stack with the sidebar hidden behind a hamburger.
-
-### 6.7 Accessibility
-
-- Minimum touch target: 36×36px.
-- Focus rings: 2px `--color-primary` with 2px offset.
-- Color alone must not convey meaning; pair with icons/text.
-- All form inputs must have associated labels.
-- Modal/Dialog must trap focus and close on Escape.
-- Use semantic HTML (`<nav>`, `<main>`, `<header>`, `<section>`).
-- Respect `prefers-reduced-motion: reduce`.
-
-### 6.8 Animation & Motion
-
-- Keep motion subtle and purposeful.
-- Default transition: `all 0.15s var(--ease-default)` for hover/focus.
-- Page transitions: none for MVP.
-- Loading skeletons: pulse opacity over 1.5s.
-- Chat streaming: text reveal, no layout shift.
-- Button press: scale 0.98 on active.
-- Card hover: translateY(-1px) + shadow-2, duration 150ms.
-
-### 6.9 Empty States (Global)
-
-Every list/table must have a coherent empty state:
-
-```
-┌─────────────────────────────┐
-│                             │
-│        [ Icon 48px ]        │
-│                             │
-│      暂无学习资料           │
-│   上传你的第一份资料        │
-│   开始学习之旅              │
-│                             │
-│    [ + 上传资料 ]           │
-│                             │
-└─────────────────────────────┘
-```
-
-- Icon: `--text-tertiary`.
-- Title: `--text-heading-3`.
-- Description: `--text-secondary`, max-width 320px, centered.
-- Action: primary button when an action is obvious.
-
-### 6.10 Error States
-
-- Inline field errors: red text below input.
-- Page-level errors: centered card with error icon, message, and "重试" button.
-- Network errors: handled by existing Axios interceptor (toast). Do not redesign.
-
-### 6.11 New API Needs (Backend Unchanged)
-
-The redesign should work with existing APIs. However, the following frontend-only data may need local state or minor backend additions later; for this design, assume they can be derived:
-
-- Dashboard stats: derive from existing `/material/list`, `/history/chat`, `/history/quiz`, `/ai/quiz/wrong`.
-- Today's plan tasks: derive from `/ai/plan` response.
-- User profile: use existing `/user/profile` (check backend endpoint; if missing, display nickname from existing user store).
-
-If backend endpoints for profile/settings do not exist, create placeholder UI that gracefully degrades (read-only fields).
+Footer
 
 ---
 
-## 7. Page-to-API Mapping
+## Login Card
 
-| Page | Existing API | Notes |
-|------|--------------|-------|
-| Login | `AuthController` | Keep existing login/register flow. |
-| Dashboard | derived | Aggregate counts client-side. |
-| Material | `material.js` | list, upload, delete, detail. |
-| AI Summary | `generateSummary` | render Markdown. |
-| AI Chat | `askQuestion` / `askQuestionStream` | render streaming Markdown. |
-| AI Quiz | `generateQuiz`, `submitAnswers` | step flow. |
-| Wrong Question | `getWrongQuestions`, `markWrongQuestionMastered` | card list. |
-| Study Plan | `generatePlan` | plan detail page. |
-| History | `history.js` | timeline view. |
-| Profile | `UserController` | if available. |
-| Settings | `UserController` | password change if available. |
+Width
 
----
+420px
 
-## 8. Quality Checklist Before Development
+Radius
 
-- [ ] All colors come from Design System tokens.
-- [ ] All spacing is a multiple of 4px.
-- [ ] No page uses a chat-first layout except `/ai/chat`.
-- [ ] No AI robot / purple gradient / sparkle visuals.
-- [ ] Every interactive element has hover, focus, active, disabled, and loading states.
-- [ ] Every list has an empty state.
-- [ ] Every form has validation and error feedback.
-- [ ] Sidebar navigation matches Information Architecture exactly.
-- [ ] New routes `/profile` and `/settings` are added and linked from user menu.
-- [ ] Existing backend API contracts are not modified.
-- [ ] Design is implementable with Vue3 + Element Plus + existing dependencies only.
-- [ ] All transitions respect `prefers-reduced-motion`.
-- [ ] Minimum touch target is 36×36px.
-- [ ] Focus rings are visible and consistent.
+20px
+
+Padding
+
+40px
+
+Background
+
+White
+
+Shadow
+
+SM
 
 ---
 
-## 9. Summary
+## Interaction
 
-This specification defines a Figma Community-grade, professional, minimal, enterprise-grade redesign for AI Study Assistant. It synthesizes Apple HIG's tactile clarity, Material 3's tonal color and elevation system, and Ant Design's deterministic 4/8-point grid and enterprise values.
+Hover
 
-The design treats AI as a capability embedded into a learning workflow — not as the visual identity of the product. Every spacing value, color token, transition timing, and component measurement is specified so that Claude Code can implement the Vue3 frontend without returning to design decisions.
+Button
+
+Border
+
+Input
+
+Login Loading
+
+Success
+
+Failure
+
+---
+
+## Empty
+
+无。
+
+---
+
+## Responsive
+
+Mobile：
+
+宽度：
+
+100%
+
+Padding：
+
+24px
+
+Card：
+
+无阴影。
+
+---
+
+# 47. Dashboard
+
+## Purpose
+
+Dashboard 是整个产品的首页。
+
+用户打开以后：
+
+3 秒内知道：
+
+今天学什么。
+
+学习进度。
+
+距离考试。
+
+最近学习。
+
+而不是：
+
+看到聊天框。
+
+---
+
+## Layout
+
+Desktop
+
+```
+
+Header
+
+---------------------------------------------------
+
+Sidebar
+
+Content
+
+---------------------------------------------------
+
+Greeting
+
+---------------------------------------------------
+
+Statistics
+
+---------------------------------------------------
+
+Recent Learning
+
+Study Progress
+
+---------------------------------------------------
+
+Today's Tasks
+
+Exam Countdown
+
+---------------------------------------------------
+
+Weekly Activity
+
+```
+
+---
+
+## Grid
+
+12 Columns
+
+Row Gap
+
+24
+
+Column Gap
+
+24
+
+---
+
+## Sections
+
+① Greeting
+
+欢迎回来
+
+用户名
+
+今天日期
+
+学习建议
+
+---
+
+② Statistics
+
+四张 Card
+
+学习时长
+
+学习资料
+
+AI总结
+
+练习次数
+
+---
+
+③ Recent Learning
+
+最近学习资料
+
+最近总结
+
+继续学习
+
+---
+
+④ Study Progress
+
+Progress
+
+Heatmap
+
+学习曲线
+
+---
+
+⑤ Today's Tasks
+
+Timeline
+
+Checkbox
+
+完成状态
+
+---
+
+⑥ Exam Countdown
+
+考试名称
+
+剩余天数
+
+计划完成率
+
+---
+
+## Component Tree
+
+Dashboard
+
+Page Header
+
+Statistic Card ×4
+
+Recent Learning Card
+
+Progress Card
+
+Timeline Card
+
+Calendar Card
+
+Quick Action Card
+
+---
+
+## Empty
+
+第一次使用：
+
+显示：
+
+上传学习资料
+
+按钮。
+
+---
+
+## Loading
+
+Skeleton。
+
+---
+
+## Error
+
+局部刷新。
+
+不要整个页面报错。
+
+---
+
+## Responsive
+
+Tablet
+
+两列。
+
+Mobile
+
+一列。
+
+---
+
+# 48. Learning Materials
+
+## Purpose
+
+管理所有学习资料。
+
+体验参考：
+
+Notion。
+
+---
+
+## Layout
+
+```
+
+Header
+
+----------------------------------------
+
+Search
+
+Filter
+
+Upload
+
+----------------------------------------
+
+Document List
+
+```
+
+---
+
+## Document Card
+
+包含：
+
+标题
+
+大小
+
+上传时间
+
+状态
+
+操作
+
+---
+
+## Status
+
+Uploading
+
+Parsing
+
+Ready
+
+Failed
+
+---
+
+## Interaction
+
+Hover：
+
+显示：
+
+更多操作。
+
+---
+
+## Empty
+
+暂无学习资料。
+
+Primary Button：
+
+上传资料。
+
+---
+
+## Upload
+
+支持：
+
+拖拽
+
+点击
+
+多文件
+
+PDF
+
+Word
+
+Markdown
+
+TXT
+
+---
+
+# 49. AI Summary
+
+## Purpose
+
+阅读 AI 总结。
+
+不是聊天。
+
+---
+
+## Layout
+
+```
+
+Left
+
+Document List
+
+----------------
+
+Right
+
+Markdown Viewer
+
+```
+
+---
+
+## Left
+
+Document
+
+Search
+
+Folder
+
+Recent
+
+---
+
+## Right
+
+Markdown
+
+目录
+
+复制
+
+导出
+
+重新生成
+
+---
+
+## Reading Width
+
+800px
+
+保证阅读体验。
+
+---
+
+## Empty
+
+请选择一个文档。
+
+---
+
+## Loading
+
+Skeleton。
+
+不要：
+
+Spinner。
+
+---
+
+# 50. AI Question Answering
+
+## Purpose
+
+帮助用户基于学习资料提问。
+
+不是聊天。
+
+更像：
+
+知识查询。
+
+---
+
+## Layout
+
+```
+
+Question
+
+↓
+
+Answer Card
+
+↓
+
+Reference
+
+↓
+
+History
+
+```
+
+---
+
+## Answer Card
+
+包含：
+
+回答
+
+引用
+
+来源
+
+页码
+
+置信度
+
+复制
+
+导出
+
+重新回答
+
+---
+
+## Reference
+
+Document
+
+Page
+
+Similarity
+
+Snippet
+
+---
+
+## History
+
+Collapse
+
+按时间排序。
+
+---
+
+## Empty
+
+输入一个问题开始。
+
+---
+
+# 51. Quiz
+
+## Purpose
+
+练习。
+
+考试。
+
+自动评分。
+
+---
+
+## Layout
+
+```
+
+Progress
+
+------------------
+
+Question
+
+------------------
+
+Options
+
+------------------
+
+Next
+
+```
+
+---
+
+## Top
+
+Question Number
+
+Progress
+
+Timer
+
+---
+
+## Bottom
+
+上一题
+
+下一题
+
+提交
+
+---
+
+## Result
+
+Score
+
+Wrong
+
+Explanation
+
+Suggestion
+
+---
+
+## Empty
+
+暂无题目。
+
+---
+
+# 52. Wrong Question Book
+
+## Purpose
+
+帮助用户复习。
+
+---
+
+## Layout
+
+```
+
+Search
+
+Filter
+
+Tag
+
+--------------------
+
+Question List
+
+```
+
+---
+
+## Card
+
+Question
+
+Knowledge Tag
+
+Difficulty
+
+Wrong Times
+
+Retry
+
+Favorite
+
+---
+
+## Statistics
+
+Wrong Count
+
+Correct Rate
+
+Review Times
+
+---
+
+# 53. Study Plan
+
+## Purpose
+
+帮助用户持续学习。
+
+---
+
+## Layout
+
+```
+
+Calendar
+
+Timeline
+
+Today's Tasks
+
+Progress
+
+```
+
+---
+
+## Calendar
+
+Month
+
+Week
+
+Day
+
+---
+
+## Timeline
+
+Today
+
+Tomorrow
+
+This Week
+
+Next Week
+
+---
+
+## Task Card
+
+Task
+
+Duration
+
+Status
+
+Start
+
+Complete
+
+---
+
+## Empty
+
+暂无计划。
+
+Primary：
+
+生成学习计划。
+
+---
+
+# 54. User Center
+
+## Layout
+
+Avatar
+
+Basic Information
+
+Learning Statistics
+
+Achievements
+
+Account Settings
+
+Security
+
+---
+
+## Statistics
+
+Study Days
+
+Study Hours
+
+Documents
+
+AI Usage
+
+Quiz Count
+
+---
+
+# 55. Settings
+
+## Sections
+
+General
+
+Theme
+
+Language
+
+AI Settings
+
+Notification
+
+Account
+
+Security
+
+About
+
+---
+
+## AI Settings
+
+Temperature
+
+Top-P
+
+Default Summary Length
+
+Citation Display
+
+Auto Generate Quiz
+
+---
+
+# 56. Global Page Rules
+
+所有页面必须包含：
+
+Page Header
+
+Breadcrumb（可选）
+
+Title
+
+Description
+
+Primary Action
+
+Content
+
+Empty State
+
+Loading State
+
+Error State
+
+Footer（可选）
+
+---
+
+# 57. Responsive Rules
+
+Desktop
+
+1440+
+
+12 Columns
+
+Laptop
+
+1200
+
+10 Columns
+
+Tablet
+
+768
+
+6 Columns
+
+Mobile
+
+1 Column
+
+Sidebar：
+
+自动折叠。
+
+---
+
+# 58. Interaction Rules
+
+所有按钮：
+
+Hover
+
+Focus
+
+Loading
+
+Disabled
+
+统一。
+
+所有 Card：
+
+Hover：
+
+translateY(-2px)
+
+所有列表：
+
+支持：
+
+Skeleton
+
+Empty
+
+Pagination
+
+Search
+
+Filter
+
+保持整个系统交互一致。

@@ -159,6 +159,21 @@ public class PromptTemplates {
     }
 
     /**
+     * 通用对话提示词模板（无需学习资料）
+     */
+    private static final String GENERAL_CHAT_TEMPLATE = """
+            你是一个智能学习助手，可以回答各类学习相关的问题。
+
+            用户问题：{question}
+
+            回答要求：
+            1. 回答准确、简洁、有条理
+            2. 使用 Markdown 格式
+            3. 如果问题涉及专业知识，请确保信息准确可靠
+            4. 如果不确定或超出知识范围，请诚实说明
+            """;
+
+    /**
      * 构建 RAG 问答提示词
      *
      * @param context  参考资料
@@ -167,6 +182,16 @@ public class PromptTemplates {
      */
     public static String buildQaPrompt(String context, String question) {
         return render(QA_TEMPLATE, Map.of("context", (Object) context, "question", question));
+    }
+
+    /**
+     * 构建通用对话提示词（无需学习资料）
+     *
+     * @param question 用户问题
+     * @return 提示词
+     */
+    public static String buildGeneralChatPrompt(String question) {
+        return render(GENERAL_CHAT_TEMPLATE, Map.of("question", question));
     }
 
     /**

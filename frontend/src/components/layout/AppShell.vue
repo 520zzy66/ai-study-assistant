@@ -18,7 +18,9 @@
     <div class="app-main" :class="{ collapsed: uiStore.sidebarCollapsed }">
       <AppHeader />
       <main class="app-content">
-        <router-view />
+        <div class="content-inner">
+          <router-view />
+        </div>
       </main>
     </div>
   </div>
@@ -68,8 +70,14 @@ const uiStore = useUiStore()
 
 .app-content {
   flex: 1;
-  padding: var(--space-6);
+  padding: var(--space-8);
   background: var(--surface-page);
+}
+
+.content-inner {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
 }
 
 @media (max-width: 1279px) {

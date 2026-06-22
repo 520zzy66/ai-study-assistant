@@ -22,6 +22,12 @@ public final class Constants {
     /** Token 刷新阈值（2小时） */
     public static final long TOKEN_REFRESH_THRESHOLD_MS = 2 * 60 * 60 * 1000;
 
+    // === 资料来源 ===
+    /** 用户上传 */
+    public static final String SOURCE_USER = "user";
+    /** 系统预置 */
+    public static final String SOURCE_SYSTEM = "system";
+
     // === 资料状态 ===
     /** 处理中（文件已上传，等待解析） */
     public static final String STATUS_PROCESSING = "processing";

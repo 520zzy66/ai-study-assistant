@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `learning_material` (
     `status` VARCHAR(20) NOT NULL DEFAULT 'processing',
     `error_msg` VARCHAR(500),
     `chunk_count` INT DEFAULT 0,
+    `source` VARCHAR(20) DEFAULT 'user' COMMENT '资料来源 user=用户上传 system=系统预置',
     `deleted` TINYINT DEFAULT 0,
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

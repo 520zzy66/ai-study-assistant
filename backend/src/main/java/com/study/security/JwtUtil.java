@@ -27,7 +27,13 @@ public class JwtUtil {
         if (secret == null || secret.isBlank()) {
             throw new IllegalStateException("JWT_SECRET 环境变量未设置，请配置后重启");
         }
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        // 兼容标准 Base64 和 URL-safe Base64（含 - _ 字符）
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64URL.decode(secret);
+        } catch (io.jsonwebtoken.io.DecodingException e) {
+            keyBytes = Decoders.BASE64.decode(secret);
+        }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
         this.expiration = expiration;
     }

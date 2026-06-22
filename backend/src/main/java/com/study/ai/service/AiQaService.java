@@ -37,13 +37,18 @@ public class AiQaService {
     private final AiChatHistoryMapper chatHistoryMapper;
 
     /**
-     * 同步问答
+     * 同步问答（支持可选资料）
      *
-     * @param materialId 资料ID
+     * @param materialId 资料ID（可为 null，null 时进行通用对话）
      * @param question   用户问题
      * @return 包含 answer、sources、conversationId 的 Map
      */
     public Map<String, Object> ask(Long materialId, String question) {
+        // 未选择资料 → 通用对话
+        if (materialId == null) {
+            return askGeneral(question);
+        }
+
         Long userId = UserContext.getCurrentUserId();
 
         // 1. 校验资料
@@ -86,13 +91,44 @@ public class AiQaService {
     }
 
     /**
-     * 流式问答（SSE）
+     * 通用对话（无需学习资料）
+     * 不进行 RAG 检索，直接与 AI 对话
      *
-     * @param materialId 资料ID
+     * @param question 用户问题
+     * @return 包含 answer、conversationId 的 Map
+     */
+    public Map<String, Object> askGeneral(String question) {
+        Long userId = UserContext.getCurrentUserId();
+
+        // 1. 构建通用对话 Prompt
+        String prompt = PromptTemplates.buildGeneralChatPrompt(question);
+
+        // 2. 调用 AI
+        String answer = aiClient.chat(prompt);
+
+        // 3. 保存历史（materialId = null）
+        String conversationId = saveHistory(userId, null, question, answer, null);
+
+        return Map.of(
+                "answer", answer,
+                "sources", List.of(),
+                "conversationId", conversationId
+        );
+    }
+
+    /**
+     * 流式问答（SSE，支持可选资料）
+     *
+     * @param materialId 资料ID（可为 null，null 时进行通用对话）
      * @param question   用户问题
      * @return 流式响应 Flux
      */
     public Flux<String> askStream(Long materialId, String question) {
+        // 未选择资料 → 通用对话
+        if (materialId == null) {
+            return askStreamGeneral(question);
+        }
+
         Long userId = UserContext.getCurrentUserId();
 
         // 1. 校验资料
@@ -122,6 +158,23 @@ public class AiQaService {
                         fullResponse.toString(), null))
                 .doOnError(e -> log.error("RAG 流式问答失败: materialId={}, question={}",
                         materialId, question, e))
+                .onErrorResume(e -> Flux.just("\n\n[错误: 回答生成失败，请稍后重试]"));
+    }
+
+    /**
+     * 通用流式对话（无需学习资料）
+     */
+    private Flux<String> askStreamGeneral(String question) {
+        Long userId = UserContext.getCurrentUserId();
+
+        String prompt = PromptTemplates.buildGeneralChatPrompt(question);
+        StringBuilder fullResponse = new StringBuilder();
+
+        return aiClient.chatStream(prompt)
+                .doOnNext(fullResponse::append)
+                .doOnComplete(() -> saveHistory(userId, null, question,
+                        fullResponse.toString(), null))
+                .doOnError(e -> log.error("通用流式对话失败: question={}", question, e))
                 .onErrorResume(e -> Flux.just("\n\n[错误: 回答生成失败，请稍后重试]"));
     }
 

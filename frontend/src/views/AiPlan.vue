@@ -6,8 +6,7 @@
     </div>
 
     <!-- Form Card -->
-    <el-card shadow="never" class="plan-form-card">
-      <div class="plan-form-title">生成学习计划</div>
+    <BaseCard title="生成学习计划" class="plan-form-card">
       <el-form :model="planForm" label-position="top" class="plan-form">
         <div class="form-grid">
           <el-form-item label="学习目标" required class="form-full">
@@ -47,7 +46,7 @@
           </el-button>
         </div>
       </el-form>
-    </el-card>
+    </BaseCard>
 
     <!-- Result -->
     <div v-if="plan.length > 0" class="plan-result">
@@ -118,6 +117,7 @@ import { ElMessage } from 'element-plus'
 import { MagicStick } from '@element-plus/icons-vue'
 import { generatePlan } from '@/api/ai'
 import { loadReadyMaterials } from '@/api/material'
+import BaseCard from '@/components/common/BaseCard.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const materialList = ref([])

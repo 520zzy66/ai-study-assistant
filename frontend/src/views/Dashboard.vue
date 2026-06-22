@@ -1,41 +1,63 @@
 <template>
   <div class="dashboard-page">
-    <!-- Welcome Section -->
+    <!-- Welcome -->
     <div class="welcome-section">
-      <h1 class="welcome-title">{{ greeting }}，{{ userStore.userInfo?.nickname || '同学' }}</h1>
-      <p class="welcome-subtitle">今天也要好好学习，继续加油吧</p>
+      <div class="welcome-text">
+        <h1 class="welcome-title">{{ greeting }}，{{ userStore.userInfo?.nickname || '同学' }}</h1>
+        <p class="welcome-date">{{ todayDate }}</p>
+      </div>
+      <p class="welcome-slogan">持续学习，每天进步一点点</p>
     </div>
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div
+      <BaseStatisticCard
         v-for="stat in stats"
         :key="stat.key"
-        class="stat-card"
-        :class="`stat-${stat.theme}`"
-        @click="navigateTo(stat.path)"
-      >
-        <div class="stat-icon">
-          <el-icon :size="24"><component :is="stat.icon" /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-label">{{ stat.label }}</div>
-        </div>
-      </div>
+        :icon="stat.icon"
+        :icon-bg="stat.iconBg"
+        :icon-color="stat.iconColor"
+        :label="stat.label"
+        :value="stat.value"
+        :trend="stat.trend"
+        :trend-value="stat.trendValue"
+        :loading="loading.stats"
+        clickable
+        :to="stat.path"
+      />
     </div>
 
-    <!-- Main Content Grid -->
+    <!-- Content Grid: 2fr main + 1fr side -->
     <div class="dashboard-grid">
-      <!-- Left Column -->
+      <!-- Main Column -->
       <div class="dashboard-main">
-        <!-- Quick Actions -->
-        <el-card class="dashboard-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">快速开始</span>
+        <!-- Progress & Charts Row -->
+        <div class="progress-row">
+          <!-- Study Progress Ring -->
+          <BaseCard title="学习进度" class="progress-card" :loading="loading.progress">
+            <div class="ring-center">
+              <ProgressRing :percentage="studyProgress" :size="140" :stroke-width="10" />
+              <p class="ring-hint">总体完成度</p>
             </div>
-          </template>
+          </BaseCard>
+
+          <!-- Exam Countdown -->
+          <BaseCard class="countdown-card" :loading="loading.progress">
+            <CountdownTimer
+              title="距离考试"
+              :target-date="examDate"
+              :total-days="90"
+            />
+          </BaseCard>
+
+          <!-- Weekly Activity -->
+          <BaseCard title="本周学习活跃" class="chart-card" :loading="loading.activity">
+            <AreaChart :data="weeklyActivity" :height="200" />
+          </BaseCard>
+        </div>
+
+        <!-- Quick Actions -->
+        <BaseCard title="快速开始">
           <div class="quick-actions">
             <button
               v-for="action in quickActions"
@@ -43,86 +65,49 @@
               class="quick-action-btn"
               @click="navigateTo(action.path)"
             >
-              <el-icon :size="22"><component :is="action.icon" /></el-icon>
-              <span>{{ action.label }}</span>
+              <div class="qa-icon" :style="{ background: action.bg, color: action.color }">
+                <el-icon :size="22"><component :is="action.icon" /></el-icon>
+              </div>
+              <span class="qa-label">{{ action.label }}</span>
             </button>
           </div>
-        </el-card>
+        </BaseCard>
 
         <!-- Continue Learning -->
-        <el-card class="dashboard-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">继续学习</span>
-              <el-button text type="primary" size="small" @click="$router.push('/material')">
-                查看全部
-              </el-button>
-            </div>
+        <BaseCard title="继续学习" :loading="loading.materials" :isEmpty="recentMaterials.length === 0 && !loading.materials"
+          empty-icon="Document" empty-text="上传你的第一份资料，开始学习之旅">
+          <template v-if="!loading.materials && recentMaterials.length > 0" #header-action>
+            <el-button text type="primary" size="small" @click="$router.push('/material')">查看全部</el-button>
           </template>
-
-          <div v-if="loading.materials" class="section-loading">
-            <el-skeleton :rows="3" animated />
-          </div>
-          <div v-else-if="recentMaterials.length === 0" class="embedded-empty">
-            <AppEmpty
-              icon="Document"
-              title="暂无学习资料"
-              description="上传你的第一份资料，开始学习之旅"
-              compact
-            >
-              <template #action>
-                <el-button type="primary" @click="$router.push('/material')">上传资料</el-button>
-              </template>
-            </AppEmpty>
-          </div>
-          <div v-else class="learning-list">
+          <div v-if="recentMaterials.length > 0" class="learning-list">
             <div
-              v-for="material in recentMaterials"
-              :key="material.id"
+              v-for="item in recentMaterials"
+              :key="item.id"
               class="learning-item"
-              @click="navigateTo(`/ai/summary?materialId=${material.id}`)"
+              @click="navigateTo(`/ai/summary?materialId=${item.id}`)"
             >
               <div class="learning-icon">
                 <el-icon :size="20"><Document /></el-icon>
               </div>
               <div class="learning-info">
-                <div class="learning-name truncate">{{ material.fileName }}</div>
-                <div class="learning-meta">{{ formatDate(material.createTime) }}</div>
+                <div class="learning-name truncate">{{ item.fileName }}</div>
+                <div class="learning-meta">{{ formatDate(item.createTime) }}</div>
               </div>
-              <el-button text type="primary" size="small" @click.stop="navigateTo(`/ai/chat?materialId=${material.id}`)">
-                提问
-              </el-button>
+              <el-icon :size="16" class="learning-arrow"><ArrowRight /></el-icon>
             </div>
           </div>
-        </el-card>
+        </BaseCard>
       </div>
 
-      <!-- Right Column -->
+      <!-- Side Column -->
       <div class="dashboard-side">
-        <!-- Today's Plan -->
-        <el-card class="dashboard-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">今日计划</span>
-            </div>
+        <!-- Today's Tasks -->
+        <BaseCard title="今日任务" :loading="loading.plan" :isEmpty="todayTasks.length === 0 && !loading.plan"
+          empty-icon="Calendar" empty-text="制定学习计划，让学习更有节奏">
+          <template v-if="todayTasks.length > 0" #header-action>
+            <el-button text type="primary" size="small" @click="$router.push('/ai/plan')">查看计划</el-button>
           </template>
-
-          <div v-if="loading.plan" class="section-loading">
-            <el-skeleton :rows="3" animated />
-          </div>
-          <div v-else-if="todayTasks.length === 0" class="embedded-empty">
-            <AppEmpty
-              icon="Calendar"
-              title="今日暂无任务"
-              description="制定学习计划，让学习更有节奏"
-              compact
-            >
-              <template #action>
-                <el-button type="primary" @click="$router.push('/ai/plan')">制定计划</el-button>
-              </template>
-            </AppEmpty>
-          </div>
-          <div v-else class="task-list">
+          <div v-if="todayTasks.length > 0" class="task-list">
             <label
               v-for="task in todayTasks"
               :key="task.id"
@@ -135,39 +120,21 @@
               <span class="task-time">{{ task.estimatedMinutes }} 分钟</span>
             </label>
           </div>
-        </el-card>
+        </BaseCard>
 
         <!-- Recent Activity -->
-        <el-card class="dashboard-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">最近动态</span>
-            </div>
-          </template>
-
-          <div v-if="loading.activity" class="section-loading">
-            <el-skeleton :rows="3" animated />
-          </div>
-          <div v-else-if="recentActivities.length === 0" class="embedded-empty">
-            <AppEmpty
-              icon="Clock"
-              title="暂无学习记录"
-              description="开始使用 AI 功能，记录你的学习轨迹"
-              compact
-            />
-          </div>
-          <div v-else class="activity-list">
-            <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-              <div class="activity-icon" :class="`activity-${activity.type}`">
-                <el-icon :size="14"><component :is="activity.icon" /></el-icon>
-              </div>
+        <BaseCard title="最近动态" :loading="loading.activity" :isEmpty="recentActivities.length === 0 && !loading.activity"
+          empty-icon="Clock" empty-text="开始使用 AI 功能，记录学习轨迹">
+          <div v-if="recentActivities.length > 0" class="activity-list">
+            <div v-for="item in recentActivities" :key="item.id" class="activity-item">
+              <div class="activity-dot" :class="`dot-${item.type}`" />
               <div class="activity-content">
-                <div class="activity-text">{{ activity.text }}</div>
-                <div class="activity-time">{{ activity.time }}</div>
+                <div class="activity-text">{{ item.text }}</div>
+                <div class="activity-time">{{ item.time }}</div>
               </div>
             </div>
           </div>
-        </el-card>
+        </BaseCard>
       </div>
     </div>
   </div>
@@ -179,34 +146,54 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getMaterialList } from '@/api/material'
 import { getChatHistory, getQuizHistory } from '@/api/history'
-import AppEmpty from '@/components/common/AppEmpty.vue'
+import { Document, ArrowRight, Upload, ChatDotRound, EditPen, Calendar } from '@element-plus/icons-vue'
+import BaseCard from '@/components/common/BaseCard.vue'
+import BaseStatisticCard from '@/components/common/BaseStatisticCard.vue'
+import ProgressRing from '@/components/common/ProgressRing.vue'
+import AreaChart from '@/components/common/AreaChart.vue'
+import CountdownTimer from '@/components/common/CountdownTimer.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const loading = reactive({
+  stats: false,
   materials: false,
   activity: false,
-  plan: false
+  plan: false,
+  progress: false
 })
 
+// Stats
 const stats = ref([
-  { key: 'material', label: '学习资料', value: 0, icon: 'Document', theme: 'primary', path: '/material' },
-  { key: 'chat', label: 'AI 对话', value: 0, icon: 'ChatDotRound', theme: 'blue', path: '/ai/chat' },
-  { key: 'quiz', label: '练习题目', value: 0, icon: 'EditPen', theme: 'amber', path: '/ai/quiz' },
-  { key: 'wrong', label: '待复习错题', value: 0, icon: 'Notebook', theme: 'rose', path: '/quiz/wrong' }
+  { key: 'hours', label: '学习时长', value: '0h', icon: 'Clock', iconBg: '#eff6ff', iconColor: '#2563eb', trend: null, trendValue: '', path: '/history' },
+  { key: 'material', label: '学习资料', value: 0, icon: 'Document', iconBg: '#f0fdf4', iconColor: '#16a34a', trend: null, trendValue: '', path: '/material' },
+  { key: 'summary', label: 'AI 总结', value: 0, icon: 'MagicStick', iconBg: '#fef3c7', iconColor: '#d97706', trend: null, trendValue: '', path: '/ai/summary' },
+  { key: 'quiz', label: '练习次数', value: 0, icon: 'EditPen', iconBg: '#fef2f2', iconColor: '#dc2626', trend: null, trendValue: '', path: '/ai/quiz' }
 ])
 
 const quickActions = [
-  { label: '上传资料', icon: 'Upload', path: '/material' },
-  { label: 'AI 问答', icon: 'ChatDotRound', path: '/ai/chat' },
-  { label: 'AI 出题', icon: 'EditPen', path: '/ai/quiz' },
-  { label: '学习计划', icon: 'Calendar', path: '/ai/plan' }
+  { label: '上传资料', icon: 'Upload', path: '/material', bg: '#eff6ff', color: '#2563eb' },
+  { label: 'AI 问答', icon: 'ChatDotRound', path: '/ai/chat', bg: '#f0fdf4', color: '#16a34a' },
+  { label: 'AI 出题', icon: 'EditPen', path: '/ai/quiz', bg: '#fef3c7', color: '#d97706' },
+  { label: '学习计划', icon: 'Calendar', path: '/ai/plan', bg: '#f3e8ff', color: '#7c3aed' }
 ]
 
 const recentMaterials = ref([])
 const recentActivities = ref([])
 const todayTasks = ref([])
+const studyProgress = ref(0)
+const examDate = ref('')
+
+const weeklyActivity = ref([
+  { label: '周一', value: 0 },
+  { label: '周二', value: 0 },
+  { label: '周三', value: 0 },
+  { label: '周四', value: 0 },
+  { label: '周五', value: 0 },
+  { label: '周六', value: 0 },
+  { label: '周日', value: 0 }
+])
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -217,9 +204,13 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-function navigateTo(path) {
-  router.push(path)
-}
+const todayDate = computed(() => {
+  const d = new Date()
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`
+})
+
+function navigateTo(path) { router.push(path) }
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -227,22 +218,17 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
-function toggleTask(task) {
-  // TODO: call API to update task status
-  console.log('toggle task', task)
-}
+function toggleTask(task) { /* TODO: API */ }
 
 async function loadMaterials() {
   loading.materials = true
   try {
     const res = await getMaterialList({ page: 1, size: 5 })
     recentMaterials.value = res.records || []
-    stats.value.find(s => s.key === 'material').value = res.total || 0
-  } catch (error) {
-    recentMaterials.value = []
-  } finally {
-    loading.materials = false
-  }
+    const materialStat = stats.value.find(s => s.key === 'material')
+    if (materialStat) materialStat.value = res.total || 0
+  } catch { recentMaterials.value = [] }
+  finally { loading.materials = false }
 }
 
 async function loadActivity() {
@@ -252,228 +238,192 @@ async function loadActivity() {
       getChatHistory({ page: 1, size: 3 }),
       getQuizHistory({ page: 1, size: 3 })
     ])
-
     const chatItems = (chatRes.records || []).map(item => ({
-      id: `chat-${item.id}`,
-      type: 'chat',
-      icon: 'ChatDotRound',
-      text: `提问了 "${item.question?.slice(0, 20) || '问题'}..."`,
+      id: `chat-${item.id}`, type: 'chat',
+      text: `提问了 "${(item.question || '问题').slice(0, 20)}..."`,
       time: formatDate(item.createTime)
     }))
-
     const quizItems = (quizRes.records || []).map(item => ({
-      id: `quiz-${item.id}`,
-      type: 'quiz',
-      icon: 'EditPen',
-      text: `完成了一次练习`,
+      id: `quiz-${item.id}`, type: 'quiz',
+      text: '完成了一次练习',
       time: formatDate(item.createTime)
     }))
-
     recentActivities.value = [...chatItems, ...quizItems]
-      .sort((a, b) => new Date(b.time) - new Date(a.time))
-      .slice(0, 5)
+      .sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5)
 
-    stats.value.find(s => s.key === 'chat').value = chatRes.total || 0
-    stats.value.find(s => s.key === 'quiz').value = quizRes.total || 0
-  } catch (error) {
-    recentActivities.value = []
-  } finally {
-    loading.activity = false
-  }
+    const summaryStat = stats.value.find(s => s.key === 'summary')
+    if (summaryStat) summaryStat.value = chatRes.total || 0
+    const quizStat = stats.value.find(s => s.key === 'quiz')
+    if (quizStat) quizStat.value = quizRes.total || 0
+  } catch { recentActivities.value = [] }
+  finally { loading.activity = false }
 }
 
-async function loadPlan() {
+function loadPlan() {
   loading.plan = true
-  try {
-    // TODO: replace with real plan API when available
-    todayTasks.value = []
-  } finally {
-    loading.plan = false
-  }
+  // TODO: real plan API
+  todayTasks.value = []
+  loading.plan = false
+}
+
+function loadProgress() {
+  loading.progress = true
+  // TODO: real progress API
+  loading.progress = false
 }
 
 onMounted(() => {
   loadMaterials()
   loadActivity()
   loadPlan()
+  loadProgress()
 })
 </script>
 
 <style scoped>
 .dashboard-page {
-  max-width: 1200px;
+  width: 100%;
 }
 
+/* Welcome */
 .welcome-section {
-  margin-bottom: var(--space-6);
+  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .welcome-title {
-  font-size: var(--text-display);
+  font-size: var(--text-hero);
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
-  margin-bottom: var(--space-1);
+  margin-bottom: 4px;
 }
 
-.welcome-subtitle {
+.welcome-date {
+  font-size: var(--text-ui);
+  color: var(--color-text-tertiary);
+}
+
+.welcome-slogan {
   font-size: var(--text-body);
   color: var(--color-text-secondary);
-  margin-bottom: 0;
+  font-weight: 500;
 }
 
 /* Stats */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
-.stat-card {
-  background: var(--surface-card);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  cursor: pointer;
-  transition: box-shadow var(--duration-normal) var(--ease-default),
-              transform var(--duration-normal) var(--ease-default);
-}
-
-.stat-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-1px);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-primary .stat-icon { background: var(--teal-50); color: var(--color-primary); }
-.stat-blue .stat-icon { background: #eff6ff; color: #3b82f6; }
-.stat-amber .stat-icon { background: #fffbeb; color: #f59e0b; }
-.stat-rose .stat-icon { background: #fff1f2; color: #f43f5e; }
-
-.stat-value {
-  font-size: var(--text-display);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: var(--text-ui);
-  color: var(--color-text-secondary);
-  margin-top: var(--space-1);
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 /* Dashboard Grid */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: var(--space-6);
+  gap: 24px;
 }
 
 .dashboard-main,
 .dashboard-side {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: 24px;
 }
 
-.dashboard-card {
-  border-radius: var(--radius-lg);
+/* Progress Row */
+.progress-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr;
+  gap: 16px;
 }
 
-.card-header {
+.ring-center {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  padding: 8px 0;
 }
 
-.card-title {
-  font-size: var(--text-heading-3);
-  font-weight: 600;
-  color: var(--color-text-primary);
+.ring-hint {
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+  margin-top: 12px;
 }
 
 /* Quick Actions */
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4);
+  gap: 12px;
 }
 
 .quick-action-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-5) var(--space-3);
+  gap: 10px;
+  padding: 20px 12px;
   border: 1px solid var(--outline);
   border-radius: var(--radius-lg);
   background: var(--surface-card);
-  color: var(--color-text-primary);
-  font-size: var(--text-ui);
-  font-weight: 500;
   cursor: pointer;
-  transition: box-shadow var(--duration-normal) var(--ease-default),
-              transform var(--duration-normal) var(--ease-default),
-              border-color var(--duration-fast) var(--ease-default);
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .quick-action-btn:hover {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
-.quick-action-btn:active {
-  transform: scale(0.98);
+.quick-action-btn:active { transform: scale(0.98); }
+
+.qa-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.quick-action-btn .el-icon {
-  color: var(--color-primary);
+.qa-label {
+  font-size: var(--text-small);
+  font-weight: 500;
+  color: var(--color-text-primary);
 }
 
 /* Learning List */
 .learning-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 4px;
 }
 
 .learning-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  gap: 12px;
+  padding: 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-default);
 }
 
-.learning-item:hover {
-  background: var(--surface-hover);
-}
+.learning-item:hover { background: var(--surface-hover); }
 
 .learning-icon {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background: var(--surface-container);
-  color: var(--color-text-secondary);
+  background: var(--blue-50);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -486,7 +436,7 @@ onMounted(() => {
 }
 
 .learning-name {
-  font-size: var(--text-body);
+  font-size: var(--text-ui);
   font-weight: 500;
   color: var(--color-text-primary);
 }
@@ -494,108 +444,78 @@ onMounted(() => {
 .learning-meta {
   font-size: var(--text-small);
   color: var(--color-text-tertiary);
-  margin-top: var(--space-1);
+  margin-top: 2px;
+}
+
+.learning-arrow {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
 
 /* Task List */
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 8px;
 }
 
 .task-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-2) var(--space-1);
+  padding: 8px 4px;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-default);
 }
 
-.task-item:hover {
-  background: var(--surface-hover);
-}
+.task-item:hover { background: var(--surface-hover); }
+.task-item.completed .task-title { text-decoration: line-through; color: var(--color-text-tertiary); }
 
-.task-item.completed .task-title {
-  text-decoration: line-through;
-  color: var(--color-text-tertiary);
-}
-
-.task-title {
-  font-size: var(--text-body);
-  color: var(--color-text-primary);
-}
-
-.task-time {
-  font-size: var(--text-small);
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
+.task-title { font-size: var(--text-ui); color: var(--color-text-primary); }
+.task-time { font-size: var(--text-small); color: var(--color-text-tertiary); flex-shrink: 0; }
 
 /* Activity */
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 14px;
 }
 
 .activity-item {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
+  gap: 10px;
 }
 
-.activity-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.activity-chat .activity-icon { background: #eff6ff; color: #3b82f6; }
-.activity-quiz .activity-icon { background: #fffbeb; color: #f59e0b; }
-.activity-summary .activity-icon { background: var(--teal-50); color: var(--color-primary); }
-.activity-plan .activity-icon { background: #f3e8ff; color: #8b5cf6; }
+.dot-chat { background: #2563eb; }
+.dot-quiz { background: #f59e0b; }
+.dot-summary { background: #16a34a; }
+.dot-plan { background: #7c3aed; }
 
-.activity-content {
-  flex: 1;
-  min-width: 0;
-}
+.activity-text { font-size: var(--text-ui); color: var(--color-text-primary); line-height: 1.5; }
+.activity-time { font-size: var(--text-small); color: var(--color-text-tertiary); margin-top: 2px; }
 
-.activity-text {
-  font-size: var(--text-body);
-  color: var(--color-text-primary);
-  line-height: 1.5;
-}
-
-.activity-time {
-  font-size: var(--text-small);
-  color: var(--color-text-tertiary);
-  margin-top: var(--space-1);
-}
-
-.section-loading {
-  padding: var(--space-4) 0;
-}
-
-.embedded-empty :deep(.app-empty) {
-  padding: var(--space-8) 0;
-}
-
+/* Responsive */
 @media (max-width: 1279px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
+  .progress-row { grid-template-columns: 1fr 1fr 1fr; }
   .quick-actions { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 767px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .quick-actions { grid-template-columns: 1fr; }
+  .progress-row { grid-template-columns: 1fr; }
+  .quick-actions { grid-template-columns: repeat(2, 1fr); }
+  .welcome-section { flex-direction: column; align-items: flex-start; }
 }
 </style>

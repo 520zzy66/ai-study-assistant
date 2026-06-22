@@ -22,18 +22,7 @@
         <span class="nav-label">{{ item.title }}</span>
       </router-link>
 
-      <div class="nav-group">
-        <span class="nav-group-label">AI 功能</span>
-        <router-link
-          v-for="item in aiNavItems"
-          :key="item.path"
-          :to="item.path"
-          :class="['nav-item', 'nav-sub-item', { active: isActive(item.path) }]"
-          @click="uiStore.closeMobileSidebar"
-        >
-          <span class="nav-label">{{ item.title }}</span>
-        </router-link>
-      </div>
+      <div class="nav-divider" />
 
       <router-link
         v-for="item in bottomNavItems"
@@ -70,19 +59,16 @@ const uiStore = useUiStore()
 
 const topNavItems = [
   { path: '/dashboard', title: '首页', icon: 'HomeFilled' },
-  { path: '/material', title: '学习资料', icon: 'Document' }
-]
-
-const aiNavItems = [
-  { path: '/ai/summary', title: 'AI 总结' },
-  { path: '/ai/chat', title: 'AI 问答' },
-  { path: '/ai/quiz', title: '自动出题' },
-  { path: '/ai/plan', title: '学习计划' }
+  { path: '/material', title: '学习资料', icon: 'Document' },
+  { path: '/ai/summary', title: 'AI 总结', icon: 'MagicStick' },
+  { path: '/ai/chat', title: 'AI 问答', icon: 'ChatDotRound' },
+  { path: '/ai/quiz', title: '自动出题', icon: 'EditPen' },
+  { path: '/ai/plan', title: '学习计划', icon: 'Calendar' }
 ]
 
 const bottomNavItems = [
   { path: '/quiz/wrong', title: '错题本', icon: 'Notebook' },
-  { path: '/history', title: '历史记录', icon: 'Clock' }
+  { path: '/settings', title: '设置', icon: 'Setting' }
 ]
 
 function isActive(path) {
@@ -211,23 +197,10 @@ function goToProfile() {
   border-radius: 0 2px 2px 0;
 }
 
-.nav-sub-item {
-  padding-left: 44px;
-  height: 36px;
-  font-size: var(--text-ui);
-}
-
-.nav-group {
-  margin: var(--space-3) 0;
-}
-
-.nav-group-label {
-  display: block;
-  padding: var(--space-4) var(--space-3) var(--space-2);
-  font-size: var(--text-micro);
-  font-weight: 600;
-  color: var(--color-text-tertiary);
-  letter-spacing: 0.02em;
+.nav-divider {
+  height: 1px;
+  background: var(--outline-variant);
+  margin: var(--space-3) var(--space-3);
 }
 
 .sidebar-footer {

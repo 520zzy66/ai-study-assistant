@@ -48,6 +48,9 @@ public class LearningMaterial {
     /** 切片数量 */
     private Integer chunkCount;
 
+    /** 资料来源 user=用户上传 system=系统预置 */
+    private String source;
+
     /** 逻辑删除 0/1 */
     @TableLogic
     private Integer deleted;

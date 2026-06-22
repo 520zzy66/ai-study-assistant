@@ -46,6 +46,9 @@ public class AiQuizService {
     private final AiChatHistoryMapper chatHistoryMapper;
     private final ObjectMapper objectMapper;
 
+    /** 批量插入每批次大小 */
+    private static final int BATCH_SIZE = 100;
+
     /**
      * 生成练习题
      * 注意：无 @Transactional — Db.saveBatch 自行管理 SqlSession 不参与 Spring 事务。
@@ -105,8 +108,11 @@ public class AiQuizService {
             entity.setExplanation(q.getExplanation());
             entities.add(entity);
         }
-        Db.saveBatch(entities);
-        // 回填 ID（MyBatis-Plus 批量插入后自动回填到 entity）
+        // 逐条插入，参与 Spring 事务（替代 Db.saveBatch，避免绕过事务）
+        for (AiQuestionBank entity : entities) {
+            questionBankMapper.insert(entity);
+        }
+        // 回填 ID（MyBatis-Plus insert 后自动回填到 entity）
         for (int i = 0; i < questions.size(); i++) {
             questions.get(i).setId(entities.get(i).getId());
         }
@@ -417,12 +423,11 @@ public class AiQuizService {
             wrong.setIsMastered(0);
             wrongQuestionMapper.insert(wrong);
         } catch (org.springframework.dao.DuplicateKeyException e) {
-            // 已存在 → 原子累加错误次数，避免读-改-写竞态
+            // 已存在 → 原子累加错误次数，不覆盖原始 user_answer 和 correct_answer
             wrongQuestionMapper.update(null,
                     new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<UserWrongQuestion>()
                             .eq(UserWrongQuestion::getUserId, userId)
                             .eq(UserWrongQuestion::getQuestionId, question.getId())
-                            .set(UserWrongQuestion::getUserAnswer, userAnswer)
                             .set(UserWrongQuestion::getIsMastered, 0)
                             .set(UserWrongQuestion::getLastWrongTime, LocalDateTime.now())
                             .setSql("wrong_count = wrong_count + 1"));

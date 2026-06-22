@@ -1,41 +1,147 @@
 <template>
-  <div class="chat-page">
-    <!-- Left Sidebar: History -->
-    <aside class="chat-history-sidebar">
-      <div class="history-header">
-        <h3 class="history-title">对话历史</h3>
-        <el-button text type="primary" :icon="Plus" size="small" @click="createNewChat">
-          新对话
-        </el-button>
-      </div>
-      <div class="history-list">
-        <div
-          v-for="session in chatSessions"
-          :key="session.id"
-          class="history-item"
-          :class="{ active: currentSessionId === session.id }"
-          @click="switchSession(session.id)"
-        >
-          <el-icon :size="16"><ChatDotRound /></el-icon>
-          <span class="history-label truncate">{{ session.title }}</span>
-        </div>
-        <div v-if="chatSessions.length === 0" class="history-empty">
-          暂无历史对话
-        </div>
-      </div>
-    </aside>
+  <div class="qa-page">
+    <div class="page-header">
+      <h2>AI 问答</h2>
+      <p>基于学习资料提问或自由对话，AI 学习助手为你解答</p>
+    </div>
 
-    <!-- Main Chat Area -->
-    <main class="chat-main">
-      <!-- Header -->
-      <div class="chat-header">
-        <div class="chat-header-left">
+    <div class="qa-layout">
+      <!-- Main Area -->
+      <div class="qa-main">
+        <!-- Question Input -->
+        <div class="qa-input-card">
+          <div class="qa-input-icon">
+            <el-icon :size="22"><MagicStick /></el-icon>
+          </div>
+          <div class="qa-input-body">
+            <el-input
+              v-model="inputQuestion"
+              type="textarea"
+              :rows="2"
+              placeholder="输入你的问题，AI 学习助手为你解答..."
+              resize="none"
+              :disabled="loading"
+              @keydown.enter.exact.prevent="handleAsk"
+            />
+            <div class="qa-input-footer">
+              <span class="qa-input-hint">
+                <template v-if="selectedMaterial">基于：{{ selectedMaterial.originalName }}</template>
+                <template v-else>通用对话模式 — 可直接提问任何学习问题</template>
+              </span>
+              <button
+                class="qa-ask-btn"
+                :disabled="!canAsk || loading"
+                @click="handleAsk"
+              >
+                <el-icon v-if="!loading" :size="16"><Promotion /></el-icon>
+                <el-icon v-else :size="16" class="spinning"><Loading /></el-icon>
+                {{ loading ? '生成中' : '提问' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="qa-loading">
+          <BaseCard>
+            <!-- RAG 模式：三步进度 -->
+            <div v-if="selectedMaterial" class="qa-progress-steps">
+              <div class="progress-step" :class="{ active: loadingStep >= 1, done: loadingStep > 1 }">
+                <div class="step-dot"><el-icon v-if="loadingStep > 1" :size="14"><Check /></el-icon><span v-else>1</span></div>
+                <span class="step-label">读取文档内容</span>
+              </div>
+              <div class="step-line" :class="{ active: loadingStep >= 2 }" />
+              <div class="progress-step" :class="{ active: loadingStep >= 2, done: loadingStep > 2 }">
+                <div class="step-dot"><el-icon v-if="loadingStep > 2" :size="14"><Check /></el-icon><span v-else>2</span></div>
+                <span class="step-label">检索相关知识</span>
+              </div>
+              <div class="step-line" :class="{ active: loadingStep >= 3 }" />
+              <div class="progress-step" :class="{ active: loadingStep >= 3 }">
+                <div class="step-dot"><span>3</span></div>
+                <span class="step-label">AI 生成答案</span>
+              </div>
+            </div>
+            <!-- 通用模式：单步加载 -->
+            <div v-else class="qa-loading-simple">
+              <el-icon :size="24" class="spinning"><Loading /></el-icon>
+              <span>AI 正在生成答案...</span>
+            </div>
+          </BaseCard>
+        </div>
+
+        <!-- Empty -->
+        <div v-else-if="!currentAnswer" class="qa-empty">
+          <AppEmpty
+            icon="ChatDotRound"
+            title="输入问题开始AI问答"
+            :description="selectedMaterial ? 'AI 将基于已选资料为你生成答案' : '通用对话模式，可以提问任何学习问题'"
+          />
+          <!-- Suggested Questions -->
+          <div class="suggested-questions">
+            <div class="suggested-label">{{ selectedMaterial ? '推荐问题' : '试试这些问题' }}</div>
+            <div class="question-chips">
+              <button
+                v-for="q in suggestedQuestions"
+                :key="q"
+                class="question-chip"
+                @click="askQuestion(q)"
+              >{{ q }}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Answer -->
+        <template v-else>
+          <!-- Synthesis Answer Card -->
+          <BaseCard class="answer-card">
+            <template #header>
+              <div class="answer-header">
+                <el-icon :size="18"><MagicStick /></el-icon>
+                <span>AI 综合答案</span>
+              </div>
+            </template>
+            <template #header-action>
+              <div class="answer-actions">
+                <el-button text size="small" @click="copyAnswer"><el-icon :size="14"><CopyDocument /></el-icon> 复制</el-button>
+                <el-button text size="small" @click="handleAsk"><el-icon :size="14"><Refresh /></el-icon> 重新生成</el-button>
+              </div>
+            </template>
+            <div class="answer-body markdown-body" v-html="renderMarkdown(currentAnswer)" />
+          </BaseCard>
+
+          <!-- Vector Reference Data -->
+          <div v-if="currentSources.length > 0" class="reference-section">
+            <h3 class="reference-title">
+              <el-icon :size="16"><Collection /></el-icon>
+              向量参考数据
+            </h3>
+            <div class="reference-grid">
+              <div v-for="(source, i) in currentSources" :key="i" class="reference-card">
+                <div class="ref-header">
+                  <el-icon :size="14"><Document /></el-icon>
+                  <span class="ref-doc truncate">{{ source.docName || '切片 ' + (source.chunkIndex || i + 1) }}</span>
+                </div>
+                <div class="ref-meta">
+                  <span class="ref-page">{{ source.page ? `第 ${source.page} 页` : '' }}</span>
+                  <span class="ref-score">匹配 {{ ((source.score || 0) * 100).toFixed(0) }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="qa-sidebar">
+        <!-- Material Selector -->
+        <BaseCard title="选择资料（可选）">
           <el-select
             v-model="selectedMaterialId"
-            placeholder="选择资料"
+            placeholder="不选则为通用对话"
             filterable
             clearable
-            style="width: 260px;"
+            style="width:100%;"
+            @change="onMaterialChange"
           >
             <el-option
               v-for="item in materialList"
@@ -44,406 +150,325 @@
               :value="item.id"
             />
           </el-select>
-        </div>
-        <div class="chat-header-right">
-          <el-button text :icon="Delete" @click="clearMessages">清空</el-button>
-        </div>
-      </div>
+          <div v-if="selectedMaterial" class="sb-material-info">
+            <div class="sb-material-icon">
+              <el-icon :size="16"><Document /></el-icon>
+            </div>
+            <div class="sb-material-name truncate">{{ selectedMaterial.originalName }}</div>
+          </div>
+        </BaseCard>
 
-      <!-- Messages -->
-      <div class="chat-messages" ref="messageListRef">
-        <div v-if="messages.length === 0" class="chat-empty">
-          <AppEmpty
-            icon="ChatDotRound"
-            title="开始你的学习问答"
-            :description="selectedMaterialId ? '基于已选资料向 AI 提问' : '请先选择一份学习资料'"
-          />
-          <div v-if="selectedMaterial && suggestedQuestions.length > 0" class="suggested-questions">
-            <div class="suggested-label">推荐问题</div>
-            <div class="question-chips">
-              <button
-                v-for="q in suggestedQuestions"
-                :key="q"
-                class="question-chip"
-                @click="sendQuestion(q)"
-              >
-                {{ q }}
-              </button>
+        <!-- History -->
+        <BaseCard title="对话历史" padding="sm">
+          <div class="history-list">
+            <div
+              v-for="(item, i) in historyList"
+              :key="i"
+              class="history-item"
+              @click="askQuestion(item)"
+            >
+              <el-icon :size="14"><ChatDotRound /></el-icon>
+              <span class="history-text truncate">{{ item }}</span>
+            </div>
+            <div v-if="historyList.length === 0" class="history-empty-text">
+              暂无历史问题
             </div>
           </div>
-        </div>
-
-        <template v-else>
-          <div
-            v-for="(msg, index) in messages"
-            :key="index"
-            class="message"
-            :class="msg.role"
-          >
-            <div class="message-avatar">
-              <div class="avatar-circle" :class="msg.role">
-                <el-icon v-if="msg.role === 'assistant'" :size="16"><MagicStick /></el-icon>
-                <span v-else>{{ userInitial }}</span>
-              </div>
-            </div>
-            <div class="message-body">
-              <div class="message-content markdown-body" v-html="renderMarkdown(msg.content)" />
-              <div v-if="msg.sources?.length > 0" class="message-sources">
-                <div class="sources-title">
-                  <el-icon :size="12"><Collection /></el-icon>
-                  <span>参考来源</span>
-                </div>
-                <div class="sources-list">
-                  <span v-for="(source, i) in msg.sources" :key="i" class="source-chip">
-                    切片 {{ source.chunkIndex }} · {{ (source.score * 100).toFixed(0) }}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Loading -->
-          <div v-if="loading" class="message assistant">
-            <div class="message-avatar">
-              <div class="avatar-circle assistant">
-                <el-icon :size="16"><MagicStick /></el-icon>
-              </div>
-            </div>
-            <div class="message-body">
-              <div class="loading-bubble">
-                <span class="typing-dot" />
-                <span class="typing-dot" />
-                <span class="typing-dot" />
-                <span>AI 思考中</span>
-              </div>
-            </div>
-          </div>
-        </template>
+        </BaseCard>
       </div>
-
-      <!-- Input -->
-      <div class="chat-input-area">
-        <div class="input-wrapper">
-          <el-input
-            v-model="inputMessage"
-            type="textarea"
-            :rows="2"
-            placeholder="输入你的问题... 按 Enter 发送，Shift+Enter 换行"
-            resize="none"
-            @keydown.enter.exact.prevent="handleSend"
-          />
-          <div class="input-actions">
-            <span class="input-hint">
-              {{ selectedMaterial ? `基于：${selectedMaterial.originalName}` : '未选择资料' }}
-            </span>
-            <el-button type="primary" :loading="loading" :disabled="!canSend" @click="handleSend">
-              <el-icon><Promotion /></el-icon>
-              发送
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Right Sidebar: Context -->
-    <aside class="chat-context-sidebar">
-      <div class="context-card">
-        <div class="context-title">当前资料</div>
-        <div v-if="selectedMaterial" class="context-material">
-          <div class="context-material-icon">
-            <el-icon :size="20"><Document /></el-icon>
-          </div>
-          <div class="context-material-info">
-            <div class="context-material-name truncate">{{ selectedMaterial.originalName }}</div>
-            <div class="context-material-size">{{ formatFileSize(selectedMaterial.fileSize) }}</div>
-          </div>
-        </div>
-        <div v-else class="context-empty">
-          未选择资料
-        </div>
-      </div>
-
-      <div v-if="selectedMaterial && suggestedQuestions.length > 0" class="context-card">
-        <div class="context-title">推荐问题</div>
-        <div class="context-questions">
-          <button
-            v-for="q in suggestedQuestions"
-            :key="q"
-            class="context-question"
-            @click="sendQuestion(q)"
-          >
-            {{ q }}
-          </button>
-        </div>
-      </div>
-    </aside>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Delete, MagicStick, Promotion, ChatDotRound, Collection, Document } from '@element-plus/icons-vue'
+import { MagicStick, Promotion, Loading, Check, Refresh, CopyDocument, Collection, Document, ChatDotRound } from '@element-plus/icons-vue'
 import { useMarkdown } from '@/composables/useMarkdown'
-import { useUserStore } from '@/stores/user'
-import { askQuestion } from '@/api/ai'
-import { loadReadyMaterials } from '@/api/material'
+import { askQuestion as apiAsk } from '@/api/ai'
+import { loadAvailableMaterials } from '@/api/material'
+import BaseCard from '@/components/common/BaseCard.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const route = useRoute()
 const { renderMarkdown } = useMarkdown()
-const userStore = useUserStore()
 
 const materialList = ref([])
 const selectedMaterialId = ref('')
-const messages = ref([])
-const inputMessage = ref('')
+const inputQuestion = ref('')
+const currentAnswer = ref('')
+const currentSources = ref([])
 const loading = ref(false)
-const messageListRef = ref(null)
-const currentSessionId = ref('default')
+const loadingStep = ref(1)
+let loadingTimer = null
 
-const chatSessions = ref([
-  { id: 'default', title: '当前对话' }
-])
+const historyList = ref([])
 
-const suggestedQuestions = ref([
-  '这份资料的核心观点是什么？',
-  '请帮我梳理一下知识结构',
-  '这个概念怎么理解？',
-  '有哪些需要注意的关键点？'
-])
-
-const selectedMaterial = computed(() => {
-  return materialList.value.find(item => item.id === selectedMaterialId.value) || null
+const suggestedQuestions = computed(() => {
+  if (selectedMaterial.value) {
+    return [
+      '这份资料的核心观点是什么？',
+      '请帮我梳理一下知识结构',
+      '这个概念怎么理解？',
+      '有哪些需要注意的关键点？'
+    ]
+  }
+  return [
+    '如何高效学习一门新学科？',
+    '什么是费曼学习法？',
+    '如何制定合理的学习计划？',
+    '怎样提高记忆效率？'
+  ]
 })
 
-const userInitial = computed(() => {
-  return (userStore.userInfo?.nickname || '我')[0]
-})
+const selectedMaterial = computed(() =>
+  materialList.value.find(m => m.id === selectedMaterialId.value) || null
+)
 
-const canSend = computed(() => {
-  return selectedMaterialId.value && inputMessage.value.trim() && !loading.value
-})
+const canAsk = computed(() =>
+  inputQuestion.value.trim() && !loading.value
+)
 
-function formatFileSize(bytes) {
-  if (!bytes) return '-'
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+function onMaterialChange() {
+  currentAnswer.value = ''
+  currentSources.value = []
 }
 
-async function scrollToBottom() {
-  await nextTick()
-  if (messageListRef.value) {
-    messageListRef.value.scrollTop = messageListRef.value.scrollHeight
-  }
+async function handleAsk() {
+  if (!canAsk.value) return
+  await performAsk(inputQuestion.value.trim())
 }
 
-async function handleSend() {
-  if (!canSend.value) {
-    if (!selectedMaterialId.value) ElMessage.warning('请先选择资料')
-    return
-  }
+function askQuestion(q) {
+  inputQuestion.value = q
+  performAsk(q)
+}
 
-  const question = inputMessage.value.trim()
-  messages.value.push({ role: 'user', content: question })
-  inputMessage.value = ''
+async function performAsk(question) {
   loading.value = true
-  await scrollToBottom()
+  loadingStep.value = 1
+  currentAnswer.value = ''
+  currentSources.value = []
+
+  // Simulate progress steps (the API doesn't provide streaming progress)
+  loadingTimer = setInterval(() => {
+    if (loadingStep.value < 3) loadingStep.value++
+  }, 1500)
 
   try {
-    const data = await askQuestion({
-      materialId: selectedMaterialId.value,
+    const data = await apiAsk({
+      materialId: selectedMaterialId.value || null,
       question
     })
-    messages.value.push({
-      role: 'assistant',
-      content: data.answer || data,
-      sources: data.sources || []
-    })
+    currentAnswer.value = data.answer || data
+    currentSources.value = data.sources || []
+    // Add to history
+    if (!historyList.value.includes(question)) {
+      historyList.value.unshift(question)
+      if (historyList.value.length > 10) historyList.value.pop()
+    }
   } catch (error) {
-    messages.value.push({
-      role: 'assistant',
-      content: '抱歉，回答生成失败，请稍后重试。'
-    })
+    currentAnswer.value = '抱歉，答案生成失败，请稍后重试。'
   } finally {
+    clearInterval(loadingTimer)
     loading.value = false
-    await scrollToBottom()
   }
 }
 
-function sendQuestion(question) {
-  inputMessage.value = question
-  handleSend()
-}
-
-function clearMessages() {
-  messages.value = []
-}
-
-function createNewChat() {
-  currentSessionId.value = `session-${Date.now()}`
-  chatSessions.value.unshift({
-    id: currentSessionId.value,
-    title: '新对话'
+function copyAnswer() {
+  navigator.clipboard.writeText(currentAnswer.value).then(() => {
+    ElMessage.success('已复制到剪贴板')
   })
-  clearMessages()
-}
-
-function switchSession(id) {
-  currentSessionId.value = id
 }
 
 async function loadMaterials() {
-  materialList.value = await loadReadyMaterials()
+  materialList.value = await loadAvailableMaterials()
   const queryId = route.query.materialId
-  if (queryId) {
-    selectedMaterialId.value = Number(queryId)
-  }
+  if (queryId) selectedMaterialId.value = Number(queryId)
 }
 
-onMounted(() => {
-  loadMaterials()
-})
+onMounted(() => loadMaterials())
 
-watch(() => route.query.materialId, (newId) => {
-  if (newId) {
-    selectedMaterialId.value = Number(newId)
-  }
+watch(() => route.query.materialId, newId => {
+  if (newId) selectedMaterialId.value = Number(newId)
 })
-
-watch(messages, () => {
-  scrollToBottom()
-}, { deep: true })
 </script>
 
 <style scoped>
-.chat-page {
+.qa-page { width: 100%; }
+
+.qa-layout {
   display: grid;
-  grid-template-columns: 260px 1fr 260px;
-  gap: var(--space-4);
-  height: calc(100vh - var(--header-height) - var(--space-8));
-  min-height: 480px;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
 }
 
-/* Left Sidebar */
-.chat-history-sidebar {
-  background: var(--surface-card);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
+.qa-main {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 20px;
 }
 
-.history-header {
+/* Input Card */
+.qa-input-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: var(--radius-lg);
+}
+
+.qa-input-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.qa-input-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.qa-input-body :deep(.el-textarea__inner) {
+  background: var(--surface-card);
+  border-color: var(--outline);
+  border-radius: var(--radius-md);
+}
+
+.qa-input-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-4);
-  border-bottom: 1px solid var(--outline-variant);
+  margin-top: 10px;
 }
 
-.history-title {
-  font-size: var(--text-heading-4);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.history-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2);
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  font-size: var(--text-body);
-  transition: background-color var(--duration-fast) var(--ease-default);
-}
-
-.history-item:hover,
-.history-item.active {
-  background: var(--surface-hover);
-  color: var(--color-text-primary);
-}
-
-.history-label {
-  flex: 1;
-}
-
-.history-empty {
-  padding: var(--space-8) var(--space-4);
-  text-align: center;
+.qa-input-hint {
   font-size: var(--text-small);
   color: var(--color-text-tertiary);
 }
 
-/* Main */
-.chat-main {
-  background: var(--surface-card);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.chat-header {
-  display: flex;
+.qa-ask-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--outline-variant);
+  gap: 6px;
+  height: 36px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
 }
 
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-5);
-}
+.qa-ask-btn:hover { background: var(--color-primary-hover); }
+.qa-ask-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.qa-ask-btn:active { transform: scale(0.98); }
 
-.chat-empty {
+.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Simple Loading (通用模式) */
+.qa-loading-simple {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  gap: 12px;
+  padding: 32px 0;
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
 }
 
-.chat-empty :deep(.app-empty) {
-  padding: var(--space-12) 0 var(--space-8);
+/* Progress Steps */
+.qa-progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 24px 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  transition: opacity var(--duration-normal) var(--ease-default);
+}
+
+.progress-step.active { opacity: 0.8; }
+.progress-step.done { opacity: 1; }
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-container);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-small);
+  font-weight: 600;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.progress-step.active .step-dot { background: var(--color-primary); color: #fff; }
+.progress-step.done .step-dot { background: var(--color-success); color: #fff; }
+
+.step-line {
+  width: 60px;
+  height: 2px;
+  background: var(--outline);
+  margin: 0 8px 22px;
+  transition: background var(--duration-normal) var(--ease-default);
+}
+
+.step-line.active { background: var(--color-primary); }
+
+.step-label {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* Empty */
+.qa-empty {
+  padding: 48px 0;
 }
 
 .suggested-questions {
-  width: 100%;
-  max-width: 520px;
+  margin-top: 24px;
+  text-align: center;
 }
 
 .suggested-label {
   font-size: var(--text-small);
-  font-weight: 500;
   color: var(--color-text-tertiary);
-  margin-bottom: var(--space-3);
-  text-align: center;
+  margin-bottom: 12px;
 }
 
 .question-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 8px;
   justify-content: center;
 }
 
 .question-chip {
-  padding: var(--space-2) var(--space-3);
+  padding: 8px 16px;
   border: 1px solid var(--outline);
   border-radius: var(--radius-full);
   background: var(--surface-card);
@@ -456,201 +481,104 @@ watch(messages, () => {
 .question-chip:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
-  background: var(--surface-active);
+  background: var(--color-primary-light);
 }
 
-/* Messages */
-.message {
-  display: flex;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-.message.user {
-  flex-direction: row-reverse;
-}
-
-.message-avatar {
-  flex-shrink: 0;
-}
-
-.avatar-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+/* Answer */
+.answer-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: var(--text-small);
+  gap: 8px;
   font-weight: 600;
-}
-
-.avatar-circle.user {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-.avatar-circle.assistant {
-  background: var(--surface-container);
-  color: var(--color-primary);
-}
-
-.message-body {
-  max-width: 70%;
-}
-
-.message-content {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  line-height: 1.7;
-  font-size: var(--text-body);
-}
-
-.message.user .message-content {
-  background: var(--color-primary);
-  color: #fff;
-  border-bottom-right-radius: var(--radius-sm);
-}
-
-.message.assistant .message-content {
-  background: var(--surface-container);
   color: var(--color-text-primary);
-  border-bottom-left-radius: var(--radius-sm);
 }
 
-.message-sources {
-  margin-top: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-container-low);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
+.answer-actions {
+  display: flex;
+  gap: 4px;
 }
 
-.sources-title {
+.answer-body {
+  font-size: var(--text-body);
+  line-height: 1.8;
+}
+
+/* Reference */
+.reference-section {
+  margin-top: 4px;
+}
+
+.reference-title {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-micro);
+  gap: 8px;
+  font-size: var(--text-heading-3);
   font-weight: 600;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-1);
+  color: var(--color-text-primary);
+  margin-bottom: 16px;
 }
 
-.sources-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
-.source-chip {
-  font-size: var(--text-micro);
-  color: var(--color-text-secondary);
+.reference-card {
+  padding: 16px;
   background: var(--surface-card);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.loading-bubble {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-container);
-  border-radius: var(--radius-lg);
-  border-bottom-left-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  font-size: var(--text-body);
-}
-
-.typing-dot {
-  width: 6px;
-  height: 6px;
-  background: currentColor;
-  border-radius: 50%;
-  animation: typingPulse 1.4s infinite ease-in-out both;
-}
-
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes typingPulse {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
-/* Input */
-.chat-input-area {
-  padding: var(--space-4);
-  border-top: 1px solid var(--outline-variant);
-}
-
-.input-wrapper {
-  background: var(--surface-container-low);
   border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3);
-  transition: border-color var(--duration-fast) var(--ease-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
 }
 
-.input-wrapper:focus-within {
-  border-color: var(--color-primary);
-}
-
-.input-wrapper :deep(.el-textarea__inner) {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  font-size: var(--text-body);
-}
-
-.input-actions {
+.ref-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: var(--space-2);
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-small);
 }
 
-.input-hint {
-  font-size: var(--text-small);
+.ref-doc {
+  font-weight: 500;
+}
+
+.ref-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-micro);
   color: var(--color-text-tertiary);
 }
 
-/* Right Sidebar */
-.chat-context-sidebar {
+.ref-score {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Sidebar */
+.qa-sidebar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 20px;
 }
 
-.context-card {
-  background: var(--surface-card);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-}
-
-.context-title {
-  font-size: var(--text-heading-4);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-3);
-}
-
-.context-material {
+.sb-material-info {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  background: var(--surface-container-low);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--blue-50);
   border-radius: var(--radius-md);
 }
 
-.context-material-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  background: var(--surface-container);
+.sb-material-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
@@ -658,75 +586,47 @@ watch(messages, () => {
   flex-shrink: 0;
 }
 
-.context-material-info {
-  min-width: 0;
-}
-
-.context-material-name {
-  font-size: var(--text-body);
+.sb-material-name {
+  font-size: var(--text-small);
   font-weight: 500;
   color: var(--color-text-primary);
 }
 
-.context-material-size {
-  font-size: var(--text-small);
-  color: var(--color-text-tertiary);
-  margin-top: var(--space-1);
-}
-
-.context-empty {
-  font-size: var(--text-body);
-  color: var(--color-text-tertiary);
-  padding: var(--space-4);
-  text-align: center;
-}
-
-.context-questions {
+.history-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
-.context-question {
-  text-align: left;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--outline-variant);
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
-  background: var(--surface-card);
-  color: var(--color-text-secondary);
-  font-size: var(--text-small);
-  line-height: 1.5;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-default);
 }
 
-.context-question:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--surface-active);
+.history-item:hover { background: var(--surface-hover); color: var(--color-text-primary); }
+
+.history-empty-text {
+  padding: 24px 8px;
+  text-align: center;
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
 }
 
+/* Responsive */
 @media (max-width: 1279px) {
-  .chat-page {
-    grid-template-columns: 200px 1fr;
-  }
-
-  .chat-context-sidebar {
-    display: none;
-  }
+  .qa-layout { grid-template-columns: 1fr; }
+  .qa-sidebar { display: none; }
 }
 
 @media (max-width: 767px) {
-  .chat-page {
-    grid-template-columns: 1fr;
-  }
-
-  .chat-history-sidebar {
-    display: none;
-  }
-
-  .message-body {
-    max-width: 85%;
-  }
+  .reference-grid { grid-template-columns: 1fr; }
+  .qa-progress-steps { flex-direction: column; gap: 12px; }
+  .step-line { width: 2px; height: 24px; margin: 0; }
 }
 </style>
