@@ -51,6 +51,9 @@ public class LearningMaterial {
     /** 资料来源 user=用户上传 system=系统预置 */
     private String source;
 
+    /** 自动重试次数 */
+    private Integer retryCount;
+
     /** 逻辑删除 0/1 */
     @TableLogic
     private Integer deleted;

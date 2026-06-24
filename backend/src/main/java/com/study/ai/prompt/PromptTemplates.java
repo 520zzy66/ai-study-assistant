@@ -1,7 +1,9 @@
 package com.study.ai.prompt;
 
+import com.study.dto.request.QaRequest;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -251,6 +253,89 @@ public class PromptTemplates {
                 "referenceAnswer", referenceAnswer,
                 "studentAnswer", studentAnswer
         ));
+    }
+
+    /**
+     * 构建带历史对话的 RAG 问答提示词
+     *
+     * @param context  参考资料
+     * @param question 用户问题
+     * @param history  对话历史
+     * @return 提示词
+     */
+    public static String buildQaPromptWithHistory(String context, String question,
+                                                   List<QaRequest.ChatMessage> history) {
+        String historyText = formatHistory(history);
+        String template = """
+                你是一个专业的学习助手。根据以下参考资料和对话历史回答用户问题。
+
+                参考资料：
+                {context}
+
+                对话历史：
+                {history}
+
+                用户问题：{question}
+
+                回答要求：
+                1. 优先基于参考资料回答，引用具体段落
+                2. 如果资料中没有相关内容，明确说明"资料中未找到相关内容"
+                3. 回答准确、简洁、有条理
+                4. 使用 Markdown 格式
+                5. 如有必要，可补充通用知识，但需标注"[补充知识]"
+                6. 注意上下文连贯性，理解代词指代（如"它"、"这个"等）
+                """;
+        return render(template, Map.of(
+                "context", (Object) context,
+                "history", historyText,
+                "question", question
+        ));
+    }
+
+    /**
+     * 构建带历史对话的通用对话提示词
+     *
+     * @param question 用户问题
+     * @param history  对话历史
+     * @return 提示词
+     */
+    public static String buildGeneralChatPromptWithHistory(String question,
+                                                            List<QaRequest.ChatMessage> history) {
+        String historyText = formatHistory(history);
+        String template = """
+                你是一个智能学习助手，可以回答各类学习相关的问题。
+
+                对话历史：
+                {history}
+
+                用户问题：{question}
+
+                回答要求：
+                1. 回答准确、简洁、有条理
+                2. 使用 Markdown 格式
+                3. 如果问题涉及专业知识，请确保信息准确可靠
+                4. 如果不确定或超出知识范围，请诚实说明
+                5. 注意上下文连贯性，理解代词指代（如"它"、"这个"等）
+                """;
+        return render(template, Map.of(
+                "history", (Object) historyText,
+                "question", question
+        ));
+    }
+
+    /**
+     * 格式化对话历史为文本
+     */
+    private static String formatHistory(List<QaRequest.ChatMessage> history) {
+        if (history == null || history.isEmpty()) {
+            return "（无历史对话）";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (QaRequest.ChatMessage msg : history) {
+            String role = "user".equals(msg.getRole()) ? "用户" : "助手";
+            sb.append(role).append("：").append(msg.getContent()).append("\n");
+        }
+        return sb.toString();
     }
 
     /**

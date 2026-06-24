@@ -53,4 +53,14 @@ public final class Constants {
     public static final int LOGIN_MAX_ATTEMPTS = 5;
     /** 登录锁定时长（分钟） */
     public static final long LOGIN_LOCK_MINUTES = 15;
+
+    // === 异步任务状态 ===
+    /** 待执行 */
+    public static final String TASK_STATUS_PENDING = "pending";
+    /** 执行中 */
+    public static final String TASK_STATUS_RUNNING = "running";
+    /** 成功 */
+    public static final String TASK_STATUS_SUCCESS = "success";
+    /** 失败 */
+    public static final String TASK_STATUS_FAILED = "failed";
 }

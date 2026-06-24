@@ -28,50 +28,43 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
     private StringRedisTemplate redisTemplate;
 
     @Override
-    public void loginFailed(String username) {
-        if (redisTemplate == null) return;
-
-        String key = KEY_PREFIX + username;
-        Long attempts = redisTemplate.opsForValue().increment(key);
-        if (attempts == null) return;
-
-        if (attempts == 1) {
-            redisTemplate.expire(key, LOCK_DURATION);
-        }
-
-        if (attempts >= Constants.LOGIN_MAX_ATTEMPTS) {
-            // 达到锁定阈值时重置 TTL，确保完整锁定时长
-            redisTemplate.expire(key, LOCK_DURATION);
-            log.warn("用户 {} 连续失败 {} 次，已锁定 {} 分钟", username, attempts,
-                    LOCK_DURATION.toMinutes());
-        }
-    }
-
-    @Override
     public void loginSucceeded(String username) {
         if (redisTemplate == null) return;
 
-        String key = KEY_PREFIX + username;
-        redisTemplate.delete(key);
-        log.debug("用户 {} 登录成功，清除失败记录", username);
+        try {
+            String key = KEY_PREFIX + username;
+            redisTemplate.delete(key);
+            log.debug("用户 {} 登录成功，清除失败记录", username);
+        } catch (Exception e) {
+            log.warn("Redis 操作失败，跳过清除登录记录: {}", e.getMessage());
+        }
     }
 
     @Override
-    public boolean isLocked(String username) {
-        if (redisTemplate == null) return false;
+    public boolean checkAndIncrement(String username) {
+        if (redisTemplate == null) return true;
 
-        String key = KEY_PREFIX + username;
-        String value = redisTemplate.opsForValue().get(key);
-        if (value == null) {
-            return false;
-        }
         try {
-            int attempts = Integer.parseInt(value);
-            return attempts >= Constants.LOGIN_MAX_ATTEMPTS;
-        } catch (NumberFormatException e) {
-            log.warn("Redis 中登录失败计数格式异常，username={}", username);
-            redisTemplate.delete(key);
-            return false;
+            String key = KEY_PREFIX + username;
+            Long attempts = redisTemplate.opsForValue().increment(key);
+            if (attempts == null) return true;
+
+            // 首次失败时设置 TTL
+            if (attempts == 1) {
+                redisTemplate.expire(key, LOCK_DURATION);
+            }
+
+            // 达到锁定阈值
+            if (attempts >= Constants.LOGIN_MAX_ATTEMPTS) {
+                redisTemplate.expire(key, LOCK_DURATION);
+                log.warn("用户 {} 连续失败 {} 次，已锁定 {} 分钟", username, attempts,
+                        LOCK_DURATION.toMinutes());
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("Redis 操作失败，降级放行登录: {}", e.getMessage());
+            return true;
         }
     }
 }

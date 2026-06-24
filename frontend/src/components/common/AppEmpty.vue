@@ -3,7 +3,7 @@
     <div :class="['empty-icon-wrap', `icon-${type}`]">
       <el-icon :size="iconSize"><component :is="resolvedIcon" /></el-icon>
     </div>
-    <div class="empty-title">{{ title }}</div>
+    <div class="empty-title">{{ actualTitle }}</div>
     <div v-if="description" class="empty-desc">{{ description }}</div>
     <div v-if="$slots.action" class="empty-action">
       <slot name="action" />
@@ -52,10 +52,9 @@ const iconSize = computed(() => {
   return 48
 })
 
-// Resolve title fallback
+// Resolve title: prop > typeDefaults fallback > empty
 const actualTitle = computed(() => {
-  // Props take priority; Vue will pass undefined which falls through
-  return undefined
+  return props.title || typeDefaults[props.type]?.title || ''
 })
 </script>
 

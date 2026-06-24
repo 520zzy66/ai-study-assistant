@@ -58,7 +58,7 @@
 | Markdown-it | 14.1+ | Markdown 渲染 |
 
 ### AI 能力
-- **大语言模型**：DeepSeek API（兼容 OpenAI 接口）
+- **大语言模型**：Xiaomi MiMo API（兼容 OpenAI 接口）
 - **Embedding 模型**：bge-small-zh（本地部署）
 - **向量检索**：Vector Search + BM25 混合检索
 - **Reranking**：可选的重排序模块
@@ -90,14 +90,14 @@ cd ai-study-assistant
 DB_USERNAME=root
 DB_PASSWORD=root
 
-# DeepSeek API 配置（必填）
-DEEPSEEK_API_KEY=your_api_key
+# MiMo API 配置（必填）
+AI_API_KEY=your_api_key
 
 # JWT 密钥（已配置默认值，生产环境请修改）
-JWT_SECRET=d2hhdGV2ZXJ5bG9uZ3NlY3JldGtleWZvcmp3dHRvZ2VuZXJhdGVkMTIzNA==
+JWT_SECRET=your_jwt_secret
 ```
 
-> ⚠️ **重要**：`DEEPSEEK_API_KEY` 必须配置，否则 AI 功能无法使用。
+> ⚠️ **重要**：`AI_API_KEY` 必须配置，否则 AI 功能无法使用。
 
 ### 3. 初始化数据库
 
@@ -110,28 +110,25 @@ mysql -u root -p < sql/init.sql
 
 **方式 1：使用启动脚本（推荐）**
 
-```bash
-# Linux/Mac
-chmod +x start-backend.sh
-./start-backend.sh
-
-# Windows
-start-backend.bat
+```powershell
+# Windows PowerShell（自动读取 .env 并启动）
+cd backend
+.\start.ps1
 ```
+
+> 💡 如果遇到执行策略限制，先运行：`Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 
 **方式 2：手动启动**
 
 ```bash
 cd backend
 
-# Linux/Mac - 需要先设置环境变量
-export JWT_SECRET="d2hhdGV2ZXJ5bG9uZ3NlY3JldGtleWZvcmp3dHRvZ2VuZXJhdGVkMTIzNA=="
-export DEEPSEEK_API_KEY="your_api_key"
+# Linux/Mac
+export AI_API_KEY="your_api_key"
 ./mvnw spring-boot:run
 
-# Windows
-set JWT_SECRET=d2hhdGV2ZXJ5bG9uZ3NlY3JldGtleWZvcmp3dHRvZ2VuZXJhdGVkMTIzNA==
-set DEEPSEEK_API_KEY=your_api_key
+# Windows CMD
+set AI_API_KEY=tp-cf9jmd3ktx1r4sm5nu2of6lv8qqs0rylsqo2ib1s4uqm7ksa
 ./mvnw.cmd spring-boot:run
 ```
 
@@ -286,16 +283,16 @@ ai-study-assistant/
 spring:
   ai:
     openai:
-      api-key: ${DEEPSEEK_API_KEY}
-      base-url: ${DEEPSEEK_BASE_URL}
+      api-key: ${AI_API_KEY}
+      base-url: https://token-plan-cn.xiaomimimo.com/v1
       chat:
         options:
-          model: deepseek-chat
-  
+          model: mimo-v2.5-pro
+
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -304,7 +301,7 @@ jwt:
 
 ### AI 模型配置
 
-系统默认使用 DeepSeek Chat 模型，可在配置文件中修改：
+系统默认使用 Xiaomi MiMo 模型，可在配置文件中修改：
 
 ```yaml
 spring:
@@ -312,9 +309,8 @@ spring:
     openai:
       chat:
         options:
-          model: deepseek-chat  # 或 deepseek-coder 等
+          model: mimo-v2.5-pro
           temperature: 0.7
-          max-tokens: 2000
 ```
 
 ---
@@ -353,7 +349,7 @@ spring:
 - [Spring AI](https://spring.io/projects/spring-ai)
 - [Vue.js](https://vuejs.org/)
 - [Element Plus](https://element-plus.org/)
-- [DeepSeek](https://www.deepseek.com/)
+- [Xiaomi MiMo](https://mimo.xiaomi.com/)
 
 ---
 

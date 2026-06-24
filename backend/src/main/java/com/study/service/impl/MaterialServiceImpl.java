@@ -2,6 +2,7 @@ package com.study.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.study.common.BusinessException;
 import com.study.common.Constants;
 import com.study.common.UserContext;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -212,7 +214,8 @@ public class MaterialServiceImpl implements MaterialService {
         if (material == null) {
             throw new BusinessException(404, "资料不存在");
         }
-        if (Constants.SOURCE_SYSTEM.equals(material.getSource())) {
+        if (Constants.SOURCE_SYSTEM.equals(material.getSource())
+                && !material.getUserId().equals(userId)) {
             throw new BusinessException(403, "系统预置资料不可删除");
         }
         if (!material.getUserId().equals(userId)) {
@@ -345,17 +348,7 @@ public class MaterialServiceImpl implements MaterialService {
             throw new BusinessException(400, "仅系统资料库的资料可添加");
         }
 
-        // 检查是否已添加过（避免重复）
-        LambdaQueryWrapper<LearningMaterial> existWrapper = new LambdaQueryWrapper<LearningMaterial>()
-                .eq(LearningMaterial::getUserId, userId)
-                .eq(LearningMaterial::getOriginalName, source.getOriginalName())
-                .eq(LearningMaterial::getSource, Constants.SOURCE_SYSTEM);
-        Long existCount = materialMapper.selectCount(existWrapper);
-        if (existCount > 0) {
-            throw new BusinessException(400, "该资料已在你的资料库中");
-        }
-
-        // 复制记录到当前用户名下
+        // 复制记录到当前用户名下，标记为用户来源
         LearningMaterial copy = new LearningMaterial();
         copy.setUserId(userId);
         copy.setOriginalName(source.getOriginalName());
@@ -367,11 +360,34 @@ public class MaterialServiceImpl implements MaterialService {
         copy.setSummary(source.getSummary());
         copy.setStatus(Constants.STATUS_READY);
         copy.setChunkCount(source.getChunkCount());
-        copy.setSource(Constants.SOURCE_SYSTEM);  // 保持 system 来源标记
+        copy.setSource(Constants.SOURCE_USER);  // 用户来源，允许自主删除
         copy.setDeleted(0);
-        materialMapper.insert(copy);
 
-        log.info("资料复制成功: sourceId={}, newId={}, userId={}", libraryId, copy.getId(), userId);
+        // 依赖数据库唯一索引防重复，替代先查后插的 TOCTOU 竞态
+        try {
+            materialMapper.insert(copy);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(400, "该资料已在你的资料库中");
+        }
+
+        // 同步复制切片数据（批量插入，避免逐条 insert）
+        List<MaterialChunk> sourceChunks = chunkMapper.selectList(
+                new LambdaQueryWrapper<MaterialChunk>()
+                        .eq(MaterialChunk::getMaterialId, libraryId)
+                        .orderByAsc(MaterialChunk::getChunkIndex));
+        if (!sourceChunks.isEmpty()) {
+            List<MaterialChunk> newChunks = new ArrayList<>(sourceChunks.size());
+            for (MaterialChunk chunk : sourceChunks) {
+                MaterialChunk newChunk = new MaterialChunk();
+                BeanUtils.copyProperties(chunk, newChunk, "id", "createTime");
+                newChunk.setMaterialId(copy.getId());
+                newChunk.setUserId(userId);
+                newChunks.add(newChunk);
+            }
+            Db.saveBatch(newChunks);
+        }
+
+        log.info("资料复制成功: sourceId={}, newId={}, userId={}, chunks={}", libraryId, copy.getId(), userId, sourceChunks.size());
         return copy.getId();
     }
 

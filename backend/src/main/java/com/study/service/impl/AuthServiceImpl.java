@@ -57,17 +57,16 @@ public class AuthServiceImpl implements AuthService {
     public LoginVO login(LoginRequest request) {
         String username = request.getUsername();
 
-        // 检查账户是否被锁定
-        if (loginAttemptService.isLocked(username)) {
+        // 原子化检查锁定状态并递增失败计数，防止并发绕过
+        if (!loginAttemptService.checkAndIncrement(username)) {
             throw new BusinessException(1003, "账户已锁定，请15分钟后重试");
         }
 
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, username));
 
-        // 用户名不存在或密码错误统一提示
+        // 用户名不存在或密码错误统一提示（失败计数已在 checkAndIncrement 中递增）
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            loginAttemptService.loginFailed(username);
             throw new BusinessException(1002, "用户名或密码错误");
         }
 

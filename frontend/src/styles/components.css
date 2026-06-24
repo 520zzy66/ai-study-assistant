@@ -81,7 +81,7 @@
 
 .el-input__wrapper:hover,
 .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px var(--zinc-300) inset !important;
+  box-shadow: 0 0 0 1px var(--slate-300) inset !important;
 }
 
 .el-input__wrapper.is-focus,

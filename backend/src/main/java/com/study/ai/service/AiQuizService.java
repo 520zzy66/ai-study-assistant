@@ -1,6 +1,7 @@
 package com.study.ai.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import com.study.vo.WrongQuestionVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,18 +53,16 @@ public class AiQuizService {
 
     /**
      * 生成练习题
-     * 注意：无 @Transactional — Db.saveBatch 自行管理 SqlSession 不参与 Spring 事务。
-     * 若需保证题目入库与对话历史写入的原子性，需将 Db.saveBatch 替换为注入 Mapper 的批量插入。
      *
      * @param materialId 资料ID
-     * @param request    出题参数
+     * @param request    出题参数（含可选的 batchName）
      * @return 题目列表 + batchId
      */
     public Map<String, Object> generateQuiz(Long materialId, GenerateQuizRequest request) {
         Long userId = UserContext.getCurrentUserId();
 
         // 1. 校验资料
-        materialValidator.validateAndGet(materialId, userId);
+        LearningMaterial material = materialValidator.validateAndGet(materialId, userId);
 
         // 2. 参数默认值
         int choiceCount = request.getChoiceCount() != null ? request.getChoiceCount() : 5;
@@ -78,21 +78,28 @@ public class AiQuizService {
             throw new BusinessException(3006, "单次出题最多20道");
         }
 
-        // 3. 读取资料内容（MaterialContentReader 自动处理超长截断）
+        // 3. 自动生成批次名称（用户指定优先，否则用资料名+时间）
+        String batchName = request.getBatchName();
+        if (batchName == null || batchName.isBlank()) {
+            batchName = material.getOriginalName() + " - "
+                    + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"));
+        }
+
+        // 4. 读取资料内容（MaterialContentReader 自动处理超长截断）
         String content = contentReader.readContent(materialId);
 
-        // 4. 构建 Prompt 并调用 AI（temperature 0.3 保证 JSON 格式稳定）
+        // 5. 构建 Prompt 并调用 AI（temperature 0.3 保证 JSON 格式稳定）
         String prompt = PromptTemplates.buildQuizPrompt(
                 content, choiceCount, judgeCount, shortAnswerCount, difficulty);
         String aiResponse = aiClient.chat(prompt, 0.3);
 
-        // 5. 解析 AI 返回的 JSON
+        // 6. 解析 AI 返回的 JSON
         List<QuizQuestion> questions = parseQuizResponse(aiResponse);
         if (questions.isEmpty()) {
             throw new BusinessException(3005, "AI 返回格式异常，请重试");
         }
 
-        // 6. 生成 batchId 并批量保存到题库
+        // 7. 生成 batchId 并批量保存到题库
         String batchId = UUID.randomUUID().toString().substring(0, 8);
         List<AiQuestionBank> entities = new ArrayList<>();
         for (QuizQuestion q : questions) {
@@ -100,34 +107,33 @@ public class AiQuizService {
             entity.setUserId(userId);
             entity.setMaterialId(materialId);
             entity.setBatchId(batchId);
+            entity.setBatchName(batchName);
             entity.setQuestionType(q.getType());
             entity.setDifficulty(difficulty);
             entity.setQuestion(q.getQuestion());
             entity.setOptions(q.getOptions() != null ? toJson(q.getOptions()) : null);
             entity.setAnswer(q.getAnswer());
             entity.setExplanation(q.getExplanation());
+            entity.setIsFavorite(0);
             entities.add(entity);
         }
-        // 逐条插入，参与 Spring 事务（替代 Db.saveBatch，避免绕过事务）
-        for (AiQuestionBank entity : entities) {
-            questionBankMapper.insert(entity);
-        }
-        // 回填 ID（MyBatis-Plus insert 后自动回填到 entity）
+        // 批量插入（替代逐条 insert，性能提升 5-10 倍）
+        Db.saveBatch(entities);
         for (int i = 0; i < questions.size(); i++) {
             questions.get(i).setId(entities.get(i).getId());
         }
 
-        // 7. 保存对话历史
+        // 8. 保存对话历史
         AiChatHistory history = new AiChatHistory();
         history.setUserId(userId);
         history.setChatType(Constants.CHAT_TYPE_QUIZ);
         history.setMaterialId(materialId);
-        history.setUserMessage("生成" + totalCount + "道" + difficulty + "难度练习题");
+        history.setUserMessage("生成" + totalCount + "道" + difficulty + "难度练习题：" + batchName);
         history.setAiResponse(aiResponse);
         history.setBatchId(batchId);
         chatHistoryMapper.insert(history);
 
-        // 8. 构建返回（隐藏选择题答案中的 options 数据过大问题）
+        // 9. 构建返回
         List<Map<String, Object>> questionList = questions.stream()
                 .map(q -> {
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -141,7 +147,7 @@ public class AiQuizService {
                     return map;
                 }).collect(Collectors.toList());
 
-        return Map.of("materialId", materialId, "batchId", batchId, "questions", questionList);
+        return Map.of("materialId", materialId, "batchId", batchId, "batchName", batchName, "questions", questionList);
     }
 
     /**
@@ -151,6 +157,7 @@ public class AiQuizService {
      * @param request 答案列表
      * @return 判分结果
      */
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> submitAnswers(String batchId, SubmitAnswerRequest request) {
         Long userId = UserContext.getCurrentUserId();
 
@@ -262,8 +269,19 @@ public class AiQuizService {
                 .orderByDesc(UserWrongQuestion::getLastWrongTime);
 
         List<UserWrongQuestion> wrongList = wrongQuestionMapper.selectList(wrapper);
+        if (wrongList.isEmpty()) return List.of();
 
-        // 转换为 VO，补充题目文本和资料名称
+        // 批量查询题目和资料，避免 N+1
+        Set<Long> questionIds = wrongList.stream().map(UserWrongQuestion::getQuestionId).collect(Collectors.toSet());
+        Set<Long> materialIds = wrongList.stream().map(UserWrongQuestion::getMaterialId).filter(Objects::nonNull).collect(Collectors.toSet());
+
+        Map<Long, AiQuestionBank> questionMap = questionBankMapper.selectBatchIds(questionIds).stream()
+                .collect(Collectors.toMap(AiQuestionBank::getId, q -> q));
+        Map<Long, LearningMaterial> materialMap = materialIds.isEmpty() ? Map.of()
+                : materialMapper.selectBatchIds(materialIds).stream()
+                .collect(Collectors.toMap(LearningMaterial::getId, m -> m));
+
+        // 转换为 VO
         return wrongList.stream().map(wrong -> {
             WrongQuestionVO vo = new WrongQuestionVO();
             vo.setId(wrong.getId());
@@ -276,14 +294,12 @@ public class AiQuizService {
             vo.setLastWrongTime(wrong.getLastWrongTime());
             vo.setIsMastered(wrong.getIsMastered());
 
-            // 查询题目文本
-            AiQuestionBank question = questionBankMapper.selectById(wrong.getQuestionId());
+            AiQuestionBank question = questionMap.get(wrong.getQuestionId());
             if (question != null) {
                 vo.setQuestion(question.getQuestion());
             }
 
-            // 查询资料名称
-            LearningMaterial material = materialMapper.selectById(wrong.getMaterialId());
+            LearningMaterial material = materialMap.get(wrong.getMaterialId());
             if (material != null) {
                 vo.setMaterialName(material.getOriginalName());
             }
@@ -431,6 +447,238 @@ public class AiQuizService {
                             .set(UserWrongQuestion::getIsMastered, 0)
                             .set(UserWrongQuestion::getLastWrongTime, LocalDateTime.now())
                             .setSql("wrong_count = wrong_count + 1"));
+        }
+    }
+
+    // ==================== 题库管理 ====================
+
+    /**
+     * 题库批次列表（按 batchId 分组，携带名称、题目数等）
+     */
+    public Map<String, Object> listBatches(int page, int size, String keyword) {
+        Long userId = UserContext.getCurrentUserId();
+
+        // 查询用户所有题库记录
+        List<AiQuestionBank> allQuestions = questionBankMapper.selectList(
+                new LambdaQueryWrapper<AiQuestionBank>()
+                        .eq(AiQuestionBank::getUserId, userId)
+                        .orderByDesc(AiQuestionBank::getCreateTime));
+
+        // 按 batchId 分组聚合
+        Map<String, List<AiQuestionBank>> grouped = allQuestions.stream()
+                .collect(Collectors.groupingBy(AiQuestionBank::getBatchId, LinkedHashMap::new, Collectors.toList()));
+
+        // 批量查询关联的资料，避免 N+1
+        Set<Long> materialIds = allQuestions.stream()
+                .map(AiQuestionBank::getMaterialId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> materialNameMap = materialIds.isEmpty() ? Map.of()
+                : materialMapper.selectBatchIds(materialIds).stream()
+                .collect(Collectors.toMap(LearningMaterial::getId, LearningMaterial::getOriginalName));
+
+        // 过滤关键词
+        List<Map<String, Object>> batchList = grouped.values().stream()
+                .map(qs -> {
+                    String batchName = qs.get(0).getBatchName();
+                    if (keyword != null && !keyword.isBlank()
+                            && (batchName == null || !batchName.contains(keyword))) {
+                        return null;
+                    }
+                    AiQuestionBank first = qs.get(0);
+                    Map<String, Object> bm = new LinkedHashMap<>();
+                    bm.put("batchId", first.getBatchId());
+                    bm.put("batchName", batchName != null ? batchName : "未命名批次");
+                    bm.put("questionCount", qs.size());
+                    bm.put("difficulty", first.getDifficulty());
+                    bm.put("createTime", first.getCreateTime());
+                    // 资料名称（从批量查询的缓存中获取）
+                    bm.put("materialName", materialNameMap.getOrDefault(first.getMaterialId(), ""));
+                    return bm;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // 分页
+        int total = batchList.size();
+        int from = (page - 1) * size;
+        int to = Math.min(from + size, total);
+        List<Map<String, Object>> pageRecords = from < total ? batchList.subList(from, to) : List.of();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("records", pageRecords);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        return result;
+    }
+
+    /**
+     * 获取批次下所有题目
+     */
+    public List<AiQuestionBank> getBatchQuestions(String batchId) {
+        Long userId = UserContext.getCurrentUserId();
+        List<AiQuestionBank> questions = questionBankMapper.selectList(
+                new LambdaQueryWrapper<AiQuestionBank>()
+                        .eq(AiQuestionBank::getBatchId, batchId)
+                        .eq(AiQuestionBank::getUserId, userId)
+                        .orderByAsc(AiQuestionBank::getId));
+        if (questions.isEmpty()) {
+            throw new BusinessException(404, "批次不存在或不属于当前用户");
+        }
+        return questions;
+    }
+
+    /**
+     * 重命名批次
+     */
+    public void renameBatch(String batchId, String name) {
+        Long userId = UserContext.getCurrentUserId();
+        verifyBatchOwnership(batchId, userId);
+        questionBankMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiQuestionBank>()
+                        .eq(AiQuestionBank::getBatchId, batchId)
+                        .eq(AiQuestionBank::getUserId, userId)
+                        .set(AiQuestionBank::getBatchName, name));
+    }
+
+    /**
+     * 删除整个批次
+     */
+    public void deleteBatch(String batchId) {
+        Long userId = UserContext.getCurrentUserId();
+        verifyBatchOwnership(batchId, userId);
+        questionBankMapper.delete(
+                new LambdaQueryWrapper<AiQuestionBank>()
+                        .eq(AiQuestionBank::getBatchId, batchId)
+                        .eq(AiQuestionBank::getUserId, userId));
+    }
+
+    /**
+     * 切换收藏状态
+     */
+    public Map<String, Object> toggleFavorite(Long questionId) {
+        Long userId = UserContext.getCurrentUserId();
+        AiQuestionBank q = questionBankMapper.selectById(questionId);
+        if (q == null || !q.getUserId().equals(userId)) {
+            throw new BusinessException(404, "题目不存在");
+        }
+        int newValue = q.getIsFavorite() != null && q.getIsFavorite() == 1 ? 0 : 1;
+        AiQuestionBank update = new AiQuestionBank();
+        update.setId(questionId);
+        update.setIsFavorite(newValue);
+        questionBankMapper.updateById(update);
+        return Map.of("isFavorite", newValue == 1);
+    }
+
+    /**
+     * 收藏题目列表
+     */
+    public List<Map<String, Object>> getFavorites(int page, int size) {
+        Long userId = UserContext.getCurrentUserId();
+        // 限制分页大小，防止恶意请求
+        size = Math.min(size, 100);
+        Page<AiQuestionBank> pageParam = new Page<>(page, size);
+        Page<AiQuestionBank> result = questionBankMapper.selectPage(pageParam,
+                new LambdaQueryWrapper<AiQuestionBank>()
+                        .eq(AiQuestionBank::getUserId, userId)
+                        .eq(AiQuestionBank::getIsFavorite, 1)
+                        .orderByDesc(AiQuestionBank::getCreateTime));
+        List<AiQuestionBank> list = result.getRecords();
+        if (list.isEmpty()) return List.of();
+
+        // 批量查询资料名称，避免 N+1
+        Set<Long> matIds = list.stream().map(AiQuestionBank::getMaterialId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> matNameMap = matIds.isEmpty() ? Map.of()
+                : materialMapper.selectBatchIds(matIds).stream()
+                .collect(Collectors.toMap(LearningMaterial::getId, LearningMaterial::getOriginalName));
+
+        return list.stream().map(q -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", q.getId());
+            m.put("batchId", q.getBatchId());
+            m.put("batchName", q.getBatchName());
+            m.put("questionType", q.getQuestionType());
+            m.put("difficulty", q.getDifficulty());
+            m.put("question", q.getQuestion());
+            m.put("options", q.getOptions());
+            m.put("answer", q.getAnswer());
+            m.put("explanation", q.getExplanation());
+            m.put("isFavorite", true);
+            m.put("materialName", matNameMap.getOrDefault(q.getMaterialId(), ""));
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 单题重新作答并判分
+     */
+    public Map<String, Object> reAnswer(Long questionId, String userAnswer) {
+        Long userId = UserContext.getCurrentUserId();
+        AiQuestionBank question = questionBankMapper.selectById(questionId);
+        if (question == null || !question.getUserId().equals(userId)) {
+            throw new BusinessException(404, "题目不存在");
+        }
+
+        boolean isCorrect;
+        String feedback = "";
+        double score = 0.0;
+
+        if ("choice".equals(question.getQuestionType()) || "judge".equals(question.getQuestionType())) {
+            isCorrect = userAnswer != null && question.getAnswer() != null &&
+                    userAnswer.trim().equalsIgnoreCase(question.getAnswer().trim());
+            score = isCorrect ? 1.0 : 0.0;
+        } else {
+            Map<String, Object> grading = gradeShortAnswer(
+                    question.getQuestion(), question.getAnswer(), userAnswer);
+            Object scoreObj = grading.get("score");
+            score = scoreObj instanceof Number ? ((Number) scoreObj).doubleValue() : 0.0;
+            isCorrect = score >= 0.6;
+            feedback = (String) grading.getOrDefault("feedback", "");
+        }
+
+        // 错题本更新（答错加入/更新，答对且之前错过则标记掌握）
+        if (!isCorrect) {
+            addToWrongBook(userId, question, userAnswer);
+        } else {
+            markIfWasWrong(userId, questionId);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("isCorrect", isCorrect);
+        result.put("correctAnswer", question.getAnswer());
+        result.put("explanation", question.getExplanation());
+        result.put("score", score);
+        if (!feedback.isEmpty()) result.put("feedback", feedback);
+        return result;
+    }
+
+    /**
+     * 如果该题在错题本中，标记为已掌握
+     */
+    private void markIfWasWrong(Long userId, Long questionId) {
+        List<UserWrongQuestion> existing = wrongQuestionMapper.selectList(
+                new LambdaQueryWrapper<UserWrongQuestion>()
+                        .eq(UserWrongQuestion::getUserId, userId)
+                        .eq(UserWrongQuestion::getQuestionId, questionId)
+                        .eq(UserWrongQuestion::getIsMastered, 0));
+        for (UserWrongQuestion w : existing) {
+            UserWrongQuestion update = new UserWrongQuestion();
+            update.setId(w.getId());
+            update.setIsMastered(1);
+            update.setMasterTime(LocalDateTime.now());
+            wrongQuestionMapper.updateById(update);
+        }
+    }
+
+    /**
+     * 校验批次归属
+     */
+    private void verifyBatchOwnership(String batchId, Long userId) {
+        Long count = questionBankMapper.selectCount(
+                new LambdaQueryWrapper<AiQuestionBank>()
+                        .eq(AiQuestionBank::getBatchId, batchId)
+                        .eq(AiQuestionBank::getUserId, userId));
+        if (count == 0) {
+            throw new BusinessException(404, "批次不存在或不属于当前用户");
         }
     }
 

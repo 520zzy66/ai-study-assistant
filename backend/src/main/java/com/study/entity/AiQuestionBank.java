@@ -24,6 +24,9 @@ public class AiQuestionBank {
     /** 批次ID */
     private String batchId;
 
+    /** 批次名称 */
+    private String batchName;
+
     /** 题目类型 choice/judge/short_answer */
     private String questionType;
 
@@ -41,6 +44,9 @@ public class AiQuestionBank {
 
     /** 答案解析 */
     private String explanation;
+
+    /** 收藏标记 0/1 */
+    private Integer isFavorite;
 
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)

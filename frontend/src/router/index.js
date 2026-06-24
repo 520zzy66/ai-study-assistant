@@ -66,6 +66,18 @@ const routes = [
         meta: { title: '学习计划' }
       },
       {
+        path: 'ai/question-bank',
+        name: 'QuestionBank',
+        component: () => import('@/views/QuestionBank.vue'),
+        meta: { title: '题库' }
+      },
+      {
+        path: 'resource/search',
+        name: 'OnlineSearch',
+        component: () => import('@/views/OnlineSearch.vue'),
+        meta: { title: '在线资源' }
+      },
+      {
         path: 'quiz/wrong',
         name: 'WrongQuestion',
         component: () => import('@/views/WrongQuestion.vue'),

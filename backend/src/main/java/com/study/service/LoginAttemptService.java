@@ -7,13 +7,6 @@ package com.study.service;
 public interface LoginAttemptService {
 
     /**
-     * 记录登录失败
-     *
-     * @param username 用户名
-     */
-    void loginFailed(String username);
-
-    /**
      * 登录成功后清除失败记录
      *
      * @param username 用户名
@@ -21,10 +14,11 @@ public interface LoginAttemptService {
     void loginSucceeded(String username);
 
     /**
-     * 判断账户是否被锁定
+     * 原子化检查锁定状态并递增失败计数
+     * 解决检查与递增之间的 TOCTOU 竞态
      *
      * @param username 用户名
-     * @return true 表示已锁定
+     * @return true 如果账户仍可登录，false 如果已被锁定
      */
-    boolean isLocked(String username);
+    boolean checkAndIncrement(String username);
 }

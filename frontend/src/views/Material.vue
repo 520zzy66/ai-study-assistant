@@ -303,6 +303,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMaterialList, uploadMaterial, deleteMaterial, getMaterialDetail, getMaterialLibrary, copyToMyLibrary } from '@/api/material'
 import { Upload, UploadFilled, Search, Document, Collection, Plus } from '@element-plus/icons-vue'
+import { formatFileSize, getStatusLabel, getStatusType } from '@/utils/format'
 import BaseCard from '@/components/common/BaseCard.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
@@ -328,12 +329,6 @@ const libraryList = ref([])
 const libraryTotal = ref(0)
 const libraryQuery = reactive({ keyword: '', category: '', page: 1, size: 10 })
 
-function formatFileSize(bytes) {
-  if (!bytes) return '-'
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
 
 function getFileIconBg(type) {
   const map = { pdf: '#fef2f2', doc: '#eff6ff', docx: '#eff6ff', epub: '#fffbeb', md: '#f3f4f6', txt: '#f3f4f6' }
@@ -345,8 +340,6 @@ function getFileIconColor(type) {
   return map[(type || '').toLowerCase()] || '#6b7280'
 }
 
-function getStatusLabel(s) { return { processing: '处理中', ready: '可用', failed: '失败' }[s] || s }
-function getStatusType(s) { return { processing: 'warning', ready: 'success', failed: 'danger' }[s] || 'info' }
 
 // ---- 我的资料 ----
 async function handleSearch() {

@@ -42,6 +42,9 @@ public class AiTask {
     /** 错误信息 */
     private String errorMsg;
 
+    /** 是否请求取消 0/1 */
+    private Integer cancelRequested;
+
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

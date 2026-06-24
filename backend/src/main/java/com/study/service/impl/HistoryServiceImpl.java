@@ -49,14 +49,14 @@ public class HistoryServiceImpl implements HistoryService {
         Long userId = UserContext.getCurrentUserId();
 
         // 1. 先查询去重的 batchId 列表（带分页）
-        // 使用 GROUP BY 避免全量加载到内存
+        // 使用子查询方式避免 only_full_group_by 问题
         Page<AiQuestionBank> batchPage = new Page<>(page, size);
         LambdaQueryWrapper<AiQuestionBank> batchWrapper = new LambdaQueryWrapper<AiQuestionBank>()
                 .select(AiQuestionBank::getBatchId)
                 .eq(AiQuestionBank::getUserId, userId)
                 .eq(materialId != null, AiQuestionBank::getMaterialId, materialId)
                 .groupBy(AiQuestionBank::getBatchId)
-                .orderByDesc(AiQuestionBank::getCreateTime);
+                .orderByDesc(AiQuestionBank::getBatchId);  // 使用 batchId 排序代替 create_time
         Page<AiQuestionBank> batchResult = questionBankMapper.selectPage(batchPage, batchWrapper);
 
         List<String> batchIds = batchResult.getRecords().stream()

@@ -31,6 +31,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # ---- Redis 缓存 ----
+  redis:
+    image: redis:7-alpine
+    container_name: ai-study-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-3002}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ---- Spring Boot 后端 ----
   backend:
     build:
@@ -41,6 +56,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: mysql
@@ -48,6 +65,8 @@ services:
       DB_NAME: ai_study
       DB_USERNAME: root
       DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
       FILE_UPLOAD_DIR: /app/uploads
@@ -70,6 +89,8 @@ services:
 
 volumes:
   mysql_data:
+    driver: local
+  redis_data:
     driver: local
   uploads_data:
     driver: local

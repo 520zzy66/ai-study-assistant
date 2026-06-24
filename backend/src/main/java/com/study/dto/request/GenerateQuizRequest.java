@@ -26,4 +26,7 @@ public class GenerateQuizRequest {
     /** 难度 easy/medium/hard */
     @Pattern(regexp = "^(easy|medium|hard)$", message = "难度必须是 easy、medium 或 hard")
     private String difficulty;
+
+    /** 批次名称（可选，不填则自动生成） */
+    private String batchName;
 }

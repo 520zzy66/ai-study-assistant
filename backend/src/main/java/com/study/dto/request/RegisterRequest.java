@@ -18,6 +18,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "密码不能为空")
     @Size(min = 6, max = 20, message = "密码6-20位")
+    @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*\\d).{6,20}$", message = "密码必须包含字母和数字")
     private String password;
 
     @Size(max = 20, message = "昵称最多20位")

@@ -60,6 +60,7 @@ const uiStore = useUiStore()
 const topNavItems = [
   { path: '/dashboard', title: '首页', icon: 'HomeFilled' },
   { path: '/material', title: '学习资料', icon: 'Document' },
+  { path: '/resource/search', title: '在线资源', icon: 'Search' },
   { path: '/ai/summary', title: 'AI 总结', icon: 'MagicStick' },
   { path: '/ai/chat', title: 'AI 问答', icon: 'ChatDotRound' },
   { path: '/ai/quiz', title: '自动出题', icon: 'EditPen' },
@@ -67,7 +68,9 @@ const topNavItems = [
 ]
 
 const bottomNavItems = [
+  { path: '/ai/question-bank', title: '题库', icon: 'Collection' },
   { path: '/quiz/wrong', title: '错题本', icon: 'Notebook' },
+  { path: '/history', title: '历史记录', icon: 'Clock' },
   { path: '/settings', title: '设置', icon: 'Setting' }
 ]
 

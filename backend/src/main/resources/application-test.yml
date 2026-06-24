@@ -12,14 +12,14 @@ spring:
     password:
     driver-class-name: org.h2.Driver
 
-  # ---- DeepSeek API（测试环境使用占位 Key） ----
+  # ---- Xiaomi MiMo API（测试环境使用占位 Key） ----
   ai:
     openai:
-      api-key: ${DEEPSEEK_API_KEY:sk-placeholder}
-      base-url: https://api.deepseek.com
+      api-key: ${AI_API_KEY}
+      base-url: https://token-plan-cn.xiaomimimo.com
       chat:
         options:
-          model: deepseek-v4-pro
+          model: mimo-v2.5
           temperature: 0.7
 
   # ---- SQL 初始化（每次启动执行 schema.sql / data.sql） ----

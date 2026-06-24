@@ -116,14 +116,17 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CopyDocument, Refresh, Download, MagicStick, Loading, CircleCheck, CircleCheckFilled } from '@element-plus/icons-vue'
+import { formatFileSize, getStatusLabel, getStatusType } from '@/utils/format'
 import { useMarkdown } from '@/composables/useMarkdown'
-import { generateSummary } from '@/api/ai'
+import { generateSummaryAsync } from '@/api/ai'
 import { loadAvailableMaterials } from '@/api/material'
+import { useTaskStore } from '@/stores/task'
 import BaseCard from '@/components/common/BaseCard.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const route = useRoute()
 const { renderMarkdown } = useMarkdown()
+const taskStore = useTaskStore()
 
 const materialList = ref([])
 const selectedMaterialId = ref('')
@@ -143,22 +146,6 @@ const selectedMaterial = computed(() => {
   return materialList.value.find(item => item.id === selectedMaterialId.value) || null
 })
 
-function formatFileSize(bytes) {
-  if (!bytes) return '-'
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
-function getStatusLabel(status) {
-  const map = { processing: '处理中', ready: '可用', failed: '失败' }
-  return map[status] || status
-}
-
-function getStatusType(status) {
-  const map = { processing: 'warning', ready: 'success', failed: 'danger' }
-  return map[status] || 'info'
-}
 
 async function handleGenerate() {
   if (!selectedMaterialId.value) {
@@ -178,34 +165,29 @@ async function handleGenerate() {
   generating.value = true
   progress.value = 0
   summary.value = ''
-
-  const timer = setInterval(() => {
-    if (progress.value < 90) {
-      progress.value += Math.floor(Math.random() * 8) + 2
-      updateStatus()
-    }
-  }, 600)
+  generateStatus.value = '正在创建任务...'
 
   try {
-    const data = await generateSummary(selectedMaterialId.value)
-    clearInterval(timer)
-    progress.value = 100
-    updateStatus()
-    summary.value = data.summary || data
-    ElMessage.success('总结生成成功')
-  } catch (error) {
-    clearInterval(timer)
-    ElMessage.error('总结生成失败')
-  } finally {
-    setTimeout(() => {
-      generating.value = false
-    }, 500)
+    const { taskId } = await generateSummaryAsync(selectedMaterialId.value)
+    taskStore.watchTask(taskId, 'summary', {
+      onProgress(pct, msg) {
+        progress.value = pct
+        generateStatus.value = msg
+      },
+      onSuccess(result) {
+        summary.value = result.summary || result
+        generating.value = false
+        ElMessage.success('总结生成成功')
+      },
+      onError(errMsg) {
+        generating.value = false
+        ElMessage.error(errMsg || '总结生成失败')
+      }
+    })
+  } catch {
+    generating.value = false
+    ElMessage.error('创建任务失败')
   }
-}
-
-function updateStatus() {
-  const step = [...generateSteps].reverse().find(s => progress.value >= s.percent)
-  generateStatus.value = step ? `${step.label}中...` : '准备中...'
 }
 
 function handleCopy() {
@@ -236,8 +218,29 @@ async function loadMaterials() {
   }
 }
 
-onMounted(() => {
-  loadMaterials()
+onMounted(async () => {
+  await loadMaterials()
+  // 恢复未完成的任务
+  const activeTask = taskStore.getFirstActiveOfType('summary')
+  if (activeTask) {
+    generating.value = true
+    generateStatus.value = '恢复任务中...'
+    taskStore.watchTask(activeTask.taskId, 'summary', {
+      onProgress(pct, msg) {
+        progress.value = pct
+        generateStatus.value = msg
+      },
+      onSuccess(result) {
+        summary.value = result.summary || result
+        generating.value = false
+        ElMessage.success('总结生成成功')
+      },
+      onError(errMsg) {
+        generating.value = false
+        ElMessage.error(errMsg || '总结生成失败')
+      }
+    })
+  }
 })
 
 watch(() => route.query.materialId, (newId) => {

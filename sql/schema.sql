@@ -31,11 +31,13 @@ CREATE TABLE IF NOT EXISTS `learning_material` (
     `error_msg` VARCHAR(500),
     `chunk_count` INT DEFAULT 0,
     `source` VARCHAR(20) DEFAULT 'user' COMMENT '资料来源 user=用户上传 system=系统预置',
+    `retry_count` INT DEFAULT 0 COMMENT '自动重试次数',
     `deleted` TINYINT DEFAULT 0,
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_user_id` (`user_id`),
-    INDEX `idx_status` (`status`)
+    INDEX `idx_status` (`status`),
+    UNIQUE KEY `uk_user_source_name` (`user_id`, `source`, `original_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习资料表';
 
 -- 3. 文档切片表
@@ -75,16 +77,19 @@ CREATE TABLE IF NOT EXISTS `ai_question_bank` (
     `user_id` BIGINT NOT NULL,
     `material_id` BIGINT NOT NULL,
     `batch_id` VARCHAR(64) NOT NULL COMMENT '批次ID',
+    `batch_name` VARCHAR(200) COMMENT '批次名称',
     `question_type` VARCHAR(20) NOT NULL COMMENT 'choice/judge/short_answer',
     `difficulty` VARCHAR(10) NOT NULL DEFAULT 'medium',
     `question` TEXT NOT NULL,
     `options` JSON COMMENT '选项JSON（选择题）',
     `answer` TEXT NOT NULL,
     `explanation` TEXT COMMENT '答案解析',
+    `is_favorite` TINYINT DEFAULT 0 COMMENT '收藏标记 0/1',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_batch_id` (`batch_id`),
     INDEX `idx_user_type` (`user_id`, `question_type`),
-    INDEX `idx_material_id` (`material_id`)
+    INDEX `idx_material_id` (`material_id`),
+    INDEX `idx_user_favorite` (`user_id`, `is_favorite`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI题库表';
 
 -- 6. 作答记录表
@@ -115,6 +120,23 @@ CREATE TABLE IF NOT EXISTS `study_plan` (
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习计划表';
+
+-- 7.1 学习计划进度表
+CREATE TABLE IF NOT EXISTS `study_plan_progress` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `plan_id` BIGINT NOT NULL COMMENT '关联 study_plan.id',
+    `user_id` BIGINT NOT NULL,
+    `day_index` INT NOT NULL COMMENT '第几天（从1开始）',
+    `completed` TINYINT DEFAULT 0 COMMENT '是否完成 0/1',
+    `actual_hours` DECIMAL(4,1) DEFAULT 0 COMMENT '实际学习时长',
+    `note` TEXT COMMENT '学习笔记',
+    `complete_time` DATETIME COMMENT '完成时间',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `uk_plan_day` (`plan_id`, `day_index`),
+    INDEX `idx_user_plan` (`user_id`, `plan_id`),
+    INDEX `idx_completed` (`plan_id`, `completed`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习计划进度表';
 
 -- 8. 错题本表
 CREATE TABLE IF NOT EXISTS `user_wrong_question` (
@@ -148,6 +170,7 @@ CREATE TABLE IF NOT EXISTS `ai_task` (
     `message` VARCHAR(500),
     `result` JSON COMMENT '任务结果',
     `error_msg` TEXT,
+    `cancel_requested` TINYINT DEFAULT 0 COMMENT '是否请求取消 0/1',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_user_id` (`user_id`),

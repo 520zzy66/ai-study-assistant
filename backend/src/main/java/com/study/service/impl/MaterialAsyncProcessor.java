@@ -95,19 +95,21 @@ public class MaterialAsyncProcessor {
 
         int retried = 0;
         for (LearningMaterial material : failedList) {
-            // 检查重试次数（通过 errorMsg 前缀判断，避免加字段）
-            String errorMsg = material.getErrorMsg();
-            int retryCount = countRetryPrefix(errorMsg);
+            // 使用数据库 retry_count 字段，避免字符串解析
+            int retryCount = material.getRetryCount() != null ? material.getRetryCount() : 0;
             if (retryCount >= MAX_RETRY) {
                 log.info("材料已达最大重试次数，跳过: materialId={}", material.getId());
                 continue;
             }
 
             log.info("自动重试: materialId={}, retry={}/{}", material.getId(), retryCount + 1, MAX_RETRY);
-            // 更新 errorMsg 标记重试次数
-            updateStatus(material.getId(), "parsing",
-                    "[自动重试 " + (retryCount + 1) + "/" + MAX_RETRY + "] " +
-                    (errorMsg != null ? errorMsg : ""));
+            // 更新重试次数
+            LearningMaterial update = new LearningMaterial();
+            update.setId(material.getId());
+            update.setStatus("parsing");
+            update.setRetryCount(retryCount + 1);
+            materialMapper.updateById(update);
+
             doProcess(material.getId(), material.getFilePath(),
                     material.getFileType(), material.getUserId());
             retried++;
@@ -116,20 +118,6 @@ public class MaterialAsyncProcessor {
         if (retried > 0) {
             log.info("定时扫描完成，已重试 {} 条失败材料", retried);
         }
-    }
-
-    /**
-     * 从 errorMsg 中提取重试次数
-     */
-    private int countRetryPrefix(String errorMsg) {
-        if (errorMsg == null) return 0;
-        int count = 0;
-        int idx = 0;
-        while ((idx = errorMsg.indexOf("[自动重试 ", idx)) != -1) {
-            count++;
-            idx++;
-        }
-        return count;
     }
 
     /**
@@ -150,9 +138,6 @@ public class MaterialAsyncProcessor {
             log.warn("材料已在处理中或已就绪，跳过重复处理: materialId={}", materialId);
             return;
         }
-
-        // 读取当前记录（包含 errorMsg 用于保留重试计数前缀）
-        LearningMaterial current = materialMapper.selectById(materialId);
 
         try {
 
@@ -203,18 +188,7 @@ public class MaterialAsyncProcessor {
         } catch (Exception e) {
             log.error("文档处理失败: materialId={}", materialId, e);
             try {
-                // 保留 errorMsg 中已有的重试前缀，追加当前错误信息
-                String existing = current != null ? current.getErrorMsg() : null;
-                String retryPrefix = "";
-                if (existing != null && existing.contains("[自动重试")) {
-                    // 提取已有的重试前缀（如 "[自动重试 1/3] 处理失败: ..." → "[自动重试 1/3] "）
-                    int idx = existing.indexOf("[自动重试");
-                    int end = existing.indexOf("] ", idx);
-                    if (end > 0) retryPrefix = existing.substring(idx, end + 2);
-                }
-                String errorMsg = (retryPrefix.isEmpty() ? "" : retryPrefix)
-                        + truncate("处理失败: " + e.getMessage(), 500 - retryPrefix.length());
-                updateStatus(materialId, "failed", errorMsg);
+                updateStatus(materialId, "failed", truncate("处理失败: " + e.getMessage(), 500));
             } catch (Exception ex) {
                 log.error("更新失败状态也失败: materialId={}", materialId, ex);
             }

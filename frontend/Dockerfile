@@ -27,11 +27,23 @@ FROM nginx:alpine
 
 LABEL maintainer="AI Study Assistant"
 
+# 创建非 root 用户运行 nginx
+RUN addgroup -S appuser && adduser -S appuser -G appuser
+
 # 复制 Nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # 复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# 设置权限
+RUN chown -R appuser:appuser /usr/share/nginx/html && \
+    chown -R appuser:appuser /var/cache/nginx && \
+    chown -R appuser:appuser /var/log/nginx && \
+    touch /var/run/nginx.pid && chown appuser:appuser /var/run/nginx.pid
+
+# 切换到非 root 用户
+USER appuser
 
 # 暴露端口
 EXPOSE 3000

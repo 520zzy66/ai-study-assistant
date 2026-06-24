@@ -241,15 +241,17 @@ async function loadActivity() {
     const chatItems = (chatRes.records || []).map(item => ({
       id: `chat-${item.id}`, type: 'chat',
       text: `提问了 "${(item.question || '问题').slice(0, 20)}..."`,
-      time: formatDate(item.createTime)
+      time: formatDate(item.createTime),
+      sortTime: item.createTime
     }))
     const quizItems = (quizRes.records || []).map(item => ({
       id: `quiz-${item.id}`, type: 'quiz',
       text: '完成了一次练习',
-      time: formatDate(item.createTime)
+      time: formatDate(item.createTime),
+      sortTime: item.createTime
     }))
     recentActivities.value = [...chatItems, ...quizItems]
-      .sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 5)
+      .sort((a, b) => new Date(b.sortTime) - new Date(a.sortTime)).slice(0, 5)
 
     const summaryStat = stats.value.find(s => s.key === 'summary')
     if (summaryStat) summaryStat.value = chatRes.total || 0

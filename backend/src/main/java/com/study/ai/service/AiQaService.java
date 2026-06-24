@@ -8,6 +8,7 @@ import com.study.ai.validator.MaterialValidator;
 import com.study.common.BusinessException;
 import com.study.common.Constants;
 import com.study.common.UserContext;
+import com.study.dto.request.QaRequest;
 import com.study.entity.AiChatHistory;
 import com.study.entity.LearningMaterial;
 import com.study.mapper.AiChatHistoryMapper;
@@ -41,12 +42,13 @@ public class AiQaService {
      *
      * @param materialId 资料ID（可为 null，null 时进行通用对话）
      * @param question   用户问题
+     * @param history    对话历史（可选）
      * @return 包含 answer、sources、conversationId 的 Map
      */
-    public Map<String, Object> ask(Long materialId, String question) {
+    public Map<String, Object> ask(Long materialId, String question, List<QaRequest.ChatMessage> history) {
         // 未选择资料 → 通用对话
         if (materialId == null) {
-            return askGeneral(question);
+            return askGeneral(question, history);
         }
 
         Long userId = UserContext.getCurrentUserId();
@@ -67,8 +69,8 @@ public class AiQaService {
         // 4. 拼接上下文
         String context = buildContext(sources);
 
-        // 5. 构建 Prompt 并调用 AI
-        String prompt = PromptTemplates.buildQaPrompt(context, question);
+        // 5. 构建 Prompt（包含对话历史）并调用 AI
+        String prompt = PromptTemplates.buildQaPromptWithHistory(context, question, history);
         String answer = aiClient.chat(prompt);
 
         // 6. 保存历史
@@ -95,13 +97,14 @@ public class AiQaService {
      * 不进行 RAG 检索，直接与 AI 对话
      *
      * @param question 用户问题
+     * @param history  对话历史（可选）
      * @return 包含 answer、conversationId 的 Map
      */
-    public Map<String, Object> askGeneral(String question) {
+    public Map<String, Object> askGeneral(String question, List<QaRequest.ChatMessage> history) {
         Long userId = UserContext.getCurrentUserId();
 
-        // 1. 构建通用对话 Prompt
-        String prompt = PromptTemplates.buildGeneralChatPrompt(question);
+        // 1. 构建通用对话 Prompt（包含对话历史）
+        String prompt = PromptTemplates.buildGeneralChatPromptWithHistory(question, history);
 
         // 2. 调用 AI
         String answer = aiClient.chat(prompt);
@@ -121,12 +124,13 @@ public class AiQaService {
      *
      * @param materialId 资料ID（可为 null，null 时进行通用对话）
      * @param question   用户问题
+     * @param history    对话历史（可选）
      * @return 流式响应 Flux
      */
-    public Flux<String> askStream(Long materialId, String question) {
+    public Flux<String> askStream(Long materialId, String question, List<QaRequest.ChatMessage> history) {
         // 未选择资料 → 通用对话
         if (materialId == null) {
-            return askStreamGeneral(question);
+            return askStreamGeneral(question, history);
         }
 
         Long userId = UserContext.getCurrentUserId();
@@ -147,35 +151,39 @@ public class AiQaService {
         // 4. 拼接上下文
         String context = buildContext(sources);
 
-        // 5. 构建 Prompt
-        String prompt = PromptTemplates.buildQaPrompt(context, question);
+        // 5. 构建 Prompt（包含对话历史）
+        String prompt = PromptTemplates.buildQaPromptWithHistory(context, question, history);
 
-        // 6. 流式调用 AI，完成后保存历史
+        // 6. 流式调用 AI（无记忆，历史已在 Prompt 中注入），完成后保存历史并追加 conversationId
         StringBuilder fullResponse = new StringBuilder();
+        String convId = UUID.randomUUID().toString().substring(0, 8);
         return aiClient.chatStream(prompt)
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> saveHistory(userId, materialId, question,
-                        fullResponse.toString(), null))
+                        fullResponse.toString(), convId))
                 .doOnError(e -> log.error("RAG 流式问答失败: materialId={}, question={}",
                         materialId, question, e))
-                .onErrorResume(e -> Flux.just("\n\n[错误: 回答生成失败，请稍后重试]"));
+                .onErrorResume(e -> Flux.just("\n\n[错误: 回答生成失败，请稍后重试]"))
+                .concatWith(Flux.just("\n\n[conversationId: " + convId + "]"));
     }
 
     /**
      * 通用流式对话（无需学习资料）
      */
-    private Flux<String> askStreamGeneral(String question) {
+    private Flux<String> askStreamGeneral(String question, List<QaRequest.ChatMessage> history) {
         Long userId = UserContext.getCurrentUserId();
 
-        String prompt = PromptTemplates.buildGeneralChatPrompt(question);
+        String prompt = PromptTemplates.buildGeneralChatPromptWithHistory(question, history);
         StringBuilder fullResponse = new StringBuilder();
+        String convId = UUID.randomUUID().toString().substring(0, 8);
 
         return aiClient.chatStream(prompt)
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> saveHistory(userId, null, question,
-                        fullResponse.toString(), null))
+                        fullResponse.toString(), convId))
                 .doOnError(e -> log.error("通用流式对话失败: question={}", question, e))
-                .onErrorResume(e -> Flux.just("\n\n[错误: 回答生成失败，请稍后重试]"));
+                .onErrorResume(e -> Flux.just("\n\n[错误: 回答生成失败，请稍后重试]"))
+                .concatWith(Flux.just("\n\n[conversationId: " + convId + "]"));
     }
 
     /**

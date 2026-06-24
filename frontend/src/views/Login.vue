@@ -156,7 +156,8 @@ const registerRules = {
 }
 
 async function handleLogin() {
-  await formRef.value.validate()
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
   loading.value = true
   try {
     await userStore.login(form.username, form.password)
@@ -170,7 +171,8 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-  await registerFormRef.value.validate()
+  const valid = await registerFormRef.value.validate().catch(() => false)
+  if (!valid) return
   registerLoading.value = true
   try {
     await userStore.register(registerForm)

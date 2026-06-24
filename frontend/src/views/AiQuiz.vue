@@ -26,6 +26,10 @@
                   <el-option label="困难" value="hard" />
                 </el-select>
               </div>
+              <div class="config-field" style="flex:1; min-width:160px;">
+                <label class="config-label">批次名称（可选）</label>
+                <el-input v-model="quizForm.batchName" placeholder="自动生成：资料名+时间" size="small" clearable />
+              </div>
               <div class="config-field" style="width:100px;">
                 <label class="config-label">单选题</label>
                 <el-input-number v-model="quizForm.choiceCount" :min="0" :max="10" style="width:100%;" size="small" />
@@ -54,13 +58,45 @@
           </div>
         </BaseCard>
 
+        <!-- Generating Progress -->
+        <BaseCard v-if="generating" class="generate-progress-card">
+          <div class="generate-progress-wrap">
+            <el-icon :size="32" class="spinning" color="var(--color-primary)"><Loading /></el-icon>
+            <div class="generate-progress-info">
+              <p class="generate-progress-title">AI 正在生成题目...</p>
+              <p class="generate-progress-msg">{{ generateMsg }}</p>
+              <div class="generate-progress-bar">
+                <div class="generate-progress-fill" :style="{ width: generateProgress + '%' }" />
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+
+        <!-- Generate Error -->
+        <BaseCard v-if="generateError && !generating" class="generate-error-card">
+          <div class="generate-error-wrap">
+            <el-icon :size="32" color="var(--color-error)"><CircleCloseFilled /></el-icon>
+            <div class="generate-error-info">
+              <p class="generate-error-title">题目生成失败</p>
+              <p class="generate-error-msg">{{ generateError }}</p>
+              <div class="generate-error-actions">
+                <el-button type="primary" @click="handleGenerate">
+                  <el-icon><Refresh /></el-icon>
+                  重新生成
+                </el-button>
+                <el-button @click="generateError = ''">关闭</el-button>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+
         <!-- Empty -->
-        <div v-if="questions.length === 0 && !generating" class="quiz-empty-area">
+        <div v-if="questions.length === 0 && !generating && !generateError" class="quiz-empty-area">
           <AppEmpty icon="EditPen" title="选择资料开始出题" description="AI 将根据学习资料自动生成练习题" />
         </div>
 
         <!-- Questions -->
-        <div v-else class="questions-area">
+        <div v-else-if="questions.length > 0" class="questions-area">
           <div
             v-for="(q, index) in questions"
             :key="index"
@@ -209,19 +245,24 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MagicStick, Loading, Check, Close, Refresh, Flag } from '@element-plus/icons-vue'
-import { generateQuiz, submitAnswers } from '@/api/ai'
+import { MagicStick, Loading, Check, Close, Refresh, Flag, CircleCloseFilled } from '@element-plus/icons-vue'
+import { generateQuiz, submitAnswers, generateQuizAsync } from '@/api/ai'
 import { loadAvailableMaterials } from '@/api/material'
+import { useTaskStore } from '@/stores/task'
 import BaseCard from '@/components/common/BaseCard.vue'
 import ProgressRing from '@/components/common/ProgressRing.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const route = useRoute()
+const taskStore = useTaskStore()
 const materialList = ref([])
 const questions = ref([])
 const userAnswers = ref([])
 const showAnswers = ref(false)
 const generating = ref(false)
+const generateProgress = ref(0)
+const generateMsg = ref('')
+const generateError = ref('')
 const batchId = ref('')
 const currentQuestionIndex = ref(0)
 
@@ -231,6 +272,7 @@ let timerInterval = null
 
 const quizForm = reactive({
   materialId: '',
+  batchName: '',
   choiceCount: 5,
   judgeCount: 3,
   shortAnswerCount: 2,
@@ -278,29 +320,52 @@ function stopTimer() { clearInterval(timerInterval) }
 async function handleGenerate() {
   if (!quizForm.materialId) { ElMessage.warning('请先选择资料'); return }
   generating.value = true
+  generateError.value = ''
+  generateProgress.value = 0
+  generateMsg.value = '正在创建任务...'
   try {
-    const data = await generateQuiz(quizForm.materialId, quizForm)
-    questions.value = data.questions || []
-    batchId.value = data.batchId || ''
-    userAnswers.value = new Array(questions.value.length).fill('')
-    showAnswers.value = false
-    currentQuestionIndex.value = 0
-    startTimer()
-    ElMessage.success(`成功生成 ${questions.value.length} 道题目`)
-  } catch { questions.value = [] }
-  finally { generating.value = false }
+    const { taskId } = await generateQuizAsync(quizForm.materialId, quizForm)
+    taskStore.watchTask(taskId, 'quiz', {
+      onProgress(pct, msg) {
+        generateProgress.value = pct
+        generateMsg.value = msg
+      },
+      onSuccess(result) {
+        questions.value = result.questions || []
+        batchId.value = result.batchId || ''
+        userAnswers.value = new Array(questions.value.length).fill('')
+        showAnswers.value = false
+        currentQuestionIndex.value = 0
+        startTimer()
+        generating.value = false
+        generateError.value = ''
+        ElMessage.success(`成功生成 ${questions.value.length} 道题目`)
+      },
+      onError(errMsg) {
+        generating.value = false
+        generateError.value = errMsg || '题目生成失败，请稍后重试'
+        ElMessage.error(errMsg || '题目生成失败')
+      }
+    })
+  } catch (err) {
+    generating.value = false
+    generateError.value = err?.message || '创建任务失败，请检查网络连接'
+    ElMessage.error('创建任务失败')
+  }
 }
 
 async function handleSubmit() {
   const unanswered = userAnswers.value.findIndex(a => !a && a !== 0)
   if (unanswered !== -1) { ElMessage.warning(`请完成第 ${unanswered + 1} 题`); return }
-  stopTimer()
   try {
     const answers = questions.value.map((q, i) => ({ questionId: q.id || i, answer: userAnswers.value[i] }))
     if (batchId.value) await submitAnswers(batchId.value, answers)
+    stopTimer()
     showAnswers.value = true
     ElMessage.success('答案已提交')
-  } catch { /* handled by interceptor */ }
+  } catch (err) {
+    ElMessage.error(err?.message || '提交失败，请重试')
+  }
 }
 
 function handleReset() {
@@ -325,6 +390,34 @@ onMounted(async () => {
   const queryId = route.query.materialId
   if (queryId) {
     quizForm.materialId = Number(queryId)
+  }
+  // 恢复未完成的任务
+  const activeTask = taskStore.getFirstActiveOfType('quiz')
+  if (activeTask) {
+    generating.value = true
+    generateMsg.value = '恢复任务中...'
+    taskStore.watchTask(activeTask.taskId, 'quiz', {
+      onProgress(pct, msg) {
+        generateProgress.value = pct
+        generateMsg.value = msg
+      },
+      onSuccess(result) {
+        questions.value = result.questions || []
+        batchId.value = result.batchId || ''
+        userAnswers.value = new Array(questions.value.length).fill('')
+        showAnswers.value = false
+        currentQuestionIndex.value = 0
+        startTimer()
+        generating.value = false
+        generateError.value = ''
+        ElMessage.success(`成功生成 ${questions.value.length} 道题目`)
+      },
+      onError(errMsg) {
+        generating.value = false
+        generateError.value = errMsg || '任务恢复失败，请重新生成'
+        ElMessage.error(errMsg || '题目生成失败')
+      }
+    })
   }
 })
 
@@ -411,6 +504,71 @@ onUnmounted(() => stopTimer())
 
 .quiz-empty-area {
   padding: 48px 0;
+}
+
+/* Generate Progress */
+.generate-progress-card { margin-bottom: 0; }
+.generate-progress-card :deep(.card-body) { padding: 24px; }
+.generate-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.generate-progress-info {
+  flex: 1;
+  min-width: 0;
+}
+.generate-progress-title {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 6px 0;
+}
+.generate-progress-msg {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  margin: 0 0 12px 0;
+}
+.generate-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-container);
+  overflow: hidden;
+}
+.generate-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-primary);
+  transition: width 0.5s var(--ease-default);
+}
+
+/* Generate Error */
+.generate-error-card { margin-bottom: 0; }
+.generate-error-card :deep(.card-body) { padding: 24px; }
+.generate-error-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.generate-error-info {
+  flex: 1;
+  min-width: 0;
+}
+.generate-error-title {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-error);
+  margin: 0 0 6px 0;
+}
+.generate-error-msg {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  margin: 0 0 16px 0;
+}
+.generate-error-actions {
+  display: flex;
+  gap: 10px;
 }
 
 /* Questions */

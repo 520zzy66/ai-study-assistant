@@ -38,3 +38,14 @@ logs/
 
 # === Playwright MCP ===
 .playwright-mcp/
+
+# === 审查报告 ===
+code-review-report/
+
+# === 截图文件 ===
+*.png
+*.jpg
+*.jpeg
+
+# === 日志目录 ===
+log/

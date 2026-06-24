@@ -138,6 +138,31 @@ public class AiClient {
     }
 
     /**
+     * 流式调用 AI（带对话记忆）
+     * 用于多轮对话场景，如 RAG 问答的流式输出
+     *
+     * @param prompt 提示词
+     * @param userId 用户 ID，用于隔离对话历史
+     * @return 流式响应
+     */
+    public Flux<String> chatStreamWithMemory(String prompt, Long userId) {
+        log.info("AI 流式调用（带记忆），userId: {}, prompt 长度: {}", userId, prompt.length());
+        String conversationId = "user_" + userId;
+        return chatClient.prompt()
+                .user(prompt)
+                .advisors(new MessageChatMemoryAdvisor(
+                        chatMemory, conversationId, AiConfig.CHAT_MEMORY_SIZE))
+                .stream()
+                .content()
+                .onBackpressureBuffer(256)
+                .limitRate(64)
+                .onErrorMap(e -> {
+                    log.error("AI 流式调用失败: {}", e.getMessage(), e);
+                    return new BusinessException(3003, "AI 服务暂时不可用，请稍后重试");
+                });
+    }
+
+    /**
      * 获取完整的 ChatResponse（包含元数据）
      *
      * @param prompt 提示词
