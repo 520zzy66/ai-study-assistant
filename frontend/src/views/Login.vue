@@ -1,37 +1,62 @@
 <template>
   <div class="login-page">
-    <!-- Background Decorations -->
-    <div class="bg-decoration">
-      <div class="bg-blob bg-blob-1" />
-      <div class="bg-blob bg-blob-2" />
-      <div class="bg-blob bg-blob-3" />
-      <div class="bg-grid" />
-    </div>
-
     <!-- Login Card -->
     <div class="login-card">
       <!-- Left: Brand -->
       <div class="login-brand">
         <div class="brand-content">
-          <div class="brand-mark">
-            <el-icon :size="32"><Reading /></el-icon>
+          <div class="brand-icon-row">
+            <div class="brand-mark">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+              </svg>
+            </div>
+            <span class="brand-badge">AI 驱动</span>
           </div>
-          <h1 class="brand-title">AI Study<br />Assistant</h1>
+          <h1 class="brand-title">AI Study<br/>Assistant</h1>
           <p class="brand-desc">
-            上传学习资料，AI 帮你总结知识、生成题目、制定计划。让学习更高效，让知识更有条理。
+            你的智能学习伙伴。上传资料，AI 帮你总结知识、答疑解惑、生成练习、规划学习路径。
           </p>
           <div class="brand-features">
-            <div class="feature-item">
-              <div class="feature-dot" />
-              <span>AI 智能总结文档</span>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <div class="feature-name">智能总结</div>
+                <div class="feature-hint">一键提取文档核心知识</div>
+              </div>
             </div>
-            <div class="feature-item">
-              <div class="feature-dot" />
-              <span>基于资料的问答</span>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <div class="feature-name">文档问答</div>
+                <div class="feature-hint">基于资料精准答疑</div>
+              </div>
             </div>
-            <div class="feature-item">
-              <div class="feature-dot" />
-              <span>自动出题与判分</span>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </div>
+              <div>
+                <div class="feature-name">自动出题</div>
+                <div class="feature-hint">AI 出题 + 智能判分</div>
+              </div>
             </div>
           </div>
         </div>
@@ -114,7 +139,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Reading } from '@element-plus/icons-vue'
+import { User, Lock } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -192,153 +217,143 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px;
-  background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 40%, #eff6ff 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-/* ---- Background Decoration ---- */
-.bg-decoration {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Soft glowing orbs */
-.bg-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-}
-
-.bg-blob-1 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
-  top: -15%;
-  right: -8%;
-  animation: float-blob 20s ease-in-out infinite;
-}
-
-.bg-blob-2 {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
-  bottom: -12%;
-  left: -6%;
-  animation: float-blob 24s ease-in-out infinite reverse;
-}
-
-.bg-blob-3 {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: float-blob 18s ease-in-out infinite 5s;
-}
-
-@keyframes float-blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -20px) scale(1.05); }
-  50% { transform: translate(-15px, 25px) scale(0.95); }
-  75% { transform: translate(-25px, -15px) scale(1.02); }
-}
-
-/* Subtle geometric grid */
-.bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(37, 99, 235, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
+  padding: var(--space-8);
+  background: var(--surface-page);
 }
 
 /* Card */
 .login-card {
   display: flex;
   width: 100%;
-  max-width: 1200px;
-  min-height: 700px;
+  max-width: 960px;
   background: var(--surface-card);
   border-radius: var(--radius-xl);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
-  position: relative;
-  z-index: 1;
+  border: 1px solid var(--outline);
 }
 
 /* ---- Left Brand ---- */
 .login-brand {
-  flex: 1;
-  background: linear-gradient(135deg, var(--blue-50) 0%, #dbeafe 100%);
+  width: 420px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 80px 72px;
+  padding: var(--space-12) var(--space-10);
   position: relative;
+  overflow: hidden;
+}
+
+/* Subtle dot pattern */
+.login-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .brand-content {
-  max-width: 340px;
+  position: relative;
+  z-index: 1;
+  max-width: 320px;
+}
+
+.brand-icon-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
 }
 
 .brand-mark {
-  width: 64px;
-  height: 64px;
-  background: var(--color-primary);
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 32px;
+  backdrop-filter: blur(4px);
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-full);
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(4px);
 }
 
 .brand-title {
-  font-size: 42px;
+  font-size: 36px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: #fff;
   letter-spacing: -0.03em;
   line-height: 1.15;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .brand-desc {
   font-size: var(--text-body);
   line-height: 1.7;
-  color: var(--color-text-secondary);
-  margin-bottom: 32px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: var(--space-8);
 }
 
+/* Feature cards */
 .brand-features {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.feature-item {
+.feature-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: var(--text-ui);
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  transition: background var(--duration-fast) var(--ease-default);
 }
 
-.feature-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--color-primary);
-  border-radius: 50%;
+.feature-card:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
   flex-shrink: 0;
+}
+
+.feature-name {
+  font-size: var(--text-ui);
+  font-weight: 600;
+  color: #fff;
+}
+
+.feature-hint {
+  font-size: var(--text-small);
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
 }
 
 /* ---- Right Form ---- */
@@ -347,13 +362,8 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 80px 72px;
+  padding: var(--space-12) var(--space-10);
   background: var(--surface-card);
-}
-
-.form-content {
-  width: 100%;
-  max-width: 380px;
 }
 
 .form-content {
@@ -362,7 +372,7 @@ async function handleRegister() {
 }
 
 .form-header {
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
 }
 
 .form-title {
@@ -370,18 +380,18 @@ async function handleRegister() {
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .form-subtitle {
   font-size: var(--text-body);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .login-form :deep(.el-form-item) {
@@ -391,7 +401,7 @@ async function handleRegister() {
 .form-options {
   display: flex;
   justify-content: flex-start;
-  margin-top: -4px;
+  margin-top: calc(-1 * var(--space-1));
 }
 
 .login-btn {
@@ -399,45 +409,44 @@ async function handleRegister() {
   height: 48px !important;
   font-size: var(--text-body) !important;
   font-weight: 600 !important;
-  margin-top: 4px;
+  margin-top: var(--space-1);
+  border-radius: var(--radius-md) !important;
+  letter-spacing: 0.02em;
 }
 
 .login-footer {
   text-align: center;
-  margin-top: 24px;
+  margin-top: var(--space-6);
   font-size: var(--text-ui);
 }
 
 .footer-text {
-  color: var(--color-text-secondary);
-  margin-right: 4px;
+  color: var(--color-text-tertiary);
+  margin-right: var(--space-1);
 }
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .login-page {
-    padding: 16px;
-    background-image: none;
+    padding: var(--space-4);
   }
 
   .login-card {
     flex-direction: column;
     max-width: 420px;
-    min-height: auto;
   }
 
   .login-brand {
-    padding: 32px 24px 16px;
-    background: var(--surface-card);
+    width: 100%;
+    padding: var(--space-8) var(--space-6);
   }
 
-  .brand-mark { width: 44px; height: 44px; margin-bottom: 16px; }
-  .brand-title { font-size: 24px; }
-  .brand-desc { font-size: var(--text-ui); margin-bottom: 20px; }
+  .brand-title { font-size: 28px; }
+  .brand-desc { font-size: var(--text-ui); margin-bottom: var(--space-5); }
   .brand-features { display: none; }
 
   .login-form-area {
-    padding: 16px 24px 32px;
+    padding: var(--space-6);
   }
 }
 </style>

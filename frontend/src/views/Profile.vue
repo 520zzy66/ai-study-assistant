@@ -1,11 +1,11 @@
 <template>
   <div class="profile-page">
-    <div class="page-header">
-      <h2>用户中心</h2>
-      <p>管理你的个人信息</p>
-    </div>
+    <BasePageHeader
+      title="用户中心"
+      description="管理你的个人信息"
+    />
 
-    <el-card class="profile-card">
+    <BaseCard class="profile-card" :padding="'lg'">
       <div class="profile-avatar-section">
         <el-avatar :size="80" class="profile-avatar">
           {{ (userStore.userInfo?.nickname || '用')[0] }}
@@ -31,7 +31,7 @@
       <div class="profile-actions">
         <el-button type="primary" @click="handleSave">保存修改</el-button>
       </div>
-    </el-card>
+    </BaseCard>
   </div>
 </template>
 
@@ -40,6 +40,8 @@ import { reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import api from '@/api'
+import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 
 const userStore = useUserStore()
 
@@ -91,7 +93,7 @@ async function handleSave() {
 }
 
 .profile-card {
-  padding: var(--space-6);
+  border-radius: var(--radius-lg);
 }
 
 .profile-avatar-section {

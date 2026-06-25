@@ -1,9 +1,9 @@
 <template>
   <div class="material-page">
-    <div class="page-header">
-      <h2>学习资料</h2>
-      <p>管理你的学习资料，支持 AI 总结、问答和出题</p>
-    </div>
+    <BasePageHeader
+      title="学习资料"
+      description="管理你的学习资料，支持 AI 总结、问答和出题"
+    />
 
     <!-- Tabs -->
     <div class="material-tabs">
@@ -305,6 +305,7 @@ import { getMaterialList, uploadMaterial, deleteMaterial, getMaterialDetail, get
 import { Upload, UploadFilled, Search, Document, Collection, Plus } from '@element-plus/icons-vue'
 import { formatFileSize, getStatusLabel, getStatusType } from '@/utils/format'
 import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const router = useRouter()

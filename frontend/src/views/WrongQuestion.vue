@@ -1,11 +1,11 @@
 <template>
   <div class="wrong-question-page">
-    <div class="page-header">
-      <h2>错题本</h2>
-      <p>回顾错题，针对性复习，巩固薄弱知识点</p>
-    </div>
+    <BasePageHeader
+      title="错题本"
+      description="回顾错题，针对性复习，巩固薄弱知识点"
+    />
 
-    <el-card shadow="never" class="wrong-question-card">
+    <BaseCard class="wrong-question-card" :padding="'none'">
       <!-- Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
@@ -101,7 +101,7 @@
           @current-change="handleSearch"
         />
       </div>
-    </el-card>
+    </BaseCard>
 
     <!-- Detail Drawer -->
     <el-drawer v-model="showDetail" title="错题详情" size="480px">
@@ -142,6 +142,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getWrongQuestions, markWrongQuestionMastered } from '@/api/quiz'
 import { loadReadyMaterials } from '@/api/material'
+import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const loading = ref(false)
@@ -229,7 +231,7 @@ onMounted(() => {
   border-radius: var(--radius-lg);
 }
 
-.wrong-question-card :deep(.el-card__body) {
+.wrong-question-card :deep(.card-body) {
   padding: var(--space-5);
 }
 

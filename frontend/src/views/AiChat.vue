@@ -985,54 +985,35 @@ watch(() => route.query.materialId, newId => {
 </script>
 
 <style scoped>
-/* 设计系统变量 - 使用 :global 确保 CSS 变量应用到 :root */
-:global(:root) {
-  --sidebar-width: 280px;
-  --sidebar-collapsed-width: 60px;
-  --header-height: 56px;
-  --input-min-height: 120px;
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc;
-  --color-bg-sidebar: #1e293b;
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-sidebar: #e2e8f0;
-  --color-border: #e5e7eb;
-  --color-border-light: #f1f5f9;
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-user-bubble: #2563eb;
-  --color-assistant-bubble: #f1f5f9;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
-  --shadow-sm: 0 2px 6px rgba(0,0,0,0.06);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
-}
-
 .chat-container {
+  --chat-sidebar-width: 280px;
+  --chat-sidebar-collapsed-width: 60px;
+  --chat-header-height: 56px;
+  --chat-user-bubble: var(--color-primary);
+  --chat-assistant-bubble: var(--slate-100);
+
   display: flex;
   height: calc(100vh - 120px);
-  background: var(--color-bg-primary);
+  background: var(--surface-card);
   overflow: hidden;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--outline);
 }
 
-/* 左侧会话管理侧边栏 */
+/* 左侧会话管理侧边栏 — 浅色系，与全局一致 */
 .chat-sidebar {
-  width: var(--sidebar-width);
-  background: var(--color-bg-sidebar);
+  width: var(--chat-sidebar-width);
+  background: var(--surface-page);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
   flex-shrink: 0;
   z-index: 10;
+  border-right: 1px solid var(--outline);
 }
 
 .chat-sidebar.collapsed {
-  width: var(--sidebar-collapsed-width);
+  width: var(--chat-sidebar-collapsed-width);
 }
 
 /* 品牌区 */
@@ -1042,7 +1023,7 @@ watch(() => route.query.materialId, newId => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid var(--outline-variant);
 }
 
 .brand-content {
@@ -1055,12 +1036,13 @@ watch(() => route.query.materialId, newId => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #fff;
+  color: var(--color-primary);
 }
 
 .brand-name {
   font-size: 16px;
   font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .collapse-btn {
@@ -1068,8 +1050,8 @@ watch(() => route.query.materialId, newId => {
   height: 32px;
   border-radius: var(--radius-sm);
   border: none;
-  background: rgba(255,255,255,0.1);
-  color: var(--color-text-sidebar);
+  background: var(--surface-hover);
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1078,7 +1060,8 @@ watch(() => route.query.materialId, newId => {
 }
 
 .collapse-btn:hover {
-  background: rgba(255,255,255,0.2);
+  background: var(--surface-container);
+  color: var(--color-text-primary);
 }
 
 /* 新建对话按钮 */
@@ -1094,9 +1077,9 @@ watch(() => route.query.materialId, newId => {
   width: 100%;
   height: 44px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255,255,255,0.2);
-  background: transparent;
-  color: var(--color-text-sidebar);
+  border: 1px solid var(--outline);
+  background: var(--surface-card);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -1104,12 +1087,13 @@ watch(() => route.query.materialId, newId => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .new-chat-btn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.3);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .new-chat-btn.icon-only {
@@ -1134,7 +1118,7 @@ watch(() => route.query.materialId, newId => {
 }
 
 .sidebar-conversations::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
+  background: var(--outline);
   border-radius: 4px;
 }
 
@@ -1146,7 +1130,7 @@ watch(() => route.query.materialId, newId => {
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: rgba(255,255,255,0.5);
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1158,16 +1142,16 @@ watch(() => route.query.materialId, newId => {
   padding: 10px 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--duration-fast) var(--ease-default);
   position: relative;
 }
 
 .conversation-item:hover {
-  background: rgba(255,255,255,0.1);
+  background: var(--surface-hover);
 }
 
 .conversation-item.active {
-  background: rgba(255,255,255,0.15);
+  background: var(--surface-active);
 }
 
 .conversation-item.active::before {
@@ -1178,7 +1162,7 @@ watch(() => route.query.materialId, newId => {
   transform: translateY(-50%);
   width: 3px;
   height: 24px;
-  background: var(--color-accent);
+  background: var(--color-primary);
   border-radius: 0 4px 4px 0;
 }
 
@@ -1186,11 +1170,11 @@ watch(() => route.query.materialId, newId => {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.1);
+  background: var(--surface-container);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-sidebar);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
@@ -1202,7 +1186,7 @@ watch(() => route.query.materialId, newId => {
 .conversation-title {
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1210,7 +1194,7 @@ watch(() => route.query.materialId, newId => {
 
 .conversation-preview {
   font-size: 12px;
-  color: rgba(255,255,255,0.6);
+  color: var(--color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1232,7 +1216,7 @@ watch(() => route.query.materialId, newId => {
   border-radius: var(--radius-sm);
   border: none;
   background: transparent;
-  color: rgba(255,255,255,0.6);
+  color: var(--color-text-tertiary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1241,8 +1225,8 @@ watch(() => route.query.materialId, newId => {
 }
 
 .more-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--surface-container);
+  color: var(--color-text-primary);
 }
 
 .conversations-empty {
@@ -1251,7 +1235,7 @@ watch(() => route.query.materialId, newId => {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: rgba(255,255,255,0.4);
+  color: var(--color-text-disabled);
 }
 
 .conversations-empty p {
@@ -1262,7 +1246,7 @@ watch(() => route.query.materialId, newId => {
 /* 底部用户/设置区 */
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid var(--outline-variant);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1278,17 +1262,17 @@ watch(() => route.query.materialId, newId => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.1);
+  background: var(--surface-active);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-sidebar);
+  color: var(--color-primary);
 }
 
 .user-name {
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .footer-actions {
@@ -1302,7 +1286,7 @@ watch(() => route.query.materialId, newId => {
   border-radius: var(--radius-sm);
   border: none;
   background: transparent;
-  color: rgba(255,255,255,0.6);
+  color: var(--color-text-tertiary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1311,8 +1295,8 @@ watch(() => route.query.materialId, newId => {
 }
 
 .icon-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--surface-hover);
+  color: var(--color-text-primary);
 }
 
 /* 右侧主对话工作区 */
@@ -1321,18 +1305,18 @@ watch(() => route.query.materialId, newId => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--color-bg-primary);
+  background: var(--surface-card);
 }
 
 /* 顶部对话标题栏 */
 .chat-header {
-  height: var(--header-height);
+  height: var(--chat-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--outline);
+  background: var(--surface-card);
 }
 
 .header-left {
@@ -1341,7 +1325,7 @@ watch(() => route.query.materialId, newId => {
 }
 
 .chat-title {
-  font-size: 18px;
+  font-size: var(--text-heading-3);
   font-weight: 600;
   color: var(--color-text-primary);
   cursor: pointer;
@@ -1351,7 +1335,7 @@ watch(() => route.query.materialId, newId => {
 }
 
 .chat-title:hover {
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .title-input {
@@ -1359,9 +1343,9 @@ watch(() => route.query.materialId, newId => {
   max-width: 400px;
   height: 36px;
   padding: 0 12px;
-  border: 2px solid var(--color-accent);
+  border: 2px solid var(--color-primary);
   border-radius: var(--radius-sm);
-  font-size: 18px;
+  font-size: var(--text-heading-3);
   font-weight: 600;
   color: var(--color-text-primary);
   outline: none;
@@ -1389,23 +1373,23 @@ watch(() => route.query.materialId, newId => {
   gap: 6px;
   padding: 6px 12px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-primary);
+  border: 1px solid var(--outline);
+  background: var(--surface-card);
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--text-small);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .search-toggle:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .search-toggle.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 /* 中央消息流区域 */
@@ -1425,12 +1409,12 @@ watch(() => route.query.materialId, newId => {
 }
 
 .messages-area::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--outline);
   border-radius: 6px;
 }
 
 .messages-area::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  background: var(--slate-300);
 }
 
 /* 欢迎屏幕 */
@@ -1447,24 +1431,24 @@ watch(() => route.query.materialId, newId => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  background: var(--blue-50);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
+  color: var(--color-primary);
   margin-bottom: 24px;
 }
 
 .welcome-screen h2 {
-  font-size: 28px;
+  font-size: var(--text-heading-1);
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0 0 12px 0;
 }
 
 .welcome-desc {
-  font-size: 16px;
-  color: var(--color-text-secondary);
+  font-size: var(--text-body);
+  color: var(--color-text-tertiary);
   margin: 0 0 40px 0;
   text-align: center;
 }
@@ -1483,25 +1467,21 @@ watch(() => route.query.materialId, newId => {
   gap: 10px;
   padding: 16px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-primary);
+  border: 1px solid var(--outline);
+  background: var(--surface-card);
   color: var(--color-text-secondary);
-  font-size: 14px;
+  font-size: var(--text-ui);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
   text-align: left;
 }
 
 .question-card:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: #f0f7ff;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.question-card el-icon {
-  color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
 }
 
 /* 消息列表 */
@@ -1541,10 +1521,10 @@ watch(() => route.query.materialId, newId => {
 .message-user .user-bubble {
   max-width: 70%;
   padding: 14px 18px;
-  background: var(--color-user-bubble);
-  color: #fff;
+  background: var(--chat-user-bubble);
+  color: var(--color-on-primary);
   border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
-  font-size: 15px;
+  font-size: var(--text-body);
   line-height: 1.6;
   word-break: break-word;
 }
@@ -1613,11 +1593,11 @@ watch(() => route.query.materialId, newId => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #dbeafe;
+  background: var(--blue-100);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -1631,11 +1611,11 @@ watch(() => route.query.materialId, newId => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--color-on-primary);
   flex-shrink: 0;
 }
 
@@ -1646,9 +1626,9 @@ watch(() => route.query.materialId, newId => {
 
 .message-assistant .message-text {
   padding: 16px 18px;
-  background: var(--color-assistant-bubble);
+  background: var(--chat-assistant-bubble);
   border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg);
-  font-size: 15px;
+  font-size: var(--text-body);
   line-height: 1.8;
   color: var(--color-text-primary);
 }
@@ -1662,15 +1642,15 @@ watch(() => route.query.materialId, newId => {
 }
 
 .message-assistant .message-text :deep(code) {
-  background: rgba(0,0,0,0.06);
+  background: var(--surface-container);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--text-ui);
 }
 
 .message-assistant .message-text :deep(pre) {
-  background: #1e293b;
-  color: #e2e8f0;
+  background: var(--slate-800);
+  color: var(--slate-100);
   padding: 16px;
   border-radius: var(--radius-md);
   overflow-x: auto;
@@ -1701,17 +1681,17 @@ watch(() => route.query.materialId, newId => {
   border-radius: var(--radius-sm);
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .action-btn:hover {
-  background: var(--color-bg-secondary);
-  color: var(--color-accent);
+  background: var(--surface-hover);
+  color: var(--color-primary);
 }
 
 /* 打字指示器 */
@@ -1719,7 +1699,7 @@ watch(() => route.query.materialId, newId => {
   display: flex;
   gap: 6px;
   padding: 20px 18px;
-  background: var(--color-assistant-bubble);
+  background: var(--chat-assistant-bubble);
   border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg);
 }
 
@@ -1727,7 +1707,7 @@ watch(() => route.query.materialId, newId => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-text-secondary);
+  background: var(--color-text-tertiary);
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -1755,15 +1735,15 @@ watch(() => route.query.materialId, newId => {
 }
 
 .system-banner.interrupted {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning-on);
 }
 
 .system-banner.error {
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+  color: var(--color-error-on);
 }
 
 .banner-btn {
@@ -1777,12 +1757,12 @@ watch(() => route.query.materialId, newId => {
 }
 
 .banner-btn:not(.secondary) {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .banner-btn:not(.secondary):hover {
-  background: var(--color-accent-hover);
+  background: var(--color-primary-hover);
 }
 
 .banner-btn.secondary {
@@ -1791,7 +1771,7 @@ watch(() => route.query.materialId, newId => {
 }
 
 .banner-btn.secondary:hover {
-  background: rgba(0,0,0,0.05);
+  background: var(--state-hover);
 }
 
 /* 标题栏资料选择器 */
@@ -1799,10 +1779,10 @@ watch(() => route.query.materialId, newId => {
   width: 180px;
 }
 
-/* 底部输入区域 - DeepSeek 风格 */
+/* 底部输入区域 */
 .input-area {
   padding: 0 24px 24px;
-  background: var(--color-bg-primary);
+  background: var(--surface-card);
 }
 
 .input-wrapper {
@@ -1822,11 +1802,11 @@ watch(() => route.query.materialId, newId => {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: #e8f4fd;
-  border: 1px solid #b8dff7;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #1a73e8;
+  background: var(--color-primary-light);
+  border: 1px solid var(--blue-200);
+  border-radius: var(--radius-full);
+  font-size: var(--text-small);
+  color: var(--color-primary);
   animation: fadeIn 0.2s ease;
 }
 
@@ -1848,7 +1828,7 @@ watch(() => route.query.materialId, newId => {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: #1a73e8;
+  color: var(--color-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1857,28 +1837,28 @@ watch(() => route.query.materialId, newId => {
 }
 
 .material-tag .tag-close:hover {
-  background: rgba(26, 115, 232, 0.15);
+  background: var(--state-hover);
 }
 
 .material-tag.processing {
-  background: #fff8e1;
-  border-color: #ffe082;
-  color: #f57f17;
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+  color: var(--color-warning-on);
 }
 
 .tag-status {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  color: #f57f17;
+  font-size: var(--text-micro);
+  color: var(--color-warning-on);
 }
 
 .dot-pulse {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f57f17;
+  background: var(--color-warning);
   animation: dotPulse 1.4s infinite ease-in-out;
 }
 
@@ -1891,17 +1871,17 @@ watch(() => route.query.materialId, newId => {
 .input-box {
   display: flex;
   align-items: flex-end;
-  background: #f4f4f4;
-  border: 1px solid #e5e5e5;
-  border-radius: 24px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-full);
   padding: 8px 8px 8px 16px;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .input-box:focus-within {
-  background: #fff;
-  border-color: #d0d0d0;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  background: var(--surface-card);
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-sm);
 }
 
 .input-left,
@@ -1915,23 +1895,24 @@ watch(() => route.query.materialId, newId => {
   padding-bottom: 4px;
 }
 
-.icon-btn {
+/* Input area icon buttons */
+.input-box .icon-btn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: #8e8e8e;
+  color: var(--color-text-tertiary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
-.icon-btn:hover {
-  background: #e8e8e8;
-  color: #333;
+.input-box .icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--color-text-primary);
 }
 
 .input-textarea {
@@ -1940,9 +1921,9 @@ watch(() => route.query.materialId, newId => {
   outline: none;
   background: transparent;
   resize: none;
-  font-size: 15px;
+  font-size: var(--text-body);
   line-height: 1.6;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   padding: 8px 12px;
   min-height: 24px;
   max-height: 200px;
@@ -1950,7 +1931,7 @@ watch(() => route.query.materialId, newId => {
 }
 
 .input-textarea::placeholder {
-  color: #9e9e9e;
+  color: var(--color-text-disabled);
 }
 
 .input-textarea:disabled {
@@ -1967,31 +1948,32 @@ watch(() => route.query.materialId, newId => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .send-btn {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--color-text-primary);
+  color: var(--surface-card);
 }
 
 .send-btn:hover:not(:disabled) {
-  background: #333;
+  background: var(--slate-700);
   transform: scale(1.05);
 }
 
 .send-btn:disabled {
-  background: #d0d0d0;
+  background: var(--slate-200);
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 
 .stop-btn {
-  background: #ef4444;
+  background: var(--color-error);
   color: #fff;
 }
 
 .stop-btn:hover {
-  background: #dc2626;
+  background: #b91c1c;
   transform: scale(1.05);
 }
 
@@ -2004,8 +1986,8 @@ watch(() => route.query.materialId, newId => {
 }
 
 .disclaimer {
-  font-size: 12px;
-  color: #9e9e9e;
+  font-size: var(--text-micro);
+  color: var(--color-text-disabled);
 }
 
 /* 响应式设计 */

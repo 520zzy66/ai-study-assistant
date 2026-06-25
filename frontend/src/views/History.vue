@@ -1,11 +1,11 @@
 <template>
   <div class="history-page">
-    <div class="page-header">
-      <h2>历史记录</h2>
-      <p>查看你的 AI 对话和出题记录</p>
-    </div>
+    <BasePageHeader
+      title="历史记录"
+      description="查看你的 AI 对话和出题记录"
+    />
 
-    <el-card shadow="never" class="history-card">
+    <BaseCard class="history-card" :padding="'none'">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange" class="history-tabs">
         <el-tab-pane label="对话历史" name="chat">
           <el-table :data="chatHistory" v-loading="loading" class="history-table">
@@ -102,7 +102,7 @@
           </div>
         </el-tab-pane>
       </el-tabs>
-    </el-card>
+    </BaseCard>
 
     <!-- Chat Detail Drawer -->
     <el-drawer v-model="showChatDetail" title="对话详情" size="520px">
@@ -149,6 +149,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useMarkdown } from '@/composables/useMarkdown'
 import { getChatHistory, getQuizHistory } from '@/api/history'
+import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const { renderMarkdown } = useMarkdown()
@@ -232,7 +234,7 @@ onMounted(() => {
   border-radius: var(--radius-lg);
 }
 
-.history-card :deep(.el-card__body) {
+.history-card :deep(.card-body) {
   padding: var(--space-5);
 }
 

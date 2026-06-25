@@ -1,9 +1,9 @@
 <template>
   <div class="plan-page">
-    <div class="page-header">
-      <h2>AI 学习计划</h2>
-      <p>输入学习目标和时间，AI 帮你制定每日学习任务</p>
-    </div>
+    <BasePageHeader
+      title="AI 学习计划"
+      description="输入学习目标和时间，AI 帮你制定每日学习任务"
+    />
 
     <!-- Form Card -->
     <BaseCard title="生成学习计划" class="plan-form-card">
@@ -183,6 +183,7 @@ import { generatePlanAsync, updatePlanProgress, getPlanProgressList, getPlanProg
 import { loadReadyMaterials } from '@/api/material'
 import { useTaskStore } from '@/stores/task'
 import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const taskStore = useTaskStore()

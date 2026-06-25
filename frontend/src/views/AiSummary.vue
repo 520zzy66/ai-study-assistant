@@ -1,9 +1,9 @@
 <template>
   <div class="summary-page">
-    <div class="page-header">
-      <h2>AI 知识总结</h2>
-      <p>选择学习资料，生成结构化的知识总结</p>
-    </div>
+    <BasePageHeader
+      title="AI 知识总结"
+      description="选择学习资料，生成结构化的知识总结"
+    />
 
     <div class="summary-layout">
       <!-- Left Panel -->
@@ -122,6 +122,7 @@ import { generateSummaryAsync } from '@/api/ai'
 import { loadAvailableMaterials } from '@/api/material'
 import { useTaskStore } from '@/stores/task'
 import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const route = useRoute()

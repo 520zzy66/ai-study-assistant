@@ -1,9 +1,9 @@
 <template>
   <div class="quiz-page">
-    <div class="page-header">
-      <h2>AI 自动出题</h2>
-      <p>选择学习资料，AI 自动生成练习题并智能判分</p>
-    </div>
+    <BasePageHeader
+      title="AI 自动出题"
+      description="选择学习资料，AI 自动生成练习题并智能判分"
+    />
 
     <div class="quiz-layout">
       <!-- Main Question Area -->
@@ -250,6 +250,7 @@ import { generateQuiz, submitAnswers, generateQuizAsync } from '@/api/ai'
 import { loadAvailableMaterials } from '@/api/material'
 import { useTaskStore } from '@/stores/task'
 import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import ProgressRing from '@/components/common/ProgressRing.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 

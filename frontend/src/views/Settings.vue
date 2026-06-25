@@ -1,11 +1,11 @@
 <template>
   <div class="settings-page">
-    <div class="page-header">
-      <h2>设置</h2>
-      <p>管理账号安全与偏好设置</p>
-    </div>
+    <BasePageHeader
+      title="设置"
+      description="管理账号安全与偏好设置"
+    />
 
-    <el-card class="settings-card">
+    <BaseCard class="settings-card" :padding="'lg'">
       <div class="settings-section">
         <h3 class="section-title">账号安全</h3>
         <el-form label-position="top">
@@ -50,7 +50,7 @@
         <h3 class="section-title">关于</h3>
         <p class="about-text">AI Study Assistant v0.0.1</p>
       </div>
-    </el-card>
+    </BaseCard>
   </div>
 </template>
 
@@ -58,6 +58,8 @@
 import { reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
+import BaseCard from '@/components/common/BaseCard.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 
 const passwordForm = reactive({
   oldPassword: '',
@@ -114,7 +116,7 @@ async function handleChangePassword() {
 }
 
 .settings-card {
-  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-lg);
 }
 
 .settings-section {
