@@ -11,6 +11,7 @@ import com.study.mapper.StudyPlanProgressMapper;
 import com.study.vo.PlanProgressVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +55,7 @@ public class PlanProgressService {
             throw new BusinessException(400, "天数超出计划范围");
         }
 
-        // 3. 查询或创建进度记录
+        // 3. 查询或创建进度记录（依赖唯一索引防并发，与 register/addToWrongBook 模式一致）
         StudyPlanProgress progress = progressMapper.selectOne(
                 new LambdaQueryWrapper<StudyPlanProgress>()
                         .eq(StudyPlanProgress::getPlanId, planId)
@@ -62,13 +63,22 @@ public class PlanProgressService {
         );
 
         if (progress == null) {
-            progress = new StudyPlanProgress();
-            progress.setPlanId(planId);
-            progress.setUserId(userId);
-            progress.setDayIndex(dayIndex);
-            progress.setCompleted(0);
-            progress.setActualHours(BigDecimal.ZERO);
-            progressMapper.insert(progress);
+            try {
+                progress = new StudyPlanProgress();
+                progress.setPlanId(planId);
+                progress.setUserId(userId);
+                progress.setDayIndex(dayIndex);
+                progress.setCompleted(0);
+                progress.setActualHours(BigDecimal.ZERO);
+                progressMapper.insert(progress);
+            } catch (DuplicateKeyException e) {
+                // 并发插入冲突，重新查询
+                progress = progressMapper.selectOne(
+                        new LambdaQueryWrapper<StudyPlanProgress>()
+                                .eq(StudyPlanProgress::getPlanId, planId)
+                                .eq(StudyPlanProgress::getDayIndex, dayIndex)
+                );
+            }
         }
 
         // 4. 更新字段

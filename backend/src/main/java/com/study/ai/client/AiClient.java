@@ -1,7 +1,6 @@
 package com.study.ai.client;
 
 import com.study.common.BusinessException;
-import com.study.config.AiChatProperties;
 import com.study.config.AiConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +24,6 @@ public class AiClient {
 
     private final ChatClient chatClient;
     private final ChatMemory chatMemory;
-    private final AiChatProperties aiChatProperties;
 
     /**
      * 同步调用 AI（无对话记忆）

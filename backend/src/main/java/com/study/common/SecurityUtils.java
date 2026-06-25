@@ -80,14 +80,30 @@ public final class SecurityUtils {
 
     /**
      * 判断是否为内网 IP
+     * 处理 IPv4、IPv6、IPv6-mapped IPv4（如 ::ffff:127.0.0.1）
      */
     private static boolean isPrivateIp(String ip) {
         if (ip == null || ip.isBlank()) return false;
+
+        // 处理 IPv6-mapped IPv4 地址（如 ::ffff:127.0.0.1）
+        if (ip.startsWith("::ffff:") || ip.startsWith("::FFFF:")) {
+            ip = ip.substring(7);
+        }
+        // 处理 IPv4-mapped IPv6 带中括号的情况
+        if (ip.startsWith("[")) {
+            ip = ip.substring(1, ip.length() - 1);
+        }
+
         for (String prefix : PRIVATE_IP_PREFIXES) {
             if (ip.startsWith(prefix)) return true;
         }
         // IPv6 回环
         if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) return true;
+        // IPv6 link-local (fe80::/10)
+        if (ip.toLowerCase().startsWith("fe80:")) return true;
+        // IPv6 ULA (fc00::/7)
+        String lower = ip.toLowerCase();
+        if (lower.startsWith("fc00:") || lower.startsWith("fd00:")) return true;
         return false;
     }
 

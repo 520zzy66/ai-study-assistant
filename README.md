@@ -128,9 +128,19 @@ export AI_API_KEY="your_api_key"
 ./mvnw spring-boot:run
 
 # Windows CMD
+set JWT_SECRET=YWktc3R1ZHktYXNzaXN0YW50LXNlY3JldC1rZXktMjAyNi0wNi0yNQ==
 set AI_API_KEY=tp-cf9jmd3ktx1r4sm5nu2of6lv8qqs0rylsqo2ib1s4uqm7ksa
+set DB_PASSWORD=123456789zzy
 ./mvnw.cmd spring-boot:run
 ```
+
+#powershell
+$env:JWT_SECRET="YWktc3R1ZHktYXNzaXN0YW50LXNlY3JldC1rZXktMjAyNi0wNi0yNQ=="
+$env:AI_API_KEY="tp-cf9jmd3ktx1r4sm5nu2of6lv8qqs0rylsqo2ib1s4uqm7ksa"
+$env:DB_PASSWORD="123456789zzy"
+./mvnw.cmd spring-boot:run
+
+
 
 后端服务将在 `http://localhost:3001/api` 启动。
 

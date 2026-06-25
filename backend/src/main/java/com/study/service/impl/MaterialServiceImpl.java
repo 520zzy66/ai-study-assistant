@@ -125,7 +125,8 @@ public class MaterialServiceImpl implements MaterialService {
         }
 
         // 7. 异步处理（通过 Spring 代理调用，传入 userId 避免竞态）
-        asyncProcessor.processMaterial(materialId, fullPath.toString(), ext, userId);
+        // 传相对路径，doProcess 内部会拼接 uploadDir
+        asyncProcessor.processMaterial(materialId, relativePath, ext, userId);
 
         // 8. 构建响应
         MaterialUploadVO vo = new MaterialUploadVO();

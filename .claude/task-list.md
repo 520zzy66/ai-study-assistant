@@ -68,46 +68,98 @@
 
 ---
 
-# v2.0 迭代计划
+## v1.5 已完成但未在 v1.0 记录的功能
 
-## Phase 7 RAG 检索升级 🔴 [核心]
+> 以下功能在 v1.0 之后、v2.0 规划之前实现，但未及时更新到任务列表。
 
-> 目标：从关键词匹配升级为混合检索，显著提升文档问答准确率
+### 基础设施增强
+- [x] **BoundedChatMemory**（`ai/memory/BoundedChatMemory.java`）— 有界对话记忆，LRU 淘汰策略，最大 1000 会话，防止内存溢出
+- [x] **ChatRequest Builder**（`ai/client/ChatRequest.java`）— 统一 AI 请求参数 Builder，支持 systemPrompt / temperature / memory / stream 等组合
+- [x] **MaterialValidator**（`ai/validator/MaterialValidator.java`）— 资料归属校验逻辑抽取，统一校验 materialId 属于当前用户且状态为 ready
+- [x] **MaterialContentReader**（`ai/MaterialContentReader.java`）— 资料内容读取工具，RAG 检索无结果时的降级读取（全量切片 → 原始文件）
+- [x] **UserConverter**（`common/UserConverter.java`）— User 实体与 UserVO 转换器
 
-### 7.1 中文分词集成
-- [ ] 集成 jieba-analysis 到 RagService
-- [ ] 实现中文分词器 JiebaTokenizer
-- [ ] 分词结果缓存（避免重复分词）
-- [ ] 停用词过滤（的、了、是、在 等）
+### 安全加固
+- [x] **SecurityUtils**（`common/SecurityUtils.java`，135行）— URL 安全校验（防 SSRF：协议白名单 + 内网 IP 过滤 + DNS 重绑定防护，IPv4/IPv6/IPv6-mapped-IPv4）+ 文件名清理（防路径穿越）
+- [x] **LoginAttemptServiceImpl**（`service/impl/LoginAttemptServiceImpl.java`，68行）— Redis 登录失败锁定（5 次/15 分钟），Redis 不可用自动降级，TTL 防永久锁定
+- [x] **UserContextFilter**（`config/UserContextFilter.java`）— 请求完成后自动清理 ThreadLocal 用户上下文，防止内存泄漏
 
-### 7.2 BM25 关键词检索
-- [ ] 实现 BM25 算法（基于 TF-IDF 改进）
-- [ ] 计算文档平均长度、IDF 值
-- [ ] 支持查询扩展（同义词）
-- [ ] BM25 检索器单元测试
+### 异步处理增强
+- [x] **MaterialAsyncProcessor 失败重试**（`service/impl/MaterialAsyncProcessor.java`）— 定时扫描失败任务（30 分钟间隔），最多重试 3 次，限 24 小时内的失败记录，支持手动重试接口
+- [x] **原子状态更新** — 并发保护，防止同一文档被重复处理
 
-### 7.3 向量检索集成
-- [ ] 实现 EmbeddingProvider 接口（调用 bge-small-zh 或在线 API）
-- [ ] 文档切片向量化（入库时生成 embedding）
-- [ ] 向量相似度检索（余弦相似度）
-- [ ] 向量索引优化（HNSW 或 IVF）
+### VO 层完善
+- [x] 8 个 VO 类：UserVO、MaterialVO、MaterialDetailVO、AiSummaryVO、AiQaResponseVO、AiQuizResponseVO、AiPlanResponseVO、WrongQuestionListVO
+- [x] 14 个请求 DTO：参数校验注解完善（@NotBlank / @Size / @Pattern 等）
 
-### 7.4 混合检索与重排序
-- [ ] 实现 HybridSearchService（向量 + BM25）
-- [ ] 混合分数计算（加权融合）
-- [ ] （可选）Reranking 重排序模型集成
-- [ ] Top-K 结果截取与上下文拼接
-
-### 7.5 检索质量评估
-- [ ] 构建测试数据集（问答对）
-- [ ] 检索准确率/召回率指标
-- [ ] A/B 测试框架（新旧算法对比）
+### 前端增强
+- [x] **异步任务全局管理**（`stores/task.js`）— 2 秒轮询任务进度，支持 watchTask / stopWatching / resumePending，网络错误重试（最多 5 次）
+- [x] **Token 自动刷新**（`api/index.js`）— 响应拦截器检查 `x-new-token` 头，自动刷新本地 Token
+- [x] **QuestionBank.vue** — 题库管理页（批次卡片列表、搜索、重命名/删除、收藏、重新作答即时判分）
+- [x] **Profile.vue** — 用户中心（头像/昵称修改）
+- [x] **Settings.vue** — 设置页（修改密码 + 通知偏好持久化 + 关于信息）
 
 ---
 
-## Phase 8 会话管理与持久化 🔴
+# v2.0 迭代计划
+
+## Phase 7 知识库搭建与 RAG 检索升级 🔴 [核心]
+
+> 目标：搭建向量知识库，从关键词匹配升级为语义检索 + BM25 混合检索，显著提升文档问答准确率
+>
+> **当前状态**：仅有关键词匹配（RagService），EmbeddingProvider 为空接口，无向量存储，`application.yml` 中的 RAG 配置项均为 dead config。
+
+### 7.1 向量存储基础设施
+- [ ] 选型：PgVector（PostgreSQL 扩展，与现有 MySQL 共存）或 Milvus Lite
+- [ ] Docker 部署向量数据库（docker-compose 新增服务）
+- [ ] 设计向量表 schema（chunk_id, material_id, embedding vector(512)）
+- [ ] 引入依赖（Spring AI VectorStore 或原生 SDK）
+- [ ] 编写 VectorStore 初始化脚本
+
+### 7.2 Embedding 模型集成
+- [ ] 实现 EmbeddingProvider 接口
+  - 方案 A：本地 bge-small-zh（ONNX Runtime，离线可用）
+  - 方案 B：在线 API（通义 text-embedding-v2 / OpenAI text-embedding-3-small）
+- [ ] Embedding 模型单元测试（输入文本 → 输出 512 维向量）
+- [ ] 批量 Embedding 方法实现（embedBatch，支持切片入库时批量向量化）
+- [ ] 激活 `application.yml` 中的 `ai.embedding.*` 配置项
+
+### 7.3 知识库构建流程
+- [ ] 切片入库时自动生成 embedding（修改 MaterialAsyncProcessor.doProcess）
+- [ ] 存储向量到向量数据库（chunk ↔ vector 关联）
+- [ ] 存储元数据（material_id, user_id, chunk_index, file_type）
+- [ ] 资料删除时同步清理向量数据（级联删除）
+- [ ] 重新索引接口（资料更新后重建向量）
+
+### 7.4 中文分词与 BM25 检索
+- [ ] 集成 jieba-analysis 到 RagService
+- [ ] 实现中文分词器 JiebaTokenizer
+- [ ] 停用词过滤（的、了、是、在 等）
+- [ ] 实现 BM25 算法（基于 TF-IDF 改进）
+- [ ] 计算文档平均长度、IDF 值
+- [ ] BM25 检索器单元测试
+
+### 7.5 混合检索与重排序
+- [ ] 实现 HybridSearchService（向量语义检索 + BM25 关键词检索）
+- [ ] 混合分数计算（加权融合，默认 vector 0.6 + bm25 0.4）
+- [ ] Top-K 结果截取与上下文拼接
+- [ ] 激活 `application.yml` 中的 `ai.rag.*` 配置项（替换硬编码常量）
+- [ ] （可选）Reranking 重排序模型集成（交叉编码器精排）
+
+### 7.6 检索质量评估
+- [ ] 构建测试数据集（10+ 问答对，覆盖精确匹配 + 语义等价场景）
+- [ ] 检索准确率/召回率指标
+- [ ] A/B 测试（关键词匹配 vs 向量检索 vs 混合检索）
+- [ ] 检索结果可视化（调试用）
+
+---
+
+## Phase 8 会话管理与持久化 🟡
 
 > 目标：支持多会话管理，对话历史持久化
+>
+> **当前状态**：前端会话管理已完整实现（AiChat.vue ~2050行），后端使用 `ai_chat_history` 表 + `conversationId` 字段
+> 存储对话，未按 spec 设计独立的 `chat_session` / `chat_message` 表。功能可用，后端 schema 可按需升级。
 
 ### 8.1 后端会话接口
 - [ ] 设计会话表 `chat_session`（id, user_id, title, created_at, updated_at）
@@ -121,25 +173,27 @@
   - DELETE /chat/session/{id} — 删除会话
   - GET /chat/session/{id}/messages — 获取消息历史
 
-### 8.2 前端会话管理
-- [ ] 对接后端会话 API
-- [ ] 会话列表按时间分组（今天、过去7天、更早）
-- [ ] 会话切换时加载对应消息
-- [ ] 新建会话清空当前对话
-- [ ] 会话重命名（双击编辑）
-- [ ] 会话删除（确认弹窗）
+### 8.2 前端会话管理 ✅
+- [x] 对接后端会话 API（AiChat.vue 通过 ai.js store + askQuestionStream 实现）
+- [x] 会话列表按时间分组（今天、过去7天、更早）
+- [x] 会话切换时加载对应消息
+- [x] 新建会话清空当前对话
+- [x] 会话重命名（双击编辑）
+- [x] 会话删除（确认弹窗）
 
-### 8.3 对话上下文优化
-- [ ] 会话消息自动保存（流式完成后）
-- [ ] 上下文窗口管理（最近 N 条消息）
-- [ ] 会话搜索功能（标题/内容模糊搜索）
-- [ ] 会话固定/置顶功能
+### 8.3 对话上下文优化 ✅
+- [x] 会话消息自动保存（流式完成后 doOnComplete 保存到 ai_chat_history）
+- [x] 上下文窗口管理（BoundedChatMemory，LRU 淘汰，最大 1000 会话，窗口 10 条）
+- [ ] 会话搜索功能（标题/内容模糊搜索）— 未实现
+- [x] 会话固定/置顶功能（AiChat.vue 支持 pin）
 
 ---
 
-## Phase 9 安全加固与限流 🔴
+## Phase 9 安全加固与限流 🟡
 
 > 目标：防止资源滥用，提升系统安全性
+>
+> **当前状态**：输入校验和认证优化部分已完成（SecurityUtils + LoginAttemptServiceImpl），限流和日志审计待做。
 
 ### 9.1 接口限流
 - [ ] 集成 Bucket4j 限流库
@@ -148,17 +202,19 @@
 - [ ] 文件上传限流（每用户每天 50 次）
 - [ ] 限流响应返回 429 + Retry-After 头
 
-### 9.2 输入校验增强
-- [ ] 文件内容安全检查（恶意代码检测）
-- [ ] 问题长度限制（最大 2000 字符）
-- [ ] SQL 注入/XSS 防护检查
-- [ ] 敏感词过滤（可选）
+### 9.2 输入校验增强 ✅ 部分完成
+- [ ] 文件内容安全检查（恶意代码检测）— 未实现
+- [ ] 问题长度限制（最大 2000 字符）— 未实现
+- [x] SQL 注入/XSS 防护检查（SecurityUtils.java：SSRF 防护，协议白名单 + 内网 IP 过滤 + DNS 重绑定防护，支持 IPv4/IPv6/IPv6-mapped-IPv4）
+- [x] 路径穿越防护（SecurityUtils.java：文件名清理，替换危险字符并限制长度）
+- [ ] 敏感词过滤（可选）— 未实现
 
-### 9.3 认证优化
-- [ ] JWT 层错误码与业务层错误码分离
-- [ ] Token 黑名单机制（登出后失效）
-- [ ] 并发登录限制（可选）
-- [ ] 添加 AccessDeniedException 处理
+### 9.3 认证优化 ✅ 部分完成
+- [ ] JWT 层错误码与业务层错误码分离 — 未实现
+- [ ] Token 黑名单机制（登出后失效）— 未实现
+- [x] 登录失败锁定（LoginAttemptServiceImpl.java：Redis 版，连续 5 次失败锁定 15 分钟，Redis 不可用自动降级，TTL 防永久锁定）
+- [ ] 并发登录限制（可选）— 未实现
+- [ ] 添加 AccessDeniedException 处理 — 未实现
 
 ### 9.4 日志与审计
 - [ ] 操作日志记录（登录、上传、AI 调用）
@@ -210,12 +266,13 @@
 
 > 目标：类型安全，错误处理更清晰
 
-### 11.1 VO 类定义
-- [ ] 定义 AiSummaryVO（总结响应）
-- [ ] 定义 AiQaResponseVO（问答响应）
-- [ ] 定义 AiQuizResponseVO（出题响应）
-- [ ] 定义 AiPlanResponseVO（学习计划响应）
-- [ ] 定义 WrongQuestionListVO（错题列表响应）
+### 11.1 VO 类定义 ✅
+- [x] 定义 AiSummaryVO（总结响应）
+- [x] 定义 AiQaResponseVO（问答响应）
+- [x] 定义 AiQuizResponseVO（出题响应）
+- [x] 定义 AiPlanResponseVO（学习计划响应）
+- [x] 定义 WrongQuestionListVO（错题列表响应）
+- [x] 额外：UserVO、MaterialVO、MaterialDetailVO（共 8 个 VO 类已实现）
 
 ### 11.2 Controller 层优化
 - [ ] 替换所有 Map<String, Object> 返回值
@@ -408,16 +465,19 @@
 ## 建议执行顺序
 
 ```
-第一阶段（2-3 周）：Phase 7 + Phase 8 + Phase 9
-  → RAG 升级 + 会话持久化 + 安全加固
+第一阶段（3-4 周）：Phase 7 知识库搭建与 RAG 检索升级
+  → 7.1 向量存储 → 7.2 Embedding → 7.3 知识库构建 → 7.4 BM25 → 7.5 混合检索 → 7.6 评估
 
-第二阶段（2 周）：Phase 10 + Phase 11
+第二阶段（2 周）：Phase 8 + Phase 9
+  → 会话持久化 + 安全加固
+
+第三阶段（2 周）：Phase 10 + Phase 11
   → 单元测试 + 错误处理优化
 
-第三阶段（2 周）：Phase 12 + Phase 13
+第四阶段（2 周）：Phase 12 + Phase 13
   → 前端重构 + 暗色模式
 
-第四阶段（按需）：Phase 14 - Phase 18
+第五阶段（按需）：Phase 14 - Phase 18
   → 功能扩展与性能优化
 ```
 
@@ -425,8 +485,8 @@
 
 | 里程碑 | 目标 | 预计时间 |
 |--------|------|----------|
-| M1 | RAG 检索升级 + 会话持久化 | 第 3 周末 |
-| M2 | 安全加固 + 测试覆盖 | 第 5 周末 |
-| M3 | 前端重构 + 主题系统 | 第 7 周末 |
-| M4 | 数据分析 + 导出功能 | 第 9 周末 |
-| M5 | 工程化 + 性能优化 | 第 11 周末 |
+| M1 | 知识库搭建 + RAG 混合检索上线 | 第 4 周末 |
+| M2 | 会话持久化 + 安全加固 | 第 6 周末 |
+| M3 | 测试覆盖 + 错误处理优化 | 第 8 周末 |
+| M4 | 前端重构 + 主题系统 | 第 10 周末 |
+| M5 | 数据分析 + 工程化部署 | 第 12 周末 |

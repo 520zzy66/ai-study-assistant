@@ -258,6 +258,19 @@
             <!-- 用户消息 -->
             <div v-if="msg.role === 'user'" class="message-user">
               <div class="message-bubble user-bubble">
+                <!-- 文件卡片 -->
+                <div v-if="msg.material" class="message-file-card">
+                  <div class="file-card-icon">
+                    <el-icon :size="20"><Document /></el-icon>
+                  </div>
+                  <div class="file-card-info">
+                    <div class="file-card-name">{{ msg.material.name }}</div>
+                    <div class="file-card-meta">
+                      <span class="file-card-type">{{ (msg.material.fileType || '').toUpperCase() }}</span>
+                      <span v-if="msg.material.fileSize" class="file-card-size">{{ formatFileSize(msg.material.fileSize) }}</span>
+                    </div>
+                  </div>
+                </div>
                 <div class="message-text">{{ msg.content }}</div>
               </div>
               <div class="message-avatar user-avatar">
@@ -335,9 +348,13 @@
         <div class="input-wrapper">
           <!-- 关联资料标签 -->
           <div v-if="selectedMaterial" class="material-tag-bar">
-            <div class="material-tag">
+            <div :class="['material-tag', { processing: isMaterialProcessing }]">
               <el-icon :size="14"><Document /></el-icon>
               <span class="tag-name">{{ selectedMaterial.originalName }}</span>
+              <span v-if="isMaterialProcessing" class="tag-status">
+                <span class="dot-pulse"></span>
+                处理中
+              </span>
               <button class="tag-close" @click="clearMaterial">
                 <el-icon :size="12"><Close /></el-icon>
               </button>
@@ -415,7 +432,7 @@ import {
 import { useMarkdown } from '@/composables/useMarkdown'
 import { useAiStore } from '@/stores/ai'
 import { askQuestionStream } from '@/api/ai'
-import { loadAvailableMaterials, uploadMaterial } from '@/api/material'
+import { loadAvailableMaterials, uploadMaterial, getMaterialDetail } from '@/api/material'
 import { getChatHistory } from '@/api/history'
 
 const route = useRoute()
@@ -482,13 +499,17 @@ const userName = ref('学习者')
 // 消息相关
 const messagesContainer = ref(null)
 const materialList = ref([])
-const selectedMaterialId = ref(null)
 const inputText = ref('')
 const fileInput = ref(null)
 const textareaRef = ref(null)
+let pollTimer = null
 
 const selectedMaterial = computed(() =>
-  materialList.value.find(m => m.id === selectedMaterialId.value) || null
+  materialList.value.find(m => m.id === aiStore.selectedMaterialId) || null
+)
+
+const isMaterialProcessing = computed(() =>
+  selectedMaterial.value && selectedMaterial.value.status === 'processing'
 )
 
 const canSend = computed(() =>
@@ -570,7 +591,20 @@ async function switchConversation(conversationId) {
 
     for (const msg of msgs) {
       if (msg.userMessage) {
-        aiStore.addUserMessage(msg.userMessage)
+        // 如果消息关联了资料，附带文件信息
+        let materialInfo = null
+        if (msg.materialId) {
+          const mat = materialList.value.find(m => m.id === msg.materialId)
+          if (mat) {
+            materialInfo = {
+              id: mat.id,
+              name: mat.originalName,
+              fileType: mat.fileType,
+              fileSize: mat.fileSize
+            }
+          }
+        }
+        aiStore.addUserMessage(msg.userMessage, materialInfo)
       }
       if (msg.aiResponse) {
         aiStore.addAssistantMessage(msg.aiResponse)
@@ -678,11 +712,23 @@ async function handleFileUpload(event) {
     ElMessage.success(`文件 "${file.name}" 上传成功，正在处理中`)
 
     // 上传成功后自动关联该资料到当前对话
-    selectedMaterialId.value = result.id
     aiStore.setSelectedMaterial(result.id)
 
-    // 刷新资料列表
-    await loadMaterials()
+    // 将新上传的资料添加到列表（避免等待异步处理）
+    const newMaterial = {
+      id: result.id,
+      originalName: result.originalName || file.name,
+      fileType: result.fileType || ext.replace('.', ''),
+      fileSize: result.fileSize || file.size,
+      status: 'processing'
+    }
+    // 避免重复添加
+    if (!materialList.value.find(m => m.id === newMaterial.id)) {
+      materialList.value.unshift(newMaterial)
+    }
+
+    // 开始轮询资料处理状态
+    startPollingMaterial(result.id)
   } catch (err) {
     console.error('文件上传失败:', err)
     ElMessage.error('文件上传失败: ' + (err.message || '未知错误'))
@@ -709,12 +755,55 @@ function isFailedMessage(content) {
 }
 
 function onMaterialChange() {
-  aiStore.setSelectedMaterial(selectedMaterialId.value)
+  // selectedMaterialId 已通过 v-model 直接绑定到 store，无需额外同步
 }
 
 function clearMaterial() {
-  selectedMaterialId.value = null
   aiStore.setSelectedMaterial(null)
+  stopPolling()
+}
+
+/**
+ * 轮询资料处理状态
+ * 上传后异步处理需要时间，每 3 秒检查一次直到 ready/failed
+ * 最多重试 20 次（约 1 分钟），避免无限轮询
+ */
+function startPollingMaterial(materialId) {
+  stopPolling()
+  let retryCount = 0
+  const MAX_RETRY = 20
+  pollTimer = setInterval(async () => {
+    try {
+      const detail = await getMaterialDetail(materialId)
+      retryCount = 0 // 请求成功重置计数
+      const idx = materialList.value.findIndex(m => m.id === materialId)
+      if (idx !== -1) {
+        materialList.value[idx].status = detail.status
+      }
+      if (detail.status === 'ready' || detail.status === 'failed') {
+        stopPolling()
+        if (detail.status === 'ready') {
+          ElMessage.success(`"${detail.originalName}" 处理完成，可以开始对话`)
+        } else {
+          ElMessage.error(`"${detail.originalName}" 处理失败: ${detail.errorMsg || '未知错误'}`)
+        }
+      }
+    } catch (e) {
+      retryCount++
+      console.error('轮询资料状态失败:', e)
+      if (retryCount >= MAX_RETRY) {
+        stopPolling()
+        ElMessage.error('资料处理状态查询超时，请手动刷新页面')
+      }
+    }
+  }, 3000)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 }
 
 // 自动调整文本框高度
@@ -732,12 +821,40 @@ async function handleSend() {
 }
 
 async function sendMessage(text) {
+  // 防止并发竞态：流式进行中禁止重复发送
+  if (aiStore.isStreaming || aiStore.loading) return
+
   const question = text || inputText.value.trim()
   if (!question) return
 
+  // 检查关联资料是否还在处理中
+  if (isMaterialProcessing.value) {
+    ElMessage.warning('文件正在处理中，请稍候再提问')
+    return
+  }
+
   inputText.value = ''
 
-  aiStore.addUserMessage(question)
+  // 捕获当前关联的文件信息，嵌入到消息中
+  const materialInfo = selectedMaterial.value
+    ? {
+        id: selectedMaterial.value.id,
+        name: selectedMaterial.value.originalName,
+        fileType: selectedMaterial.value.fileType,
+        fileSize: selectedMaterial.value.fileSize
+      }
+    : null
+
+  aiStore.addUserMessage(question, materialInfo)
+
+  // 保存 materialId，因为清除状态后 store 中的值会丢失
+  const currentMaterialId = materialInfo?.id || null
+
+  // 文件已随消息发出，清除输入框上方的文件标签
+  if (materialInfo) {
+    aiStore.setSelectedMaterial(null)
+  }
+
   aiStore.setLoading(true)
   aiStore.setStreaming(true)
   aiStore.clearError()
@@ -746,36 +863,42 @@ async function sendMessage(text) {
   await nextTick()
   scrollToBottom()
 
-  const history = aiStore.getRecentHistory(10)
+  try {
+    const history = aiStore.getRecentHistory(10)
 
-  const abortFn = askQuestionStream(
-    {
-      materialId: selectedMaterialId.value || null,
-      question,
-      history
-    },
-    {
-      onToken(_token, fullText) {
-        aiStore.updateCurrentAnswer(fullText)
-        nextTick(() => scrollToBottom())
+    const abortFn = askQuestionStream(
+      {
+        materialId: currentMaterialId,
+        question,
+        history
       },
-      onComplete(fullText) {
-        aiStore.finishStream()
-        aiStore.setAbortFn(null)
-        // 刷新会话列表
-        loadConversations()
-        nextTick(() => scrollToBottom())
-      },
-      onError(err) {
-        console.error('AI 流式调用失败:', err)
-        aiStore.setError(err)
-        aiStore.setAbortFn(null)
-        nextTick(() => scrollToBottom())
+      {
+        onToken(_token, fullText) {
+          aiStore.updateCurrentAnswer(fullText)
+          nextTick(() => scrollToBottom())
+        },
+        onComplete(fullText) {
+          aiStore.finishStream()
+          aiStore.setAbortFn(null)
+          // 刷新会话列表
+          loadConversations()
+          nextTick(() => scrollToBottom())
+        },
+        onError(err) {
+          console.error('AI 流式调用失败:', err)
+          aiStore.setError(err)
+          aiStore.setAbortFn(null)
+          nextTick(() => scrollToBottom())
+        }
       }
-    }
-  )
+    )
 
-  aiStore.setAbortFn(abortFn)
+    aiStore.setAbortFn(abortFn)
+  } catch (err) {
+    console.error('发送消息失败:', err)
+    aiStore.setError(err.message || '发送失败')
+    aiStore.finishStream()
+  }
 }
 
 function stopStream() {
@@ -815,6 +938,16 @@ function dislikeMessage(index) {
   ElMessage.success('已点踩')
 }
 
+/**
+ * 格式化文件大小
+ */
+function formatFileSize(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
 function scrollToBottom() {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
@@ -826,8 +959,7 @@ async function loadMaterials() {
     materialList.value = await loadAvailableMaterials()
     const queryId = route.query.materialId
     if (queryId) {
-      selectedMaterialId.value = Number(queryId)
-      aiStore.setSelectedMaterial(selectedMaterialId.value)
+      aiStore.setSelectedMaterial(Number(queryId))
     }
   } catch (e) {
     console.error('加载资料列表失败:', e)
@@ -841,13 +973,13 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  // 清理工作
+  stopPolling()
+  aiStore.abortCurrent()
 })
 
 watch(() => route.query.materialId, newId => {
   if (newId) {
-    selectedMaterialId.value = Number(newId)
-    aiStore.setSelectedMaterial(selectedMaterialId.value)
+    aiStore.setSelectedMaterial(Number(newId))
   }
 })
 </script>
@@ -1417,6 +1549,66 @@ watch(() => route.query.materialId, newId => {
   word-break: break-word;
 }
 
+/* 消息内文件卡片 */
+.message-file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  backdrop-filter: blur(4px);
+}
+
+.file-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.file-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.file-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.file-card-type {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.file-card-size {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .message-user .user-avatar {
   width: 36px;
   height: 36px;
@@ -1666,6 +1858,33 @@ watch(() => route.query.materialId, newId => {
 
 .material-tag .tag-close:hover {
   background: rgba(26, 115, 232, 0.15);
+}
+
+.material-tag.processing {
+  background: #fff8e1;
+  border-color: #ffe082;
+  color: #f57f17;
+}
+
+.tag-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #f57f17;
+}
+
+.dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f57f17;
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
 }
 
 /* 输入框容器 */

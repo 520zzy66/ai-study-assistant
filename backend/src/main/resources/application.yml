@@ -56,4 +56,4 @@ ai:
     vector-top-k: 10                                 # 向量检索返回候选数
     bm25-top-k: 10                                   # BM25 检索返回候选数
     final-top-k: 5                                   # 最终送入 LLM 的切片数
-    similarity-threshold: 0.7                        # 向量相似度阈值（低于此值丢弃）
+    similarity-threshold: 0.3                        # 关键词匹配阈值（当前为关键词检索，0.3 即可）

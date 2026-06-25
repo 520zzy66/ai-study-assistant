@@ -10,11 +10,11 @@ import com.study.entity.MaterialChunk;
 import com.study.mapper.LearningMaterialMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +36,9 @@ public class MaterialAsyncProcessor {
     private final DocumentParser documentParser;
     private final ChunkSplitter chunkSplitter;
 
+    @Value("${file.upload-dir:./uploads}")
+    private String uploadDir;
+
     /** 最大重试次数 */
     private static final int MAX_RETRY = 3;
 
@@ -53,9 +56,9 @@ public class MaterialAsyncProcessor {
      * @param fileType   文件类型
      * @param userId     用户ID（必须直接传入，避免事务竞态读不到数据）
      */
-    @Async
+    @Async("taskExecutor")
     public void processMaterial(Long materialId, String filePath, String fileType, Long userId) {
-        doProcess(materialId, filePath, fileType, userId);
+        doProcess(materialId, filePath, fileType, userId, false);
     }
 
     /**
@@ -63,7 +66,7 @@ public class MaterialAsyncProcessor {
      *
      * @param materialId 资料ID
      */
-    @Async
+    @Async("taskExecutor")
     public void retryProcess(Long materialId) {
         LearningMaterial material = materialMapper.selectById(materialId);
         if (material == null) {
@@ -76,7 +79,7 @@ public class MaterialAsyncProcessor {
         }
 
         log.info("手动重试文档处理: materialId={}", materialId);
-        doProcess(materialId, material.getFilePath(), material.getFileType(), material.getUserId());
+        doProcess(materialId, material.getFilePath(), material.getFileType(), material.getUserId(), true);
     }
 
     /**
@@ -103,15 +106,9 @@ public class MaterialAsyncProcessor {
             }
 
             log.info("自动重试: materialId={}, retry={}/{}", material.getId(), retryCount + 1, MAX_RETRY);
-            // 更新重试次数
-            LearningMaterial update = new LearningMaterial();
-            update.setId(material.getId());
-            update.setStatus("parsing");
-            update.setRetryCount(retryCount + 1);
-            materialMapper.updateById(update);
-
+            // 状态更新和重试次数递增全部由 doProcess 原子完成，避免竞态
             doProcess(material.getId(), material.getFilePath(),
-                    material.getFileType(), material.getUserId());
+                    material.getFileType(), material.getUserId(), true);
             retried++;
         }
 
@@ -122,17 +119,30 @@ public class MaterialAsyncProcessor {
 
     /**
      * 执行处理的核心逻辑
+     *
+     * @param materialId    资料ID
+     * @param filePath      文件路径（相对路径，基于 uploadDir 解析）
+     * @param fileType      文件类型
+     * @param userId        用户ID
+     * @param incrementRetry 是否递增重试计数（重试场景为 true，初次处理为 false）
      */
-    private void doProcess(Long materialId, String filePath, String fileType, Long userId) {
+    private void doProcess(Long materialId, String filePath, String fileType, Long userId,
+                           boolean incrementRetry) {
         log.info("开始处理文档: materialId={}", materialId);
 
         // 并发保护：原子更新状态为 parsing，只有非 parsing/ready 状态的记录才会被更新
         // 避免 @Scheduled 与 @Async 并发处理同一材料的 TOCTOU 竞态
-        int affected = materialMapper.update(null, new LambdaUpdateWrapper<LearningMaterial>()
+        // 重试场景下同时递增 retry_count，保证原子性
+        LambdaUpdateWrapper<LearningMaterial> updateWrapper = new LambdaUpdateWrapper<LearningMaterial>()
                 .eq(LearningMaterial::getId, materialId)
                 .ne(LearningMaterial::getStatus, "parsing")
                 .ne(LearningMaterial::getStatus, "ready")
-                .set(LearningMaterial::getStatus, "parsing"));
+                .set(LearningMaterial::getStatus, "parsing");
+        if (incrementRetry) {
+            updateWrapper.setSql("retry_count = retry_count + 1");
+        }
+
+        int affected = materialMapper.update(null, updateWrapper);
 
         if (affected == 0) {
             log.warn("材料已在处理中或已就绪，跳过重复处理: materialId={}", materialId);
@@ -140,10 +150,11 @@ public class MaterialAsyncProcessor {
         }
 
         try {
-
             // 2. 解析文档为纯文本
+            // filePath 是相对路径（如 userId/dateDir/uuid.ext），需拼接 uploadDir
+            Path fullPath = Paths.get(uploadDir, filePath);
             String text;
-            try (InputStream input = Files.newInputStream(Paths.get(filePath))) {
+            try (InputStream input = Files.newInputStream(fullPath)) {
                 text = documentParser.parse(input, fileType);
             }
 

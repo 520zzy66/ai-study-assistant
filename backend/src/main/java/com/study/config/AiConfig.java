@@ -1,24 +1,18 @@
 package com.study.config;
 
 import com.study.ai.memory.BoundedChatMemory;
-import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Duration;
-
 /**
  * AI 配置类
  * 配置 Spring AI ChatClient
  */
 @Configuration
-@RequiredArgsConstructor
 public class AiConfig {
-
-    private final AiChatProperties aiChatProperties;
 
     /**
      * 对话记忆窗口大小，限制每次请求携带的历史消息轮数，防止内存无限增长
@@ -45,7 +39,7 @@ public class AiConfig {
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder) {
         return builder
-                .defaultSystem("你是一个专业的学习助手，擅长解答学习问题、总结知识点和生成练习题。")
+                .defaultSystem("你是一个专业的学习助手，擅长解答学习问题、总结知识点和生成练习题。回复必须使用 Markdown 结构化格式：用 ##/### 标题分层、关键概念加粗、并列内容用列表、对比数据用表格、段落不超过 3 行、块之间空行分隔。禁止大段纯文本堆砌。")
                 .build();
     }
 }

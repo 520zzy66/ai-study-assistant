@@ -240,7 +240,7 @@ async function loadActivity() {
     ])
     const chatItems = (chatRes.records || []).map(item => ({
       id: `chat-${item.id}`, type: 'chat',
-      text: `提问了 "${(item.question || '问题').slice(0, 20)}..."`,
+      text: `提问了 "${(item.userMessage || item.question || '问题').slice(0, 20)}..."`,
       time: formatDate(item.createTime),
       sortTime: item.createTime
     }))

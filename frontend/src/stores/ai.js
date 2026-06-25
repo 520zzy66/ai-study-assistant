@@ -8,7 +8,7 @@ import { ref, computed } from 'vue'
 export const useAiStore = defineStore('ai', () => {
   // ==================== 对话状态 ====================
 
-  /** 消息列表：{ role: 'user'|'assistant', content: string, timestamp: number } */
+  /** 消息列表：{ role: 'user'|'assistant', content: string, timestamp: number, material?: {id, name, fileType, fileSize} } */
   const messages = ref([])
 
   /** 当前正在流式接收的回答 */
@@ -57,13 +57,19 @@ export const useAiStore = defineStore('ai', () => {
 
   /**
    * 添加用户消息
+   * @param {string} content 消息内容
+   * @param {Object} [material] 附带的文件信息 { id, name, fileType, fileSize }
    */
-  function addUserMessage(content) {
-    messages.value.push({
+  function addUserMessage(content, material) {
+    const msg = {
       role: 'user',
       content,
       timestamp: Date.now()
-    })
+    }
+    if (material) {
+      msg.material = material
+    }
+    messages.value.push(msg)
     lastQuestion.value = content
   }
 
@@ -122,23 +128,34 @@ export const useAiStore = defineStore('ai', () => {
 
   /**
    * 中断当前对话
+   * 仅在有活跃流或加载状态时才标记为中断，已完成的回答不会被误判
    */
   function abortCurrent() {
+    const wasActive = isStreaming.value || loading.value
+
     if (abortFn) {
       abortFn()
       abortFn = null
     }
-    // 如果有正在流式接收的内容，保存为中断状态
-    if (currentAnswer.value) {
-      addAssistantMessage(currentAnswer.value + '\n\n[回答被中断]')
+
+    if (wasActive) {
+      // 如果有正在流式接收的内容，保存为中断状态
+      if (currentAnswer.value) {
+        addAssistantMessage(currentAnswer.value + '\n\n[回答被中断]')
+        currentAnswer.value = ''
+      }
+      isStreaming.value = false
+      loading.value = false
+      interruptedInfo.value = {
+        question: lastQuestion.value,
+        time: new Date().toLocaleTimeString(),
+        reason: '用户中断了回答'
+      }
+    } else {
+      // 回答已完成，仅做清理，不标记中断
+      isStreaming.value = false
+      loading.value = false
       currentAnswer.value = ''
-    }
-    isStreaming.value = false
-    loading.value = false
-    interruptedInfo.value = {
-      question: lastQuestion.value,
-      time: new Date().toLocaleTimeString(),
-      reason: '用户中断了回答'
     }
   }
 

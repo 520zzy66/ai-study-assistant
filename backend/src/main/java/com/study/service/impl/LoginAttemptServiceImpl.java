@@ -49,14 +49,11 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
             Long attempts = redisTemplate.opsForValue().increment(key);
             if (attempts == null) return true;
 
-            // 首次失败时设置 TTL
-            if (attempts == 1) {
-                redisTemplate.expire(key, LOCK_DURATION);
-            }
+            // 每次 increment 后都确保有 TTL，防止崩溃导致 key 无过期时间被永久锁定
+            redisTemplate.expire(key, LOCK_DURATION);
 
             // 达到锁定阈值
             if (attempts >= Constants.LOGIN_MAX_ATTEMPTS) {
-                redisTemplate.expire(key, LOCK_DURATION);
                 log.warn("用户 {} 连续失败 {} 次，已锁定 {} 分钟", username, attempts,
                         LOCK_DURATION.toMinutes());
                 return false;
