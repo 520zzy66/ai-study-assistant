@@ -504,7 +504,7 @@ onUnmounted(() => stopTimer())
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .quiz-empty-area {
-  padding: 48px 0;
+  padding: var(--space-8) 0;
 }
 
 /* Generate Progress */

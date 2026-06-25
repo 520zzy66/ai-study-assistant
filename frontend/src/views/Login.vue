@@ -217,15 +217,16 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8);
+  padding: var(--space-6);
   background: var(--surface-page);
 }
 
-/* Card */
+/* Card — 占屏幕 2/3 */
 .login-card {
   display: flex;
-  width: 100%;
-  max-width: 960px;
+  width: 66.667vw;
+  max-width: 1200px;
+  min-height: 520px;
   background: var(--surface-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
@@ -235,13 +236,12 @@ async function handleRegister() {
 
 /* ---- Left Brand ---- */
 .login-brand {
-  width: 420px;
-  flex-shrink: 0;
+  flex: 1;
   background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12) var(--space-10);
+  padding: var(--space-10) var(--space-8);
   position: relative;
   overflow: hidden;
 }
@@ -362,13 +362,13 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12) var(--space-10);
+  padding: var(--space-10) var(--space-8);
   background: var(--surface-card);
 }
 
 .form-content {
   width: 100%;
-  max-width: 340px;
+  max-width: 380px;
 }
 
 .form-header {
@@ -426,18 +426,24 @@ async function handleRegister() {
 }
 
 /* ---- Responsive ---- */
+@media (max-width: 1024px) {
+  .login-card {
+    width: 80vw;
+  }
+}
+
 @media (max-width: 768px) {
   .login-page {
     padding: var(--space-4);
   }
 
   .login-card {
-    flex-direction: column;
+    width: 100%;
     max-width: 420px;
+    flex-direction: column;
   }
 
   .login-brand {
-    width: 100%;
     padding: var(--space-8) var(--space-6);
   }
 

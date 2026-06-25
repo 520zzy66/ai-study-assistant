@@ -689,7 +689,7 @@ onMounted(async () => {
 }
 
 .plan-empty :deep(.app-empty) {
-  padding: var(--space-16) 0;
+  padding: var(--space-10) 0;
 }
 
 @media (max-width: 767px) {

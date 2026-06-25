@@ -60,7 +60,7 @@
         </div>
 
         <!-- Empty -->
-        <div v-else-if="materialList.length === 0" style="padding:80px 0;">
+        <div v-else-if="materialList.length === 0" style="padding:40px 0;">
           <AppEmpty icon="Document" title="暂无学习资料" description="上传你的第一份资料，开始学习之旅">
             <template #action>
               <el-button type="primary" @click="showUpload = true">上传资料</el-button>
@@ -160,7 +160,7 @@
           <el-skeleton :rows="8" animated />
         </div>
 
-        <div v-else-if="libraryList.length === 0" style="padding:80px 0;">
+        <div v-else-if="libraryList.length === 0" style="padding:40px 0;">
           <AppEmpty icon="Collection" title="暂无资料" description="资料库正在建设中，敬请期待" />
         </div>
 

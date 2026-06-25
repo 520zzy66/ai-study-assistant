@@ -5,10 +5,10 @@
       description="管理账号安全与偏好设置"
     />
 
-    <BaseCard class="settings-card" :padding="'lg'">
-      <div class="settings-section">
-        <h3 class="section-title">账号安全</h3>
-        <el-form label-position="top">
+    <div class="settings-grid">
+      <!-- 账号安全 -->
+      <BaseCard class="settings-card" title="账号安全">
+        <el-form label-position="top" class="settings-form">
           <el-form-item label="当前密码">
             <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
           </el-form-item>
@@ -19,38 +19,47 @@
             <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
           </el-form-item>
         </el-form>
-        <div class="section-actions">
-          <el-button type="primary" @click="handleChangePassword">修改密码</el-button>
-        </div>
-      </div>
-
-      <el-divider />
-
-      <div class="settings-section">
-        <h3 class="section-title">通知偏好</h3>
-        <div class="preference-item">
-          <div>
-            <div class="preference-title">学习提醒</div>
-            <div class="preference-desc">按计划发送学习提醒</div>
+        <template #footer>
+          <div class="section-actions">
+            <el-button type="primary" @click="handleChangePassword">修改密码</el-button>
           </div>
-          <el-switch v-model="preferences.studyReminder" />
-        </div>
-        <div class="preference-item">
-          <div>
-            <div class="preference-title">每周学习报告</div>
-            <div class="preference-desc">每周汇总学习进度</div>
+        </template>
+      </BaseCard>
+
+      <!-- 通知偏好 -->
+      <BaseCard class="settings-card" title="通知偏好">
+        <div class="preference-list">
+          <div class="preference-item">
+            <div>
+              <div class="preference-title">学习提醒</div>
+              <div class="preference-desc">按计划发送学习提醒</div>
+            </div>
+            <el-switch v-model="preferences.studyReminder" />
           </div>
-          <el-switch v-model="preferences.weeklyReport" />
+          <div class="preference-item">
+            <div>
+              <div class="preference-title">每周学习报告</div>
+              <div class="preference-desc">每周汇总学习进度</div>
+            </div>
+            <el-switch v-model="preferences.weeklyReport" />
+          </div>
         </div>
-      </div>
+      </BaseCard>
 
-      <el-divider />
-
-      <div class="settings-section">
-        <h3 class="section-title">关于</h3>
-        <p class="about-text">AI Study Assistant v0.0.1</p>
-      </div>
-    </BaseCard>
+      <!-- 关于 -->
+      <BaseCard class="settings-card" title="关于">
+        <div class="about-info">
+          <div class="about-row">
+            <span class="about-label">版本</span>
+            <span class="about-value">v0.0.1</span>
+          </div>
+          <div class="about-row">
+            <span class="about-label">技术栈</span>
+            <span class="about-value">Spring Boot 3 + Vue 3 + Spring AI</span>
+          </div>
+        </div>
+      </BaseCard>
+    </div>
   </div>
 </template>
 
@@ -72,7 +81,6 @@ const preferences = reactive({
   weeklyReport: JSON.parse(localStorage.getItem('pref_weeklyReport') ?? 'false')
 })
 
-// 持久化偏好设置
 watch(preferences, (val) => {
   localStorage.setItem('pref_studyReminder', JSON.stringify(val.studyReminder))
   localStorage.setItem('pref_weeklyReport', JSON.stringify(val.weeklyReport))
@@ -112,22 +120,26 @@ async function handleChangePassword() {
 
 <style scoped>
 .settings-page {
-  max-width: 720px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 .settings-card {
   border-radius: var(--radius-lg);
 }
 
-.settings-section {
-  padding: var(--space-4) 0;
+.settings-form :deep(.el-form-item) {
+  margin-bottom: var(--space-4);
 }
 
-.section-title {
-  font-size: var(--text-heading-3);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-4);
+.settings-form :deep(.el-form-item:last-child) {
+  margin-bottom: 0;
 }
 
 .section-actions {
@@ -135,11 +147,21 @@ async function handleChangePassword() {
   justify-content: flex-end;
 }
 
+.preference-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .preference-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) 0;
+}
+
+.preference-item + .preference-item {
+  border-top: 1px solid var(--outline-variant);
 }
 
 .preference-title {
@@ -154,8 +176,27 @@ async function handleChangePassword() {
   margin-top: var(--space-1);
 }
 
-.about-text {
+.about-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.about-label {
+  font-size: var(--text-ui);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  width: 64px;
+}
+
+.about-value {
   font-size: var(--text-body);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 </style>

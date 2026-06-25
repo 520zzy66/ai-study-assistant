@@ -339,12 +339,12 @@ watch(() => route.query.materialId, (newId) => {
 }
 
 .summary-content {
-  min-height: 400px;
+  min-height: 200px;
   padding: var(--space-2);
 }
 
 .summary-empty :deep(.app-empty) {
-  padding: var(--space-16) 0;
+  padding: var(--space-10) 0;
 }
 
 .generating-state {
@@ -352,7 +352,7 @@ watch(() => route.query.materialId, (newId) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-16) var(--space-8);
+  padding: var(--space-10) var(--space-8);
 }
 
 .generate-progress {
