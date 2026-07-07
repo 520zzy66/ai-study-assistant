@@ -1,0 +1,36 @@
+# ============================================================
+# 考研专家 Agent 配置
+# 职责：研究生考试专业解答 — 高数、英语、政治、专业课
+# ============================================================
+
+id: graduate
+type: GRADUATE_EXPERT
+name: 考研助手
+description: 研究生考试专用，侧重高数、英语、政治、专业课
+icon: "🎓"
+order: 2
+
+# 模型绑定（可选，空则使用全局默认模型）
+model:
+  base-url: ${AI_BASE_URL}
+  api-key: ${AI_API_KEY}
+  model: ${AI_CHAT_MODEL:mimo-v2.5}
+  temperature: 0.5
+
+# System Prompt
+system-prompt-file: prompts/graduate-system.txt
+
+# 出题配置
+quiz:
+  default-choice-count: 5
+  default-judge-count: 3
+  default-short-answer-count: 3
+  default-difficulty: hard
+  supported-types:
+    - choice
+    - judge
+    - short_answer
+    - calculation  # 考研特有：计算题
+
+# 领域专属关键词
+domain-keywords: "考研,高数,概率论,线性代数,英一,英二,政治,专业课"

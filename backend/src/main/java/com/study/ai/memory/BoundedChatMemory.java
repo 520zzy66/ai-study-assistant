@@ -67,13 +67,26 @@ public class BoundedChatMemory implements ChatMemory {
     }
 
     @Override
-    public List<Message> get(String conversationId, int lastN) {
+    public List<Message> get(String conversationId) {
         // 先读取 delegate，再 touch LRU — 降低中间被驱逐的 TOCTOU 窗口
-        List<Message> messages = delegate.get(conversationId, lastN);
+        List<Message> messages = delegate.get(conversationId);
         if (messages != null && !messages.isEmpty()) {
             lru.get(conversationId); // 仅在读取到数据时标记访问
         }
         return messages != null ? messages : new ArrayList<>();
+    }
+
+    /**
+     * 兼容旧 API：获取最近 N 条消息。
+     * Spring AI 1.1.2 的 ChatMemory.get() 只接受 conversationId，
+     * 此方法用于需要限制消息数量的场景。
+     */
+    public List<Message> get(String conversationId, int lastN) {
+        List<Message> messages = get(conversationId);
+        if (messages.size() <= lastN) {
+            return messages;
+        }
+        return messages.subList(messages.size() - lastN, messages.size());
     }
 
     @Override

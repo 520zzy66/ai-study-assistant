@@ -43,10 +43,11 @@ export function askQuestionStream(params, callbacks) {
   const requestBody = {
     materialId: params.materialId,
     question: params.question,
-    history: params.history || []
+    history: params.history || [],
+    conversationId: params.conversationId || null
   }
 
-  fetch('/api/ai/qa/stream', {
+  fetch('/api/ai/workflow/ask/stream', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -78,19 +79,45 @@ export function askQuestionStream(params, callbacks) {
         const { done, value } = await reader.read()
         if (done) break
         buffer += decoder.decode(value, { stream: true })
-        // SSE 格式: "data: <token>\n\n"
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            const token = line.slice(5).trim()
-            if (token === '[DONE]') {
+
+        // SSE 事件以 \n\n 分隔
+        const events = buffer.split('\n\n')
+        buffer = events.pop() || ''  // 最后一个可能不完整，留到下次处理
+
+        for (const event of events) {
+          if (streamDone) break
+          // 提取所有 data: 行并拼接（SSE 规范：多行 data 合并）
+          const dataLines = event.split('\n')
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.slice(5).trim())
+
+          if (dataLines.length === 0) continue
+
+          // 合并同一事件的多行 data
+          const token = dataLines.join('\n')
+
+          if (token === '[DONE]') {
+            streamDone = true
+            break
+          }
+
+          // 尝试解析 JSON（错误响应 / 路由元数据）
+          try {
+            const jsonData = JSON.parse(token)
+            if (jsonData.type === 'error') {
+              callbacks.onError?.(new Error(jsonData.message || '工作流执行失败'))
               streamDone = true
               break
             }
-            fullText += token
-            callbacks.onToken?.(token, fullText)
+            // 过滤路由元数据 JSON（含 domain/confidence/intent 字段）
+            if ('domain' in jsonData && 'confidence' in jsonData) {
+              continue
+            }
+          } catch {
+            // 普通 token 流式响应，忽略解析错误
           }
+          fullText += token
+          callbacks.onToken?.(token, fullText)
         }
       }
       callbacks.onComplete?.(fullText)

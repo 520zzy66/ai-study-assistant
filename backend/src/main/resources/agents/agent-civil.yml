@@ -1,0 +1,36 @@
+# ============================================================
+# 考公专家 Agent 配置
+# 职责：公务员考试专业解答 — 申论写作、行测推理、时政分析
+# ============================================================
+
+id: civil
+type: CIVIL_EXPERT
+name: 考公助手
+description: 公务员考试专用，侧重申论写作、行测推理、时政分析
+icon: "🏛️"
+order: 1
+
+# 模型绑定（可选，空则使用全局默认模型）
+model:
+  base-url: ${AI_BASE_URL}
+  api-key: ${AI_API_KEY}
+  model: ${AI_CHAT_MODEL:mimo-v2.5}
+  temperature: 0.5  # 专业解答需要适中的创造性
+
+# System Prompt
+system-prompt-file: prompts/civil-system.txt
+
+# 出题配置
+quiz:
+  default-choice-count: 8
+  default-judge-count: 2
+  default-short-answer-count: 3
+  default-difficulty: hard
+  supported-types:
+    - choice
+    - judge
+    - short_answer
+    - essay  # 考公特有：申论题
+
+# 领域专属关键词（用于 prompt 中的专业术语提示）
+domain-keywords: "申论,行测,国考,省考,时政,公务"

@@ -59,8 +59,9 @@ public class AiClient {
         return handleException(() -> {
             String response = chatClient.prompt()
                     .user(prompt)
-                    .advisors(new MessageChatMemoryAdvisor(
-                            chatMemory, conversationId, AiConfig.CHAT_MEMORY_SIZE))
+                    .advisors(MessageChatMemoryAdvisor.builder(chatMemory)
+                            .conversationId(conversationId)
+                            .build())
                     .call()
                     .content();
             log.info("AI 响应成功，响应长度: {}", response != null ? response.length() : 0);
@@ -105,8 +106,9 @@ public class AiClient {
             String response = chatClient.prompt()
                     .system(systemPrompt)
                     .user(userPrompt)
-                    .advisors(new MessageChatMemoryAdvisor(
-                            chatMemory, conversationId, AiConfig.CHAT_MEMORY_SIZE))
+                    .advisors(MessageChatMemoryAdvisor.builder(chatMemory)
+                            .conversationId(conversationId)
+                            .build())
                     .call()
                     .content();
             log.info("AI 响应成功，响应长度: {}", response != null ? response.length() : 0);
@@ -148,8 +150,9 @@ public class AiClient {
         String conversationId = "user_" + userId;
         return chatClient.prompt()
                 .user(prompt)
-                .advisors(new MessageChatMemoryAdvisor(
-                        chatMemory, conversationId, AiConfig.CHAT_MEMORY_SIZE))
+                .advisors(MessageChatMemoryAdvisor.builder(chatMemory)
+                        .conversationId(conversationId)
+                        .build())
                 .stream()
                 .content()
                 .onBackpressureBuffer(256)
@@ -238,8 +241,9 @@ public class AiClient {
             // 设置对话记忆
             if (useMemory) {
                 String conversationId = "user_" + request.getUserId();
-                callBuilder = callBuilder.advisors(new MessageChatMemoryAdvisor(
-                        chatMemory, conversationId, AiConfig.CHAT_MEMORY_SIZE));
+                callBuilder = callBuilder.advisors(MessageChatMemoryAdvisor.builder(chatMemory)
+                        .conversationId(conversationId)
+                        .build());
             }
 
             // 设置 temperature

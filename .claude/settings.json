@@ -78,7 +78,10 @@
       "Bash(curl -s --noproxy localhost --max-time 10 http://localhost:3000/dashboard -o /dev/null -w \"%{http_code}\\\\n\")",
       "Bash(curl -s --noproxy localhost --max-time 10 http://localhost:3000/material -o /dev/null -w \"%{http_code}\\\\n\")",
       "Bash(curl -s --noproxy localhost --max-time 10 http://localhost:3000/ai/chat -o /dev/null -w \"%{http_code}\\\\n\")",
-      "Bash(curl -s --noproxy localhost --max-time 10 http://localhost:3000/ai/summary -o /dev/null -w \"%{http_code}\\\\n\")"
+      "Bash(curl -s --noproxy localhost --max-time 10 http://localhost:3000/ai/summary -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(git -C \"c:/Users/20370/Desktop/ai-study-assistant\" stash pop)",
+      "Bash(./mvnw clean *)",
+      "Bash(xargs -I {} basename {})"
     ],
     "additionalDirectories": [
       "\\tmp"

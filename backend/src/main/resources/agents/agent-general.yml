@@ -1,0 +1,32 @@
+# ============================================================
+# 通用 Agent 配置（Orchestrator）
+# 职责：意图识别 + 任务路由 + 简单问题直接回答 + 最终回复润色
+# ============================================================
+
+id: general
+type: ROUTER
+name: 通用助手
+description: 学习助手的默认调度中心，负责理解用户需求、路由到合适的专家、或直接回答通用问题
+icon: "🧭"
+order: 0
+
+# 模型绑定（使用本地 Ollama qwen2.5，走 OpenAI 兼容端点）
+model:
+  base-url: http://localhost:11434
+  api-key: ollama
+  model: qwen2.5:7b
+  temperature: 0.3  # 路由任务需要低温度以保证稳定性
+
+# System Prompt
+system-prompt-file: prompts/general-system.txt
+
+# 领域专属关键词（Layer 0 快速路由，一个词只属于一个领域）
+domain-keywords:
+  CIVIL: "申论,行测,国考,省考,面试,时政,公务,公考,选调"
+  GRADUATE: "考研,高数,概率论,线性代数,英一,英二,复试,专业课,数学一,数学二,数学三"
+
+# 路由阈值
+routing:
+  expert-threshold: 0.80      # ≥ 此值直接路由专家
+  suggestion-threshold: 0.60   # 0.60-0.79 路由但附带备选回答
+  # < 0.60 通用 Agent 直接回答

@@ -103,6 +103,43 @@
 
 # v2.0 迭代计划
 
+## Phase 6.5 StateGraph 工作流架构 ✅
+
+> 目标：将 AI 对话功能封装为 StateGraph 状态图工作流，替代命令式编排器
+>
+> **当前状态**：已完成。Graph 架构（GeneralNode → LocalAnswerNode/ExpertAgentNode → END）已实现并编译通过。
+
+### 6.5.1 Graph 核心
+- [x] **WorkflowGraphService**（`workflow/graph/WorkflowGraphService.java`）— StateGraph 构建与执行，替代旧的 AiWorkflowOrchestrator
+- [x] **RouteKeys**（`workflow/graph/RouteKeys.java`）— State key 常量定义（新增 MEMORY_CONTEXT、RECENT_CONTEXT）
+- [x] **WorkflowChatResult**（`workflow/graph/WorkflowChatResult.java`）— 工作流结果 DTO（从 orchestrator 包移入 graph 包）
+
+### 6.5.2 节点实现
+- [x] **GeneralNode**（`workflow/node/GeneralNode.java`）— 重写：会话向量化 + 上下文注入（画像/记忆/历史/近期对话）+ 三级路由 + 简单问题回答
+- [x] **LocalAnswerNode**（`workflow/node/LocalAnswerNode.java`）— Level 0/1 本地回答节点
+- [x] **ExpertAgentNode**（`workflow/node/ExpertAgentNode.java`）— 专家 Agent 节点，内部路由到三个 ExpertAgentService
+- [x] **MultimodalNode**（`workflow/node/MultimodalNode.java`）— 资料预处理节点（保留）
+
+### 6.5.3 专家 Agent 服务
+- [x] **ExpertAgentService** 接口 — 改为 `answer(OverAllState state)`
+- [x] **AbstractExpertAgentService** — 简化 buildPrompt，从 OverAllState 读取上下文
+- [x] **CivilExpertAgentService** — 考公专家（适配新接口）
+- [x] **GraduateExpertAgentService** — 考研专家（适配新接口）
+- [x] **GeneralQaAgentService** — 通用专家（适配新接口）
+
+### 6.5.4 集成与清理
+- [x] **AiController** — 改用 WorkflowGraphService
+- [x] **AgentExecutionLogService** — import 改为 graph 包
+- [x] **删除** AiWorkflowOrchestrator.java（旧编排器）
+- [x] **删除** orchestrator/WorkflowChatResult.java（移入 graph 包）
+
+### 6.5.5 文档
+- [x] **workflow-orchestrator-spec.md** — v2.0 Graph 架构设计文档
+- [x] **workflow-implementation-guide.md** — 详细实现说明（面向小白）
+- [x] **spec.md** — 新增 Spec-10: StateGraph 工作流
+
+---
+
 ## Phase 7 知识库搭建与 RAG 检索升级 🔴 [核心]
 
 > 目标：搭建向量知识库，从关键词匹配升级为语义检索 + BM25 混合检索，显著提升文档问答准确率

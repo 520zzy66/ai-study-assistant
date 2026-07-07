@@ -1,7 +1,10 @@
 package com.study.controller;
 
 import com.study.ai.service.*;
+import com.study.ai.workflow.graph.WorkflowChatResult;
+import com.study.ai.workflow.graph.WorkflowGraphService;
 import com.study.common.Result;
+import com.study.common.UserContext;
 import com.study.dto.request.*;
 import com.study.entity.AiQuestionBank;
 import com.study.entity.StudyPlan;
@@ -32,6 +35,30 @@ public class AiController {
     private final AiQaService qaService;
     private final AiQuizService quizService;
     private final AiPlanService planService;
+    private final WorkflowGraphService workflowGraphService;
+
+    // ==================== Spec-08: Workflow 编排器（专家 Agent 路由） ====================
+
+    /**
+     * 工作流同步问答 — 经 GeneralNode 路由后由专家 Agent 回答
+     */
+    @Operation(summary = "工作流问答（同步）", description = "经路由节点自动选择专家 Agent 回答，支持资料上下文")
+    @PostMapping("/workflow/ask")
+    public Result<WorkflowChatResult> workflowAsk(@Valid @RequestBody WorkflowChatRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+        WorkflowChatResult result = workflowGraphService.execute(request, userId);
+        return Result.success(result);
+    }
+
+    /**
+     * 工作流流式问答（SSE）— 实时推送路由决策和工具调用事件
+     */
+    @Operation(summary = "工作流问答（流式）", description = "SSE 流式返回，包含路由事件、工具调用、最终回答")
+    @PostMapping(value = "/workflow/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> workflowAskStream(@Valid @RequestBody WorkflowChatRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+        return workflowGraphService.executeStream(request, userId);
+    }
 
     // ==================== Spec-04: AI 文档总结 ====================
 

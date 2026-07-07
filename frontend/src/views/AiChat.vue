@@ -544,7 +544,7 @@ const suggestedQuestions = computed(() => {
 // 加载会话列表
 async function loadConversations() {
   try {
-    const result = await getChatHistory({ type: 'qa', page: 1, size: 100 })
+    const result = await getChatHistory({ type: 'workflow', page: 1, size: 100 })
     // 按 conversationId 聚合
     const grouped = {}
     for (const record of result.records) {
@@ -574,7 +574,7 @@ function toggleSidebar() {
 }
 
 function createNewChat() {
-  activeConversationId.value = null
+  activeConversationId.value = crypto.randomUUID()
   aiStore.clearMessages()
 }
 
@@ -583,7 +583,7 @@ async function switchConversation(conversationId) {
   aiStore.clearMessages()
 
   try {
-    const result = await getChatHistory({ page: 1, size: 100 })
+    const result = await getChatHistory({ type: 'workflow', page: 1, size: 100 })
     // 筛选出该 conversationId 的消息，按时间正序
     const msgs = result.records
       .filter(r => r.conversationId === conversationId)
@@ -827,6 +827,11 @@ async function sendMessage(text) {
   const question = text || inputText.value.trim()
   if (!question) return
 
+  // 确保有 conversationId
+  if (!activeConversationId.value) {
+    activeConversationId.value = crypto.randomUUID()
+  }
+
   // 检查关联资料是否还在处理中
   if (isMaterialProcessing.value) {
     ElMessage.warning('文件正在处理中，请稍候再提问')
@@ -870,7 +875,8 @@ async function sendMessage(text) {
       {
         materialId: currentMaterialId,
         question,
-        history
+        history,
+        conversationId: activeConversationId.value
       },
       {
         onToken(_token, fullText) {

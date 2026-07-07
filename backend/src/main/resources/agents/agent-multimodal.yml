@@ -1,0 +1,20 @@
+# ============================================================
+# 多模态预处理 Agent 配置
+# 职责：解析上传文件内容，生成结构化资料描述（不含领域判断）
+# ============================================================
+
+id: multimodal
+name: 多模态预处理
+description: 解析用户上传的学习资料，生成结构化描述供路由节点使用
+icon: "📄"
+order: -1
+
+# 模型绑定（空则使用全局默认模型）
+model:
+  base-url: http://localhost:11434
+  api-key: ollama
+  model: qwen2.5vl:3b
+  temperature: 0.3  # 路由任务需要低温度以保证稳定性
+
+# System Prompt
+system-prompt-file: prompts/multimodal-system.txt

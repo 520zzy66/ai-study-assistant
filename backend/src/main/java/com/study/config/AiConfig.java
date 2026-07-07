@@ -3,39 +3,37 @@ package com.study.config;
 import com.study.ai.memory.BoundedChatMemory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * AI 配置类
- * 配置 Spring AI ChatClient
+ *
+ * <h3>ChatModel 架构</h3>
+ * <ul>
+ *   <li><b>openAiChatModel</b> — Spring AI 自动配置，小米 MiMo API，专家 Agent 使用</li>
+ *   <li><b>GeneralNode</b> — AgentClientFactory 根据 agent-general.yml 独立 base-url 自动创建 Ollama 模型</li>
+ *   <li><b>Embedding</b> — OllamaEmbeddingProvider 手动创建，不走 Spring AI bean</li>
+ * </ul>
+ *
+ * <p>不需要手动创建 ollamaChatModel bean，避免与 openAiChatModel 冲突。</p>
  */
 @Configuration
 public class AiConfig {
 
-    /**
-     * 对话记忆窗口大小，限制每次请求携带的历史消息轮数，防止内存无限增长
-     */
+    /** 对话记忆窗口大小 */
     public static final int CHAT_MEMORY_SIZE = 10;
 
-    /**
-     * ChatMemory Bean，用于存储对话历史
-     * 使用 BoundedChatMemory 包装 InMemoryChatMemory，限制最大 1000 个会话，LRU 淘汰旧会话防止 OOM
-     */
+    // ==================== ChatMemory ====================
+
     @Bean
     public ChatMemory chatMemory() {
-        return new BoundedChatMemory(new InMemoryChatMemory());
+        return new BoundedChatMemory(MessageWindowChatMemory.builder().build());
     }
 
-    /**
-     * 创建 ChatClient Bean，用于调用 DeepSeek API（兼容 OpenAI 协议）
-     * 注意：不在此处设置默认的 MessageChatMemoryAdvisor，
-     * 因为需要在调用时动态传入 conversation_id 实现多用户隔离
-     *
-     * @param builder ChatClient.Builder
-     * @return ChatClient
-     */
+    // ==================== ChatClient（MiMo，专家 Agent） ====================
+
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder) {
         return builder

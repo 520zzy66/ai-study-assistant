@@ -18,6 +18,7 @@
 - [Spec-07: AI 学习计划](#spec-07-ai-学习计划)
 - [Spec-08: 历史记录模块](#spec-08-历史记录模块)
 - [Spec-09: 异步任务模块](#spec-09-异步任务模块)
+- [Spec-10: StateGraph 工作流](#spec-10-stategraph-工作流)
 - [附录](#附录)
 
 ---
@@ -1643,6 +1644,216 @@ CREATE TABLE IF NOT EXISTS ai_task (
 
 ---
 
+## Spec-10: StateGraph 工作流
+
+> **架构**：Spring AI Alibaba StateGraph 状态图引擎
+> **详细设计**：`docs/workflow-orchestrator-spec.md`
+> **实现说明**：`docs/workflow-implementation-guide.md`
+
+### 10.1 整体架构
+
+AI 对话功能封装为 StateGraph 状态图工作流：
+
+```
+START → GeneralNode → (localAnswer | expertAgent) → END
+```
+
+- **GeneralNode**：路由决策 + 上下文注入（画像/记忆/历史/资料）+ 会话向量化 + 简单问题回答
+- **LocalAnswerNode**：返回 Level 0/1 的本地回答
+- **ExpertAgentNode**：内部路由到三个专家 Agent Service（Civil/Graduate/General）
+
+### 10.2 接口
+
+**同步问答**
+
+```
+POST /ai/workflow/ask
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "question": "什么是申论？",
+  "materialId": null,
+  "conversationId": "xxx",
+  "history": []
+}
+```
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "answer": "申论是公务员考试科目之一...",
+    "routeLevel": 1,
+    "routedExpert": "GENERAL_EXPERT",
+    "routeDomain": "GENERAL",
+    "routeIntent": "简单常识问题",
+    "routeConfidence": 0.85,
+    "conversationId": "xxx",
+    "durationMs": 1200,
+    "fallback": false
+  }
+}
+```
+
+**流式问答（SSE）**
+
+```
+POST /ai/workflow/ask/stream
+Authorization: Bearer <token>
+Content-Type: application/json
+Accept: text/event-stream
+
+// 请求体同上
+```
+
+**SSE 事件格式**
+
+```
+event: done
+data: {"type":"done","answer":"...","level":1,"agent":"GENERAL_EXPERT","duration_ms":1200,"conversationId":"xxx"}
+```
+
+### 10.3 三级路由
+
+| Level | 场景 | 处理方式 | 示例 |
+|-------|------|----------|------|
+| 0 | 问候/关键词 | 预设回答，不调用 LLM | "你好"、"谢谢" |
+| 1 | 简单常识 | 调用一次 LLM，简短回答 | "什么是申论" |
+| 2 | 专家分析 | 路由到 ExpertAgent，ReAct 循环 | "帮我分析国考申论技巧" |
+
+### 10.4 上下文注入
+
+GeneralNode 在路由前必须注入以下上下文：
+
+| 上下文 | 来源 | 作用 |
+|--------|------|------|
+| 用户画像 | `UserProfileCompressor.getCachedProfile()` | 了解用户学习偏好 |
+| 长期记忆 | `UserMemoryService.searchMemories()` | 检索相关记忆条目 |
+| 历史对话向量 | `VectorStore.similaritySearch()` | 语义检索历史对话 |
+| 近期对话 | `BoundedChatMemory.get()` | 最近 10 条消息 |
+| 资料分析 | state 中 MultimodalNode 输出 | 上传资料的摘要 |
+
+### 10.5 专家 Agent
+
+| expertId | Service | 专长 |
+|----------|---------|------|
+| CIVIL_EXPERT | CivilExpertAgentService | 考公（申论、行测、面试） |
+| GRADUATE_EXPERT | GraduateExpertAgentService | 考研（高数、英语、政治） |
+| GENERAL_EXPERT | GeneralQaAgentService | 通用学习助手 |
+
+每个专家通过 `@Tool` 注解暴露 3 个工具，Spring AI 自动 ReAct 循环：
+
+- `searchDomainKnowledge(domain, query)` — 检索系统知识库
+- `searchPersonalMaterial(userId, query)` — 检索用户资料
+- `searchConversationHistory(userId, query)` — 检索历史对话
+
+### 10.6 会话向量化
+
+GeneralNode 在每次请求时将上一轮对话向量化存入 PgVector：
+
+- 调用 `ConversationHistoryVectorizer.vectorizeSync()`
+- 使用本地 Ollama bge-m3 Embedding 模型
+- 切片 300 字/片，50 字重叠
+- 元数据包含 `source=conversation_history`, `user_id`
+
+### 10.7 错误码
+
+| 错误码 | 含义 | 触发条件 |
+|--------|------|----------|
+| 7001 | Agent 不存在 | routedExpert 对应的 Service 未找到 |
+| 7009 | 本地模型调用失败 | Level 0/1 LLM 异常 |
+| 7010 | 工具调用失败 | @Tool 方法异常 |
+
+### 10.8 数据模型
+
+**执行日志表：agent_execution_log**
+
+```sql
+CREATE TABLE IF NOT EXISTS agent_execution_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    conversation_id VARCHAR(64),
+    question TEXT,
+    route_level INT DEFAULT 2,
+    routed_expert VARCHAR(50),
+    route_domain VARCHAR(20),
+    route_intent VARCHAR(200),
+    route_confidence DOUBLE DEFAULT 0.0,
+    routing JSON,
+    execution_chain JSON,
+    final_answer TEXT,
+    fallback INT DEFAULT 0,
+    error_message VARCHAR(500),
+    total_duration_ms BIGINT DEFAULT 0,
+    llm_call_count INT DEFAULT 0,
+    tool_call_count INT DEFAULT 0,
+    total_tokens INT DEFAULT 0,
+    user_feedback VARCHAR(10),
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_conversation_id (conversation_id)
+) ENGINE=InnoDB COMMENT='Agent执行日志';
+```
+
+### 10.9 文件结构
+
+```
+backend/src/main/java/com/study/ai/
+├── workflow/
+│   ├── graph/
+│   │   ├── RouteKeys.java              # State key 常量
+│   │   ├── WorkflowGraphService.java   # StateGraph 构建与执行
+│   │   └── WorkflowChatResult.java     # 结果 DTO
+│   ├── node/
+│   │   ├── GeneralNode.java            # 路由+上下文+向量化+回答
+│   │   ├── LocalAnswerNode.java        # Level 0/1 本地回答
+│   │   ├── ExpertAgentNode.java        # 专家 Agent 节点
+│   │   ├── MultimodalNode.java         # 资料预处理
+│   │   └── NodeType.java               # 节点类型枚举
+│   └── service/
+│       ├── ExpertAgentService.java     # 专家服务接口
+│       ├── AbstractExpertAgentService.java # 专家服务基类
+│       ├── CivilExpertAgentService.java    # 考公专家
+│       ├── GraduateExpertAgentService.java # 考研专家
+│       └── GeneralQaAgentService.java      # 通用专家
+├── agent/tool/
+│   ├── KnowledgeTools.java             # @Tool 方法（RAG 检索）
+│   └── ToolCallEventPublisher.java     # 工具调用事件发布
+├── profile/
+│   └── UserProfileCompressor.java      # 用户画像压缩
+├── history/
+│   └── ConversationHistoryVectorizer.java # 会话向量化
+├── memory/
+│   ├── UserMemoryExtractor.java        # 记忆提取
+│   └── BoundedChatMemory.java          # 有界对话记忆
+└── rag/
+    ├── HybridSearchService.java        # 混合检索
+    ├── Bm25Service.java                # BM25 检索
+    └── OllamaEmbeddingProvider.java    # Ollama Embedding
+```
+
+### 10.10 验收标准
+
+- [x] StateGraph 正确构建（节点 + 条件边）
+- [x] 条件路由根据 routeLevel 正确分流
+- [x] 节点通过 OverAllState 共享数据
+- [x] 会话向量化正常工作（本地 Ollama）
+- [x] 用户画像/记忆/历史/资料注入到 state
+- [x] Level 0 关键词直接回答
+- [x] Level 1 简单问题 LLM 回答
+- [x] Level 2 专家路由（关键词 + LLM）
+- [x] 专家 Agent 自主调用 @Tool
+- [x] 路由失败回退 GENERAL_EXPERT
+- [x] 专家执行失败返回友好提示
+- [x] WorkflowChatResult 字段向后兼容
+- [x] agent_execution_log 表结构不变
+
+---
+
 ## 附录
 
 ### A.1 完整文件结构
@@ -1707,13 +1918,42 @@ backend/
     │       ├── client/
     │       │   ├── AiClient.java
     │       │   └── EmbeddingProvider.java
-    │       ├── prompt/
-    │       │   └── PromptTemplates.java
+    │       ├── agent/
+    │       │   ├── config/
+    │       │   │   └── AgentClientFactory.java
+    │       │   └── tool/
+    │       │       ├── KnowledgeTools.java
+    │       │       └── ToolCallEventPublisher.java
+    │       ├── workflow/
+    │       │   ├── graph/
+    │       │   │   ├── RouteKeys.java
+    │       │   │   ├── WorkflowGraphService.java
+    │       │   │   └── WorkflowChatResult.java
+    │       │   ├── node/
+    │       │   │   ├── GeneralNode.java
+    │       │   │   ├── LocalAnswerNode.java
+    │       │   │   ├── ExpertAgentNode.java
+    │       │   │   └── MultimodalNode.java
+    │       │   └── service/
+    │       │       ├── ExpertAgentService.java
+    │       │       ├── AbstractExpertAgentService.java
+    │       │       ├── CivilExpertAgentService.java
+    │       │       ├── GraduateExpertAgentService.java
+    │       │       └── GeneralQaAgentService.java
+    │       ├── profile/
+    │       │   └── UserProfileCompressor.java
+    │       ├── history/
+    │       │   └── ConversationHistoryVectorizer.java
+    │       ├── memory/
+    │       │   ├── UserMemoryExtractor.java
+    │       │   └── BoundedChatMemory.java
     │       ├── rag/
     │       │   ├── RagService.java
-    │       │   ├── VectorIndex.java
-    │       │   ├── BM25Search.java
-    │       │   └── HybridSearch.java
+    │       │   ├── HybridSearchService.java
+    │       │   ├── Bm25Service.java
+    │       │   └── OllamaEmbeddingProvider.java
+    │       ├── prompt/
+    │       │   └── PromptTemplates.java
     │       ├── parser/
     │       │   ├── DocumentParser.java
     │       │   └── TikaDocumentParser.java
@@ -1848,6 +2088,8 @@ CREATE TABLE IF NOT EXISTS ai_quiz_record (
 | AI | /ai/summary/{id} | POST | 是 |
 | AI | /ai/qa | POST | 是 |
 | AI | /ai/qa/stream | POST | 是 |
+| AI | /ai/workflow/ask | POST | 是 |
+| AI | /ai/workflow/ask/stream | POST | 是 |
 | AI | /ai/quiz/{id} | POST | 是 |
 | AI | /ai/quiz/{batchId}/answer | POST | 是 |
 | AI | /ai/plan | POST | 是 |

@@ -26,12 +26,16 @@ AI Study Assistant
 
 - Java 21
 - Spring Boot 3.x
-- Spring AI 1.0.0（正式版）
-- MyBatis-Plus
+- **Spring AI 1.1.2（GA 正式版）**
+- **Spring AI Alibaba 1.1.2.0（Agent 框架 + 向量存储增强）**
+- MyBatis-Plus 3.5.7
 - Spring Web
 - Spring Validation
 - Spring Security + JWT Authentication
 - Maven
+
+> ⚠️ **底层 Spring 框架版本约束**：必须使用 Spring AI 1.1.2 + Spring AI Alibaba 1.1.2.0，禁止降级或混用其他版本。
+> 详细 API 参考见 `docs/spring-ai-framework-guide.md`
 
 ## Frontend
 
@@ -44,16 +48,29 @@ AI Study Assistant
 
 ## Database
 
-- MySQL 8.0
+- PostgreSQL 16 + pgvector（向量存储）
 
 ## AI
 
-- Spring AI ChatClient
-- DeepSeek API（兼容 OpenAI API）
-- RAG（Embedding + Vector Store）
-- Embedding Model：bge-small-zh（本地部署）
-- Hybrid Search：Vector Search + BM25
-- Optional Reranking
+- Spring AI 1.1.2 ChatClient + VectorStore + EmbeddingModel
+- Spring AI Alibaba 1.1.2.0 Agent 框架
+- Xiaomi MiMo API（mimo-v2.5，兼容 OpenAI API，主要 LLM 提供商）
+- DeepSeek API（兼容 OpenAI API，备选）
+- RAG（Embedding + Vector Store + BM25 混合检索）
+- Embedding Model：bge-m3（本地 Ollama 部署，1024 维）
+- Vector Store：PgVector（PostgreSQL 扩展，与业务数据共存）
+- Hybrid Search：Vector Search（余弦相似度）+ BM25（jieba 中文分词）
+- Optional Reranking（预留）
+
+## 框架开发规范
+
+> 详细 API 参考见 `docs/spring-ai-framework-guide.md`
+
+- 向量存储统一使用 Spring AI `VectorStore` 接口（PgVector 实现）
+- Embedding 通过 `EmbeddingModel` 接口注入，本地实现为 Ollama + bge-m3
+- Agent 开发基于 Spring AI Alibaba `Agent` 接口
+- 工具调用使用 `@Tool` 注解
+- 配置统一使用 BOM 管理版本，不手动指定 Spring AI 模块版本
 
 ---
 
