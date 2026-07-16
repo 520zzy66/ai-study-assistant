@@ -49,7 +49,7 @@ ai:
   embedding:
     provider: ${EMBEDDING_PROVIDER:local}            # Embedding 服务（local = 本地 bge 模型）
     model: bge-small-zh                              # Embedding 模型名称
-    dimension: 512                                   # 向量维度
+    dimension: 1024                                  # 向量维度
   rag:
     enable-bm25: true                                # 是否启用 BM25 关键词检索
     enable-reranking: false                          # 是否启用 Reranking 重排序

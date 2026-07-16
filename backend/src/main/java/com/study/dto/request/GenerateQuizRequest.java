@@ -23,6 +23,18 @@ public class GenerateQuizRequest {
     @Min(0) @Max(5)
     private Integer shortAnswerCount;
 
+    /** 填空题数量 */
+    @Min(0) @Max(10)
+    private Integer fillBlankCount;
+
+    /** 多选题数量 */
+    @Min(0) @Max(10)
+    private Integer multiChoiceCount;
+
+    /** 数学填空题数量 */
+    @Min(0) @Max(10)
+    private Integer mathFillCount;
+
     /** 难度 easy/medium/hard */
     @Pattern(regexp = "^(easy|medium|hard)$", message = "难度必须是 easy、medium 或 hard")
     private String difficulty;

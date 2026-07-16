@@ -122,13 +122,12 @@ public class MaterialFolderServiceImpl implements MaterialFolderService {
             throw new BusinessException(2004, "请先删除该文件夹下的所有子文件夹");
         }
 
-        // TODO: 文件夹功能待 LearningMaterial 添加 folderId 字段后启用
         // 将该文件夹下的资料的 folder_id 置为 NULL（移出文件夹）
-        // LambdaUpdateWrapper<LearningMaterial> updateWrapper = new LambdaUpdateWrapper<>();
-        // updateWrapper.set(LearningMaterial::getFolderId, null)
-        //         .eq(LearningMaterial::getFolderId, id)
-        //         .eq(LearningMaterial::getUserId, userId);
-        // materialMapper.update(null, updateWrapper);
+        LambdaUpdateWrapper<LearningMaterial> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(LearningMaterial::getFolderId, null)
+                .eq(LearningMaterial::getFolderId, id)
+                .eq(LearningMaterial::getUserId, userId);
+        materialMapper.update(null, updateWrapper);
 
         // 逻辑删除文件夹
         folderMapper.deleteById(id);
@@ -147,10 +146,22 @@ public class MaterialFolderServiceImpl implements MaterialFolderService {
                         .orderByAsc(MaterialFolder::getId)
         );
 
+        // 统计每个文件夹下的资料数量
+        Map<Long, Integer> materialCountMap = new HashMap<>();
+        for (MaterialFolder f : allFolders) {
+            Long count = materialMapper.selectCount(
+                    new LambdaQueryWrapper<LearningMaterial>()
+                            .eq(LearningMaterial::getFolderId, f.getId())
+                            .eq(LearningMaterial::getUserId, userId)
+            );
+            materialCountMap.put(f.getId(), count.intValue());
+        }
+
         // 先全部转 VO，用 id 索引
         Map<Long, FolderVO> voMap = new HashMap<>();
         for (MaterialFolder f : allFolders) {
             FolderVO vo = toVO(f);
+            vo.setMaterialCount(materialCountMap.getOrDefault(f.getId(), 0));
             vo.setChildren(new ArrayList<>());
             voMap.put(vo.getId(), vo);
         }

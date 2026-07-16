@@ -1,6 +1,7 @@
 package com.study.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.study.common.BusinessException;
@@ -9,6 +10,7 @@ import com.study.common.UserContext;
 import com.study.dto.request.MaterialListRequest;
 import com.study.entity.LearningMaterial;
 import com.study.entity.MaterialChunk;
+import com.study.entity.MaterialFolder;
 import com.study.mapper.LearningMaterialMapper;
 import com.study.mapper.MaterialChunkMapper;
 import com.study.service.MaterialService;
@@ -34,6 +36,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 学习资料服务实现
@@ -73,7 +76,7 @@ public class MaterialServiceImpl implements MaterialService {
     }
 
     @Override
-    public MaterialUploadVO upload(MultipartFile file, String category) {
+    public MaterialUploadVO upload(MultipartFile file, String category, Long folderId) {
         // 1. 基础校验
         if (file == null || file.isEmpty()) {
             throw new BusinessException(2004, "文件为空");
@@ -118,7 +121,7 @@ public class MaterialServiceImpl implements MaterialService {
         Long materialId;
         try {
             materialId = insertMaterialRecord(userId, originalName, storedName, ext,
-                    file.getSize(), relativePath, category);
+                    file.getSize(), relativePath, category, folderId);
         } catch (Exception e) {
             try { Files.deleteIfExists(fullPath); } catch (IOException ignored) {}
             throw e;
@@ -145,7 +148,7 @@ public class MaterialServiceImpl implements MaterialService {
      */
     private Long insertMaterialRecord(Long userId, String originalName, String storedName,
                                       String fileType, Long fileSize, String filePath,
-                                      String category) {
+                                      String category, Long folderId) {
         LearningMaterial material = new LearningMaterial();
         material.setUserId(userId);
         material.setOriginalName(originalName);
@@ -154,11 +157,22 @@ public class MaterialServiceImpl implements MaterialService {
         material.setFileSize(fileSize);
         material.setFilePath(filePath);
         material.setCategory(category);
+        material.setFolderId(folderId);
         material.setStatus("processing");
         material.setChunkCount(0);
         material.setSource(Constants.SOURCE_USER);
         materialMapper.insert(material);
+        clearFolderSummary(folderId);
         return material.getId();
+    }
+
+    private void clearFolderSummary(Long folderId) {
+        if (folderId == null) return;
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<MaterialFolder> wrapper = new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
+        wrapper.eq(MaterialFolder::getId, folderId)
+               .set(MaterialFolder::getSummary, null)
+               .set(MaterialFolder::getMindMap, null);
+        Db.update(wrapper);
     }
 
     @Override
@@ -170,19 +184,43 @@ public class MaterialServiceImpl implements MaterialService {
                 .eq(LearningMaterial::getUserId, userId)
                 .and(w -> w.isNull(LearningMaterial::getSource)
                         .or().ne(LearningMaterial::getSource, Constants.SOURCE_SYSTEM))
+                .eq(request.getFolderId() != null,
+                        LearningMaterial::getFolderId, request.getFolderId())
+                .isNull(request.getFolderId() == null,
+                        LearningMaterial::getFolderId)
                 .eq(StringUtils.hasText(request.getStatus()),
                         LearningMaterial::getStatus, request.getStatus())
                 .eq(StringUtils.hasText(request.getCategory()),
                         LearningMaterial::getCategory, request.getCategory())
+                .like(StringUtils.hasText(request.getFileName()),
+                        LearningMaterial::getOriginalName, request.getFileName())
                 .orderByDesc(LearningMaterial::getCreateTime);
 
         Page<LearningMaterial> result = materialMapper.selectPage(page, wrapper);
 
+        // 查询文件夹名称映射
+        Set<Long> folderIds = result.getRecords().stream()
+                .map(LearningMaterial::getFolderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> folderNameMap = new HashMap<>();
+        if (!folderIds.isEmpty()) {
+            List<MaterialFolder> folders = Db.lambdaQuery(MaterialFolder.class)
+                    .in(MaterialFolder::getId, folderIds)
+                    .list();
+            folderNameMap = folders.stream()
+                    .collect(Collectors.toMap(MaterialFolder::getId, MaterialFolder::getName));
+        }
+
         // 转换为 VO
+        Map<Long, String> finalFolderNameMap = folderNameMap;
         Page<MaterialVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
         List<MaterialVO> voList = result.getRecords().stream().map(m -> {
             MaterialVO vo = new MaterialVO();
             BeanUtils.copyProperties(m, vo);
+            if (m.getFolderId() != null) {
+                vo.setFolderName(finalFolderNameMap.get(m.getFolderId()));
+            }
             return vo;
         }).toList();
         voPage.setRecords(voList);
@@ -225,6 +263,7 @@ public class MaterialServiceImpl implements MaterialService {
 
         // 逻辑删除资料（@TableLogic 自动处理）
         materialMapper.deleteById(id);
+        clearFolderSummary(material.getFolderId());
 
         // 逻辑删除关联的切片（与 Spec 2.4 保持一致）
         LambdaQueryWrapper<MaterialChunk> wrapper = new LambdaQueryWrapper<MaterialChunk>()
@@ -408,11 +447,101 @@ public class MaterialServiceImpl implements MaterialService {
 
         List<LearningMaterial> list = materialMapper.selectList(wrapper);
 
+        // 查询文件夹名称映射
+        Set<Long> folderIds = list.stream()
+                .map(LearningMaterial::getFolderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> folderNameMap = new HashMap<>();
+        if (!folderIds.isEmpty()) {
+            List<MaterialFolder> folders = Db.lambdaQuery(MaterialFolder.class)
+                    .in(MaterialFolder::getId, folderIds)
+                    .list();
+            folderNameMap = folders.stream()
+                    .collect(Collectors.toMap(MaterialFolder::getId, MaterialFolder::getName));
+        }
+
+        // 转换为 VO
+        Map<Long, String> finalFolderNameMap = folderNameMap;
         return list.stream().map(m -> {
             MaterialVO vo = new MaterialVO();
             BeanUtils.copyProperties(m, vo);
+            if (m.getFolderId() != null) {
+                vo.setFolderName(finalFolderNameMap.get(m.getFolderId()));
+            }
             return vo;
         }).toList();
     }
 
+    @Override
+    @Transactional
+    public void moveMaterials(Long userId, List<Long> materialIds, Long folderId) {
+        if (materialIds == null || materialIds.isEmpty()) {
+            return;
+        }
+
+        // 校验目标文件夹归属（如果指定了文件夹）
+        if (folderId != null) {
+            MaterialFolder folder = Db.lambdaQuery(MaterialFolder.class)
+                    .eq(MaterialFolder::getId, folderId)
+                    .eq(MaterialFolder::getUserId, userId)
+                    .one();
+            if (folder == null) {
+                throw new BusinessException(2001, "目标文件夹不存在");
+            }
+        }
+
+        // 批量更新资料和关联切片的 folderId
+        for (Long materialId : materialIds) {
+            LearningMaterial material = materialMapper.selectById(materialId);
+            if (material == null || !material.getUserId().equals(userId)) {
+                continue; // 跳过不存在或不属于当前用户的资料
+            }
+
+            Long oldFolderId = material.getFolderId();
+
+            // 更新资料的 folderId
+            material.setFolderId(folderId);
+            materialMapper.updateById(material);
+
+            if (!java.util.Objects.equals(oldFolderId, folderId)) {
+                clearFolderSummary(oldFolderId);
+            }
+
+            // 同步更新关联切片的 folderId（冗余字段，便于按文件夹检索）
+            LambdaUpdateWrapper<MaterialChunk> chunkUpdate = new LambdaUpdateWrapper<>();
+            chunkUpdate.eq(MaterialChunk::getMaterialId, materialId)
+                    .eq(MaterialChunk::getUserId, userId)
+                    .set(MaterialChunk::getFolderId, folderId);
+            chunkMapper.update(null, chunkUpdate);
+        }
+
+        clearFolderSummary(folderId);
+        log.info("资料移动成功: userId={}, count={}, targetFolderId={}", userId, materialIds.size(), folderId);
+    }
+
+    @Override
+    public org.springframework.core.io.Resource preview(Long id) {
+        LearningMaterial material = materialMapper.selectById(id);
+        if (material == null || material.getDeleted() == 1) {
+            throw new com.study.common.BusinessException(404, "文件不存在");
+        }
+        
+        String path = material.getFilePath();
+        if (path == null || path.isEmpty()) {
+            throw new com.study.common.BusinessException(404, "文件未找到");
+        }
+        
+        try {
+            java.nio.file.Path file = java.nio.file.Paths.get(uploadDir).resolve(path).normalize();
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(file.toUri());
+            if (resource.exists() || resource.isReadable()) {
+                return resource;
+            } else {
+                throw new com.study.common.BusinessException(500, "无法读取文件");
+            }
+        } catch (Exception e) {
+            throw new com.study.common.BusinessException(500, "文件预览失败");
+        }
+    }
 }

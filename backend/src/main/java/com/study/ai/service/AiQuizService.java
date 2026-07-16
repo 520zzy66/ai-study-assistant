@@ -13,7 +13,6 @@ import com.study.common.BusinessException;
 import com.study.common.Constants;
 import com.study.common.JsonUtils;
 import com.study.common.UserContext;
-import static com.study.common.JsonUtils.toJson;
 import com.study.dto.request.GenerateQuizRequest;
 import com.study.dto.request.SubmitAnswerRequest;
 import com.study.entity.*;
@@ -68,9 +67,12 @@ public class AiQuizService {
         int choiceCount = request.getChoiceCount() != null ? request.getChoiceCount() : 5;
         int judgeCount = request.getJudgeCount() != null ? request.getJudgeCount() : 3;
         int shortAnswerCount = request.getShortAnswerCount() != null ? request.getShortAnswerCount() : 2;
+        int fillBlankCount = request.getFillBlankCount() != null ? request.getFillBlankCount() : 0;
+        int multiChoiceCount = request.getMultiChoiceCount() != null ? request.getMultiChoiceCount() : 0;
+        int mathFillCount = request.getMathFillCount() != null ? request.getMathFillCount() : 0;
         String difficulty = request.getDifficulty() != null ? request.getDifficulty() : "medium";
 
-        int totalCount = choiceCount + judgeCount + shortAnswerCount;
+        int totalCount = choiceCount + judgeCount + shortAnswerCount + fillBlankCount + multiChoiceCount + mathFillCount;
         if (totalCount == 0) {
             throw new BusinessException(400, "至少需要生成一道题目");
         }
@@ -90,7 +92,8 @@ public class AiQuizService {
 
         // 5. 构建 Prompt 并调用 AI（temperature 0.3 保证 JSON 格式稳定）
         String prompt = PromptTemplates.buildQuizPrompt(
-                content, choiceCount, judgeCount, shortAnswerCount, difficulty);
+                content, choiceCount, judgeCount, shortAnswerCount,
+                fillBlankCount, multiChoiceCount, mathFillCount, difficulty);
         String aiResponse = aiClient.chat(prompt, 0.3);
 
         // 6. 解析 AI 返回的 JSON
@@ -111,7 +114,7 @@ public class AiQuizService {
             entity.setQuestionType(q.getType());
             entity.setDifficulty(difficulty);
             entity.setQuestion(q.getQuestion());
-            entity.setOptions(q.getOptions() != null ? toJson(q.getOptions()) : null);
+            entity.setOptions(q.getOptions());
             entity.setAnswer(q.getAnswer());
             entity.setExplanation(q.getExplanation());
             entity.setIsFavorite(0);
@@ -148,6 +151,113 @@ public class AiQuizService {
                 }).collect(Collectors.toList());
 
         return Map.of("materialId", materialId, "batchId", batchId, "batchName", batchName, "questions", questionList);
+    }
+
+    /**
+     * 生成文件夹练习题（混合出题）
+     * 从向量数据库读取该文件夹下所有资料的切片内容，由AI混合出题
+     *
+     * @param folderId 文件夹ID
+     * @param request  出题参数
+     * @return 题目列表 + batchId
+     */
+    public Map<String, Object> generateFolderQuiz(Long folderId, GenerateQuizRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+
+        // 1. 参数默认值
+        int choiceCount = request.getChoiceCount() != null ? request.getChoiceCount() : 5;
+        int judgeCount = request.getJudgeCount() != null ? request.getJudgeCount() : 3;
+        int shortAnswerCount = request.getShortAnswerCount() != null ? request.getShortAnswerCount() : 2;
+        int fillBlankCount = request.getFillBlankCount() != null ? request.getFillBlankCount() : 0;
+        int multiChoiceCount = request.getMultiChoiceCount() != null ? request.getMultiChoiceCount() : 0;
+        int mathFillCount = request.getMathFillCount() != null ? request.getMathFillCount() : 0;
+        String difficulty = request.getDifficulty() != null ? request.getDifficulty() : "medium";
+
+        int totalCount = choiceCount + judgeCount + shortAnswerCount + fillBlankCount + multiChoiceCount + mathFillCount;
+        if (totalCount == 0) {
+            throw new BusinessException(400, "至少需要生成一道题目");
+        }
+        if (totalCount > 20) {
+            throw new BusinessException(3006, "单次出题最多20道");
+        }
+
+        // 2. 读取文件夹下所有资料的切片内容
+        String content = contentReader.readFolderContent(folderId, userId);
+        if (content.isBlank()) {
+            throw new BusinessException(3001, "文件夹下没有可用资料或资料内容为空");
+        }
+
+        // 3. 获取文件夹下的资料ID列表
+        List<Long> materialIds = contentReader.getFolderMaterialIds(folderId, userId);
+
+        // 4. 自动生成批次名称
+        String batchName = request.getBatchName();
+        if (batchName == null || batchName.isBlank()) {
+            batchName = "文件夹混合出题 - "
+                    + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"));
+        }
+
+        // 5. 构建 Prompt 并调用 AI
+        String prompt = PromptTemplates.buildQuizPrompt(
+                content, choiceCount, judgeCount, shortAnswerCount,
+                fillBlankCount, multiChoiceCount, mathFillCount, difficulty);
+        String aiResponse = aiClient.chat(prompt, 0.3);
+
+        // 6. 解析 AI 返回的 JSON
+        List<QuizQuestion> questions = parseQuizResponse(aiResponse);
+        if (questions.isEmpty()) {
+            throw new BusinessException(3005, "AI 返回格式异常，请重试");
+        }
+
+        // 7. 生成 batchId 并批量保存到题库
+        String batchId = UUID.randomUUID().toString().substring(0, 8);
+        List<AiQuestionBank> entities = new ArrayList<>();
+        for (QuizQuestion q : questions) {
+            AiQuestionBank entity = new AiQuestionBank();
+            entity.setUserId(userId);
+            entity.setMaterialId(materialIds.isEmpty() ? null : materialIds.get(0)); // 关联第一个资料
+            entity.setBatchId(batchId);
+            entity.setBatchName(batchName);
+            entity.setQuestionType(q.getType());
+            entity.setDifficulty(difficulty);
+            entity.setQuestion(q.getQuestion());
+            entity.setOptions(q.getOptions());
+            entity.setAnswer(q.getAnswer());
+            entity.setExplanation(q.getExplanation());
+            entity.setIsFavorite(0);
+            entities.add(entity);
+        }
+        Db.saveBatch(entities);
+        for (int i = 0; i < questions.size(); i++) {
+            questions.get(i).setId(entities.get(i).getId());
+        }
+
+        // 8. 保存对话历史
+        AiChatHistory history = new AiChatHistory();
+        history.setUserId(userId);
+        history.setChatType(Constants.CHAT_TYPE_QUIZ);
+        history.setMaterialId(materialIds.isEmpty() ? null : materialIds.get(0));
+        history.setUserMessage("生成文件夹混合练习题: folderId=" + folderId + ", " + totalCount + "道" + difficulty + "难度");
+        history.setAiResponse(aiResponse);
+        history.setBatchId(batchId);
+        chatHistoryMapper.insert(history);
+
+        // 9. 构建返回
+        List<Map<String, Object>> questionList = questions.stream()
+                .map(q -> {
+                    Map<String, Object> map = new LinkedHashMap<>();
+                    map.put("id", q.getId());
+                    map.put("type", q.getType());
+                    map.put("difficulty", difficulty);
+                    map.put("question", q.getQuestion());
+                    map.put("options", q.getOptions());
+                    map.put("answer", q.getAnswer());
+                    map.put("explanation", q.getExplanation());
+                    return map;
+                }).collect(Collectors.toList());
+
+        return Map.of("folderId", folderId, "materialCount", materialIds.size(),
+                "batchId", batchId, "batchName", batchName, "questions", questionList);
     }
 
     /**
@@ -197,7 +307,7 @@ public class AiQuizService {
             boolean isCorrect;
             BigDecimal score = BigDecimal.ZERO;
 
-            // 选择题和判断题：精确匹配（防御 AI 返回 answer 为 null）
+            // 选择题和判断题：精确匹配
             if ("choice".equals(question.getQuestionType()) || "judge".equals(question.getQuestionType())) {
                 isCorrect = item.getAnswer() != null && question.getAnswer() != null &&
                         item.getAnswer().trim().equalsIgnoreCase(question.getAnswer().trim());
@@ -205,6 +315,36 @@ public class AiQuizService {
                     correctCount++;
                     score = BigDecimal.ONE;
                 }
+            }
+            // 填空题：精确匹配 + AI 语义判分
+            else if ("fill_blank".equals(question.getQuestionType())) {
+                Map<String, Object> grading = gradeFillBlank(
+                        question.getQuestion(), question.getAnswer(), item.getAnswer());
+                Object scoreObj = grading.get("score");
+                double gradingScore = scoreObj instanceof Number ? ((Number) scoreObj).doubleValue() : 0.0;
+                score = BigDecimal.valueOf(gradingScore);
+                isCorrect = gradingScore >= 0.6;
+                if (isCorrect) correctCount++;
+                detail.put("feedback", grading.getOrDefault("feedback", ""));
+            }
+            // 多选题：集合匹配（全对才得分）
+            else if ("multi_choice".equals(question.getQuestionType())) {
+                isCorrect = gradeMultiChoice(question.getAnswer(), item.getAnswer());
+                if (isCorrect) {
+                    correctCount++;
+                    score = BigDecimal.ONE;
+                }
+            }
+            // 数学填空题：数值容差匹配
+            else if ("math_fill".equals(question.getQuestionType())) {
+                Map<String, Object> grading = gradeMathFill(
+                        question.getQuestion(), question.getAnswer(), item.getAnswer());
+                Object scoreObj = grading.get("score");
+                double gradingScore = scoreObj instanceof Number ? ((Number) scoreObj).doubleValue() : 0.0;
+                score = BigDecimal.valueOf(gradingScore);
+                isCorrect = gradingScore >= 0.6;
+                if (isCorrect) correctCount++;
+                detail.put("feedback", grading.getOrDefault("feedback", ""));
             }
             // 简答题：AI 语义判分
             else {
@@ -297,6 +437,7 @@ public class AiQuizService {
             AiQuestionBank question = questionMap.get(wrong.getQuestionId());
             if (question != null) {
                 vo.setQuestion(question.getQuestion());
+                vo.setOptions(question.getOptions());
             }
 
             LearningMaterial material = materialMap.get(wrong.getMaterialId());
@@ -306,6 +447,148 @@ public class AiQuizService {
 
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 重做错题 — 随机抽取未掌握的错题
+     *
+     * @param count 抽取数量（默认10）
+     * @return 错题列表（含题目详情）
+     */
+    public List<WrongQuestionVO> getWrongQuestionsForRepractice(int count) {
+        Long userId = UserContext.getCurrentUserId();
+        if (count <= 0) count = 10;
+        count = Math.min(count, 50);
+
+        // 查询未掌握的错题
+        List<UserWrongQuestion> wrongList = wrongQuestionMapper.selectList(
+                new LambdaQueryWrapper<UserWrongQuestion>()
+                        .eq(UserWrongQuestion::getUserId, userId)
+                        .eq(UserWrongQuestion::getIsMastered, 0)
+                        .orderByDesc(UserWrongQuestion::getWrongCount));
+
+        if (wrongList.isEmpty()) return List.of();
+
+        // 随机打乱后取 count 条
+        List<UserWrongQuestion> shuffled = new ArrayList<>(wrongList);
+        Collections.shuffle(shuffled);
+        List<UserWrongQuestion> selected = shuffled.subList(0, Math.min(count, shuffled.size()));
+
+        // 批量查询题目和资料
+        Set<Long> questionIds = selected.stream().map(UserWrongQuestion::getQuestionId).collect(Collectors.toSet());
+        Set<Long> materialIds = selected.stream().map(UserWrongQuestion::getMaterialId).filter(Objects::nonNull).collect(Collectors.toSet());
+
+        Map<Long, AiQuestionBank> questionMap = questionBankMapper.selectBatchIds(questionIds).stream()
+                .collect(Collectors.toMap(AiQuestionBank::getId, q -> q));
+        Map<Long, LearningMaterial> materialMap = materialIds.isEmpty() ? Map.of()
+                : materialMapper.selectBatchIds(materialIds).stream()
+                .collect(Collectors.toMap(LearningMaterial::getId, m -> m));
+
+        return selected.stream().map(wrong -> {
+            WrongQuestionVO vo = new WrongQuestionVO();
+            vo.setId(wrong.getId());
+            vo.setQuestionId(wrong.getQuestionId());
+            vo.setMaterialId(wrong.getMaterialId());
+            vo.setQuestionType(wrong.getQuestionType());
+            vo.setUserAnswer(wrong.getUserAnswer());
+            vo.setCorrectAnswer(wrong.getCorrectAnswer());
+            vo.setWrongCount(wrong.getWrongCount());
+            vo.setLastWrongTime(wrong.getLastWrongTime());
+            vo.setIsMastered(wrong.getIsMastered());
+
+            AiQuestionBank question = questionMap.get(wrong.getQuestionId());
+            if (question != null) {
+                vo.setQuestion(question.getQuestion());
+                vo.setOptions(question.getOptions());
+            }
+
+            LearningMaterial material = materialMap.get(wrong.getMaterialId());
+            if (material != null) {
+                vo.setMaterialName(material.getOriginalName());
+            }
+
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 错题统计 — 按知识点、按日期、题型分布
+     *
+     * @param startDate 开始时间（可选）
+     * @param endDate   结束时间（可选）
+     * @return 统计数据
+     */
+    public Map<String, Object> getWrongQuestionStats(LocalDateTime startDate, LocalDateTime endDate) {
+        Long userId = UserContext.getCurrentUserId();
+
+        // 查询用户所有错题
+        LambdaQueryWrapper<UserWrongQuestion> wrapper = new LambdaQueryWrapper<UserWrongQuestion>()
+                .eq(UserWrongQuestion::getUserId, userId)
+                .ge(startDate != null, UserWrongQuestion::getLastWrongTime, startDate)
+                .le(endDate != null, UserWrongQuestion::getLastWrongTime, endDate)
+                .orderByDesc(UserWrongQuestion::getLastWrongTime);
+
+        List<UserWrongQuestion> wrongList = wrongQuestionMapper.selectList(wrapper);
+
+        // 总计
+        int totalCount = wrongList.size();
+        int masteredCount = (int) wrongList.stream().filter(w -> w.getIsMastered() != null && w.getIsMastered() == 1).count();
+        int unmasteredCount = totalCount - masteredCount;
+
+        // 按题型分布
+        Map<String, Long> byType = wrongList.stream()
+                .collect(Collectors.groupingBy(
+                        w -> w.getQuestionType() != null ? w.getQuestionType() : "unknown",
+                        Collectors.counting()));
+
+        // 按日期分布（最近30天，按天分组）
+        Map<String, Long> byDate = wrongList.stream()
+                .filter(w -> w.getLastWrongTime() != null)
+                .collect(Collectors.groupingBy(
+                        w -> w.getLastWrongTime().toLocalDate().toString(),
+                        TreeMap::new,
+                        Collectors.counting()));
+
+        // 按知识点（资料来源）分布
+        Set<Long> materialIds = wrongList.stream()
+                .map(UserWrongQuestion::getMaterialId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> materialNameMap = materialIds.isEmpty() ? Map.of()
+                : materialMapper.selectBatchIds(materialIds).stream()
+                .collect(Collectors.toMap(LearningMaterial::getId, LearningMaterial::getOriginalName));
+
+        Map<String, Long> byMaterial = wrongList.stream()
+                .filter(w -> w.getMaterialId() != null)
+                .collect(Collectors.groupingBy(
+                        w -> materialNameMap.getOrDefault(w.getMaterialId(), "未知来源"),
+                        Collectors.counting()));
+
+        // 错误次数 Top10 题目
+        List<Map<String, Object>> topWrong = wrongList.stream()
+                .sorted((a, b) -> Integer.compare(
+                        b.getWrongCount() != null ? b.getWrongCount() : 0,
+                        a.getWrongCount() != null ? a.getWrongCount() : 0))
+                .limit(10)
+                .map(w -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("questionId", w.getQuestionId());
+                    m.put("wrongCount", w.getWrongCount());
+                    m.put("questionType", w.getQuestionType());
+                    m.put("materialName", materialNameMap.getOrDefault(w.getMaterialId(), ""));
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalCount", totalCount);
+        result.put("masteredCount", masteredCount);
+        result.put("unmasteredCount", unmasteredCount);
+        result.put("byType", byType);
+        result.put("byDate", byDate);
+        result.put("byMaterial", byMaterial);
+        result.put("topWrong", topWrong);
+        return result;
     }
 
     /**
@@ -373,6 +656,137 @@ public class AiQuizService {
             String preview = aiResponse.length() > 200 ? aiResponse.substring(0, 200) : aiResponse;
             log.error("解析 AI 返回的题目 JSON 失败: {}", preview, e);
             throw new BusinessException(3005, "AI 返回格式异常，请重试");
+        }
+    }
+
+    /**
+     * 填空题判分
+     * 先精确匹配，失败则 AI 语义判分
+     */
+    private Map<String, Object> gradeFillBlank(String question, String referenceAnswer, String studentAnswer) {
+        if (studentAnswer == null || studentAnswer.isBlank()) {
+            return Map.of("score", 0.0, "feedback", "未作答");
+        }
+
+        // 1. 精确匹配（trim + ignoreCase）
+        if (referenceAnswer != null &&
+                studentAnswer.trim().equalsIgnoreCase(referenceAnswer.trim())) {
+            return Map.of("score", 1.0, "feedback", "完全正确");
+        }
+
+        // 2. AI 语义判分（降级）
+        return gradeShortAnswer(question, referenceAnswer, studentAnswer);
+    }
+
+    /**
+     * 多选题判分
+     * 解析参考答案和用户答案为集合，全对才得分
+     *
+     * @param referenceAnswer 参考答案，如 "A,C,D"
+     * @param studentAnswer   用户答案，如 "A,C,D"
+     * @return 是否全对
+     */
+    private boolean gradeMultiChoice(String referenceAnswer, String studentAnswer) {
+        if (referenceAnswer == null || studentAnswer == null) return false;
+
+        Set<String> refSet = parseChoiceSet(referenceAnswer);
+        Set<String> stuSet = parseChoiceSet(studentAnswer);
+        return refSet.equals(stuSet);
+    }
+
+    /**
+     * 解析多选题答案为有序集合（如 "A,C,D" → Set{"A","C","D"}）
+     */
+    private Set<String> parseChoiceSet(String answer) {
+        if (answer == null || answer.isBlank()) return Set.of();
+        return Arrays.stream(answer.split("[,，、\\s]+"))
+                .map(String::trim)
+                .map(String::toUpperCase)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    /**
+     * 数学填空题判分
+     * 三级匹配：精确字符串 → 数值解析（容差 0.0001）→ AI 语义判分
+     */
+    private Map<String, Object> gradeMathFill(String question, String referenceAnswer, String studentAnswer) {
+        if (studentAnswer == null || studentAnswer.isBlank()) {
+            return Map.of("score", 0.0, "feedback", "未作答");
+        }
+
+        // 1. 精确字符串匹配
+        if (referenceAnswer != null &&
+                studentAnswer.trim().equalsIgnoreCase(referenceAnswer.trim())) {
+            return Map.of("score", 1.0, "feedback", "完全正确");
+        }
+
+        // 2. 数值解析 + 容差匹配
+        Double refNum = parseNumericValue(referenceAnswer);
+        Double stuNum = parseNumericValue(studentAnswer);
+        if (refNum != null && stuNum != null) {
+            double diff = Math.abs(refNum - stuNum);
+            if (diff < 0.0001) {
+                return Map.of("score", 1.0, "feedback", "数值正确（容差范围内）");
+            }
+            return Map.of("score", 0.0, "feedback", "数值不正确，正确答案: " + referenceAnswer);
+        }
+
+        // 3. AI 语义判分（降级）
+        return gradeShortAnswer(question, referenceAnswer, studentAnswer);
+    }
+
+    /**
+     * 解析数学表达式为数值
+     * 支持：整数、小数、分数（1/3）、百分数（50%）、根号（√2、sqrt(2)）、π、e
+     *
+     * @param expr 数学表达式
+     * @return 数值，解析失败返回 null
+     */
+    private Double parseNumericValue(String expr) {
+        if (expr == null || expr.isBlank()) return null;
+        String s = expr.trim().toLowerCase();
+
+        try {
+            // 常量替换
+            s = s.replace("π", String.valueOf(Math.PI))
+                 .replace("pi", String.valueOf(Math.PI))
+                 .replace("e", String.valueOf(Math.E));
+
+            // 百分数：50% → 0.5
+            if (s.endsWith("%")) {
+                String num = s.substring(0, s.length() - 1);
+                return Double.parseDouble(num) / 100.0;
+            }
+
+            // 分数：1/3
+            if (s.contains("/")) {
+                String[] parts = s.split("/");
+                if (parts.length == 2) {
+                    double numerator = Double.parseDouble(parts[0].trim());
+                    double denominator = Double.parseDouble(parts[1].trim());
+                    if (denominator != 0) return numerator / denominator;
+                }
+            }
+
+            // 根号：√2 或 sqrt(2)
+            if (s.startsWith("√")) {
+                String inner = s.substring(1).trim();
+                // 处理 √(2) 格式
+                if (inner.startsWith("(") && inner.endsWith(")")) {
+                    inner = inner.substring(1, inner.length() - 1);
+                }
+                return Math.sqrt(Double.parseDouble(inner));
+            }
+            if (s.startsWith("sqrt(") && s.endsWith(")")) {
+                String inner = s.substring(5, s.length() - 1);
+                return Math.sqrt(Double.parseDouble(inner));
+            }
+
+            // 普通数字
+            return Double.parseDouble(s);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -622,10 +1036,28 @@ public class AiQuizService {
         String feedback = "";
         double score = 0.0;
 
-        if ("choice".equals(question.getQuestionType()) || "judge".equals(question.getQuestionType())) {
+        String qType = question.getQuestionType();
+        if ("choice".equals(qType) || "judge".equals(qType)) {
             isCorrect = userAnswer != null && question.getAnswer() != null &&
                     userAnswer.trim().equalsIgnoreCase(question.getAnswer().trim());
             score = isCorrect ? 1.0 : 0.0;
+        } else if ("fill_blank".equals(qType)) {
+            Map<String, Object> grading = gradeFillBlank(
+                    question.getQuestion(), question.getAnswer(), userAnswer);
+            Object scoreObj = grading.get("score");
+            score = scoreObj instanceof Number ? ((Number) scoreObj).doubleValue() : 0.0;
+            isCorrect = score >= 0.6;
+            feedback = (String) grading.getOrDefault("feedback", "");
+        } else if ("multi_choice".equals(qType)) {
+            isCorrect = gradeMultiChoice(question.getAnswer(), userAnswer);
+            score = isCorrect ? 1.0 : 0.0;
+        } else if ("math_fill".equals(qType)) {
+            Map<String, Object> grading = gradeMathFill(
+                    question.getQuestion(), question.getAnswer(), userAnswer);
+            Object scoreObj = grading.get("score");
+            score = scoreObj instanceof Number ? ((Number) scoreObj).doubleValue() : 0.0;
+            isCorrect = score >= 0.6;
+            feedback = (String) grading.getOrDefault("feedback", "");
         } else {
             Map<String, Object> grading = gradeShortAnswer(
                     question.getQuestion(), question.getAnswer(), userAnswer);

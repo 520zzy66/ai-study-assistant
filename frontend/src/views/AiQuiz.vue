@@ -2,7 +2,7 @@
   <div class="quiz-page">
     <BasePageHeader
       title="AI 自动出题"
-      description="选择学习资料，AI 自动生成练习题并智能判分"
+      description="选择学习资料或文件夹，AI 自动生成练习题并智能判分"
     />
 
     <div class="quiz-layout">
@@ -13,10 +13,31 @@
           <div class="quiz-config">
             <div class="config-row">
               <div class="config-field" style="flex:2;min-width:200px;">
-                <label class="config-label">选择资料</label>
-                <el-select v-model="quizForm.materialId" placeholder="请选择资料" filterable style="width:100%;">
-                  <el-option v-for="item in materialList" :key="item.id" :label="item.originalName" :value="item.id" />
-                </el-select>
+                <label class="config-label">选择文件夹或资料</label>
+                <el-cascader
+                  v-model="cascaderValue"
+                  :options="cascaderOptions"
+                  :props="cascaderProps"
+                  placeholder="请选择..."
+                  clearable
+                  style="width: 100%"
+                  @change="handleCascaderChange"
+                >
+                  <template #default="{ node, data }">
+                    <div class="cascader-node">
+                      <el-icon v-if="data.isFolder" class="cascader-icon folder-icon">
+                        <Folder />
+                      </el-icon>
+                      <el-icon v-else class="cascader-icon material-icon">
+                        <Document />
+                      </el-icon>
+                      <span class="cascader-label">{{ data.label }}</span>
+                      <span v-if="data.isFolder && data.materialCount" class="cascader-count">
+                        {{ data.materialCount }} 份资料
+                      </span>
+                    </div>
+                  </template>
+                </el-cascader>
               </div>
               <div class="config-field" style="width:120px;">
                 <label class="config-label">难度</label>
@@ -42,11 +63,23 @@
                 <label class="config-label">简答题</label>
                 <el-input-number v-model="quizForm.shortAnswerCount" :min="0" :max="5" style="width:100%;" size="small" />
               </div>
+              <div class="config-field" style="width:100px;">
+                <label class="config-label">填空题</label>
+                <el-input-number v-model="quizForm.fillBlankCount" :min="0" :max="10" style="width:100%;" size="small" />
+              </div>
+              <div class="config-field" style="width:100px;">
+                <label class="config-label">多选题</label>
+                <el-input-number v-model="quizForm.multiChoiceCount" :min="0" :max="10" style="width:100%;" size="small" />
+              </div>
+              <div class="config-field" style="width:100px;">
+                <label class="config-label">数学题</label>
+                <el-input-number v-model="quizForm.mathFillCount" :min="0" :max="10" style="width:100%;" size="small" />
+              </div>
             </div>
             <div class="config-action">
               <button
                 class="generate-btn"
-                :disabled="!quizForm.materialId || generating"
+                :disabled="!selectedInfo || generating"
                 @click="handleGenerate"
               >
                 <el-icon :size="16" :class="{ spinning: generating }">
@@ -79,154 +112,230 @@
             <div class="generate-error-info">
               <p class="generate-error-title">题目生成失败</p>
               <p class="generate-error-msg">{{ generateError }}</p>
-              <div class="generate-error-actions">
-                <el-button type="primary" @click="handleGenerate">
-                  <el-icon><Refresh /></el-icon>
-                  重新生成
-                </el-button>
-                <el-button @click="generateError = ''">关闭</el-button>
-              </div>
             </div>
+            <button class="retry-btn" @click="handleGenerate">
+              <el-icon><Refresh /></el-icon> 重试
+            </button>
           </div>
         </BaseCard>
 
-        <!-- Empty -->
-        <div v-if="questions.length === 0 && !generating && !generateError" class="quiz-empty-area">
-          <AppEmpty icon="EditPen" title="选择资料开始出题" description="AI 将根据学习资料自动生成练习题" />
-        </div>
-
         <!-- Questions -->
-        <div v-else-if="questions.length > 0" class="questions-area">
-          <div
+        <template v-if="questions.length > 0">
+          <!-- Question Cards -->
+          <BaseCard
             v-for="(q, index) in questions"
             :key="index"
+            :id="'question-' + index"
             class="question-card"
             :class="{
-              'q-correct': showAnswers && isCorrect(q, index),
-              'q-wrong': showAnswers && !isCorrect(q, index)
+              'is-correct': showAnswers && isCorrect(q, index),
+              'is-wrong': showAnswers && !isCorrect(q, index),
+              'is-current': currentQuestionIndex === index
             }"
           >
-            <!-- Header -->
-            <div class="q-header">
-              <div class="q-number">{{ index + 1 }}</div>
-              <div class="q-tags">
-                <el-tag size="small" :type="getTypeTag(q.type)">{{ getTypeLabel(q.type) }}</el-tag>
-                <el-tag size="small" :type="getDifficultyTag(q.difficulty)">{{ getDifficultyLabel(q.difficulty) }}</el-tag>
+            <div class="question-header">
+              <div class="question-meta">
+                <el-tag :type="getTypeTag(q.type)" size="small" effect="light">
+                  {{ getTypeLabel(q.type) }}
+                </el-tag>
+                <el-tag v-if="q.difficulty" :type="getDifficultyTag(q.difficulty)" size="small" effect="plain">
+                  {{ getDifficultyLabel(q.difficulty) }}
+                </el-tag>
+                <span class="question-number">第 {{ index + 1 }} 题</span>
+              </div>
+              <div v-if="showAnswers" class="question-result">
+                <el-icon v-if="isCorrect(q, index)" :size="20" color="var(--color-success)"><CircleCheckFilled /></el-icon>
+                <el-icon v-else :size="20" color="var(--color-error)"><CircleCloseFilled /></el-icon>
               </div>
             </div>
 
-            <!-- Question text -->
-            <div class="q-text">{{ q.question }}</div>
+            <p class="question-text">{{ q.question }}</p>
 
-            <!-- Code block if present -->
-            <div v-if="q.codeBlock" class="q-code-block">
-              <pre><code>{{ q.codeBlock }}</code></pre>
-            </div>
-
-            <!-- Options -->
-            <div v-if="q.type === 'choice'" class="q-options">
+            <!-- Options (choice type) -->
+            <div v-if="q.type === 'choice'" class="options-list">
               <div
-                v-for="(val, key) in q.options"
+                v-for="(value, key) in q.options"
                 :key="key"
-                class="q-option"
+                class="option-item"
                 :class="{
-                  'opt-selected': userAnswers[index] === key,
-                  'opt-correct': showAnswers && key === q.answer,
-                  'opt-wrong': showAnswers && userAnswers[index] === key && key !== q.answer
+                  selected: userAnswers[index] === key,
+                  correct: showAnswers && key === q.answer,
+                  wrong: showAnswers && userAnswers[index] === key && key !== q.answer
                 }"
-                @click="!showAnswers && (userAnswers[index] = key)"
+                @click="!showAnswers && selectOption(index, key)"
               >
-                <span class="opt-key">{{ key }}</span>
-                <span class="opt-val">{{ val }}</span>
+                <span class="option-key">{{ key }}</span>
+                <span class="option-value">{{ value }}</span>
+                <el-icon v-if="showAnswers && key === q.answer" class="correct-icon" :size="16">
+                  <CircleCheckFilled />
+                </el-icon>
               </div>
             </div>
 
-            <div v-else-if="q.type === 'judge'" class="q-options">
+            <!-- Judge options -->
+            <div v-else-if="q.type === 'judge'" class="options-list">
               <div
-                v-for="opt in ['true', 'false']"
-                :key="opt"
-                class="q-option"
+                v-for="opt in [{ key: 'T', label: '正确' }, { key: 'F', label: '错误' }]"
+                :key="opt.key"
+                class="option-item"
                 :class="{
-                  'opt-selected': userAnswers[index] === opt,
-                  'opt-correct': showAnswers && opt === q.answer,
-                  'opt-wrong': showAnswers && userAnswers[index] === opt && opt !== q.answer
+                  selected: userAnswers[index] === opt.key,
+                  correct: showAnswers && opt.key === q.answer,
+                  wrong: showAnswers && userAnswers[index] === opt.key && opt.key !== q.answer
                 }"
-                @click="!showAnswers && (userAnswers[index] = opt)"
+                @click="!showAnswers && selectOption(index, opt.key)"
               >
-                <span class="opt-val">{{ opt === 'true' ? '✓ 正确' : '✗ 错误' }}</span>
+                <span class="option-key">{{ opt.key === 'T' ? '✓' : '✗' }}</span>
+                <span class="option-value">{{ opt.label }}</span>
+                <el-icon v-if="showAnswers && opt.key === q.answer" class="correct-icon" :size="16">
+                  <CircleCheckFilled />
+                </el-icon>
               </div>
             </div>
 
-            <div v-else-if="q.type === 'short_answer'" class="q-options">
+            <!-- Short answer input -->
+            <div v-else-if="q.type === 'short_answer'" class="short-answer">
               <el-input
                 v-model="userAnswers[index]"
                 type="textarea"
                 :rows="3"
-                placeholder="请输入你的答案"
+                placeholder="请输入你的答案..."
                 :disabled="showAnswers"
               />
             </div>
 
-            <!-- Answer Result -->
-            <div v-if="showAnswers" class="q-result">
-              <div class="result-badge" :class="isCorrect(q, index) ? 'badge-ok' : 'badge-fail'">
-                <el-icon :size="14"><Check v-if="isCorrect(q, index)" /><Close v-else /></el-icon>
-                {{ isCorrect(q, index) ? '回答正确' : '回答错误' }}
-              </div>
-              <div class="result-detail">
-                <div class="result-row">
-                  <span class="result-label">正确答案</span>
-                  <span class="result-value">{{ q.answer }}</span>
-                </div>
-                <div v-if="q.explanation" class="result-row">
-                  <span class="result-label">解析</span>
-                  <span class="result-value">{{ q.explanation }}</span>
-                </div>
+            <!-- Fill blank input -->
+            <div v-else-if="q.type === 'fill_blank'" class="fill-blank">
+              <el-input
+                v-model="userAnswers[index]"
+                placeholder="请填入答案..."
+                :disabled="showAnswers"
+                clearable
+              />
+            </div>
+
+            <!-- Multi choice (checkboxes) -->
+            <div v-else-if="q.type === 'multi_choice'" class="options-list multi-choice">
+              <div
+                v-for="(value, key) in q.options"
+                :key="key"
+                class="option-item multi"
+                :class="{
+                  selected: isMultiSelected(index, key),
+                  correct: showAnswers && isMultiCorrect(key, q.answer),
+                  wrong: showAnswers && isMultiSelected(index, key) && !isMultiCorrect(key, q.answer)
+                }"
+                @click="!showAnswers && toggleMultiOption(index, key)"
+              >
+                <span class="option-checkbox">
+                  <el-icon v-if="isMultiSelected(index, key)"><CircleCheckFilled /></el-icon>
+                  <el-icon v-else><CircleCheck /></el-icon>
+                </span>
+                <span class="option-key">{{ key }}</span>
+                <span class="option-value">{{ value }}</span>
+                <el-icon v-if="showAnswers && isMultiCorrect(key, q.answer)" class="correct-icon" :size="16">
+                  <CircleCheckFilled />
+                </el-icon>
               </div>
             </div>
-          </div>
 
-          <!-- Submit Area -->
-          <div v-if="questions.length > 0" class="submit-area">
-            <button v-if="!showAnswers" class="submit-btn" @click="handleSubmit">提交答案</button>
-            <button v-else class="submit-btn retry-btn" @click="handleReset">
-              <el-icon :size="16"><Refresh /></el-icon> 重新答题
-            </button>
-          </div>
+            <!-- Math fill input -->
+            <div v-else-if="q.type === 'math_fill'" class="math-fill">
+              <el-input
+                v-model="userAnswers[index]"
+                placeholder="输入数值或表达式（如 1/3、0.5、√2）"
+                :disabled="showAnswers"
+                clearable
+              />
+            </div>
+
+            <!-- Answer explanation (shown after submit) -->
+            <div v-if="showAnswers && q.explanation" class="answer-explanation">
+              <div class="explanation-header">
+                <el-icon><InfoFilled /></el-icon>
+                <span>答案解析</span>
+              </div>
+              <p class="explanation-text">{{ q.explanation }}</p>
+              <div v-if="q.type === 'short_answer' && q.score !== undefined" class="score-display">
+                <span class="score-label">得分：</span>
+                <span class="score-value" :class="{ 'full-score': q.score === 100 }">{{ q.score }} 分</span>
+              </div>
+            </div>
+          </BaseCard>
+
+          <!-- Action Bar -->
+          <BaseCard class="action-card">
+            <div class="action-bar">
+              <div class="action-info">
+                <span v-if="!showAnswers">
+                  已答 {{ userAnswers.filter(a => a || a === 0).length }}/{{ questions.length }} 题
+                </span>
+                <span v-else>
+                  得分：<strong>{{ scorePercent }}</strong> 分（{{ correctCount }}/{{ questions.length }} 正确）
+                </span>
+                <span class="timer">
+                  <el-icon><Timer /></el-icon>
+                  {{ timerDisplay }}
+                </span>
+              </div>
+              <div class="action-buttons">
+                <button v-if="!showAnswers" class="submit-btn" :disabled="submitting" @click="handleSubmit">
+                  <el-icon :class="{ 'is-loading': submitting }">
+                    <Loading v-if="submitting" />
+                    <Check v-else />
+                  </el-icon>
+                  {{ submitting ? 'AI 正在判分中...' : '提交答案' }}
+                </button>
+                <button v-else class="reset-btn" @click="handleReset">
+                  <el-icon><Refresh /></el-icon> 重新作答
+                </button>
+              </div>
+            </div>
+          </BaseCard>
+        </template>
+
+        <!-- Empty State -->
+        <div v-if="!generating && !generateError && questions.length === 0" class="empty-state">
+          <AppEmpty
+            icon="Edit"
+            title="选择资料开始出题"
+            description="AI 将根据学习资料自动生成练习题"
+          />
         </div>
       </div>
 
-      <!-- Right Panel -->
-      <div v-if="questions.length > 0" class="quiz-panel">
-        <!-- Timer -->
-        <BaseCard class="panel-card">
-          <div class="timer-display">
-            <div class="timer-label">计时器</div>
-            <div class="timer-value">{{ timerDisplay }}</div>
+      <!-- Right Sidebar -->
+      <div v-if="questions.length > 0" class="quiz-sidebar">
+        <!-- Question Navigator -->
+        <BaseCard title="题目导航" class="panel-card">
+          <div class="question-nav">
+            <button
+              v-for="(q, index) in questions"
+              :key="index"
+              class="nav-item"
+              :class="{
+                active: currentQuestionIndex === index,
+                answered: userAnswers[index] || userAnswers[index] === 0,
+                correct: showAnswers && isCorrect(q, index),
+                wrong: showAnswers && !isCorrect(q, index),
+                flagged: false
+              }"
+              @click="scrollToQuestion(index)"
+            >
+              {{ index + 1 }}
+            </button>
           </div>
         </BaseCard>
 
-        <!-- Answer State Grid -->
-        <BaseCard title="答题状态" class="panel-card">
-          <div class="answer-grid">
-            <div
-              v-for="(q, i) in questions"
-              :key="'ag-'+i"
-              class="answer-square"
-              :class="{
-                'sq-current': !showAnswers && i === currentQuestionIndex,
-                'sq-answered': !showAnswers && userAnswers[i],
-                'sq-correct': showAnswers && isCorrect(q, i),
-                'sq-wrong': showAnswers && !isCorrect(q, i)
-              }"
-              @click="scrollToQuestion(i)"
-            >
-              {{ i + 1 }}
-            </div>
+        <!-- Current Question Info -->
+        <BaseCard title="当前题目" class="panel-card" v-if="!showAnswers">
+          <div class="current-info">
+            <p class="current-number">第 {{ currentQuestionIndex + 1 }} 题</p>
+            <p class="current-type">{{ getTypeLabel(questions[currentQuestionIndex]?.type) }}</p>
+            <button class="flag-btn" @click="flagQuestion(currentQuestionIndex)">
+              <el-icon :size="14"><Flag /></el-icon> 标记题目
+            </button>
           </div>
-          <button class="flag-btn" @click="flagQuestion(currentQuestionIndex)">
-            <el-icon :size="14"><Flag /></el-icon> 标记题目
-          </button>
         </BaseCard>
 
         <!-- Score Ring -->
@@ -244,10 +353,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { MagicStick, Loading, Check, Close, Refresh, Flag, CircleCloseFilled } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { MagicStick, Loading, Check, Close, Refresh, Flag, CircleCloseFilled, Folder, Document, InfoFilled, Timer, CircleCheckFilled, CircleCheck } from '@element-plus/icons-vue'
 import { generateQuiz, submitAnswers, generateQuizAsync } from '@/api/ai'
 import { loadAvailableMaterials } from '@/api/material'
+import { getFolderTree } from '@/api/materialFolder'
+import { buildCascaderOptions, parseCascaderValue, getCascaderLabel } from '@/utils/folderTreeHelper'
 import { useTaskStore } from '@/stores/task'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BasePageHeader from '@/components/common/BasePageHeader.vue'
@@ -256,11 +367,14 @@ import AppEmpty from '@/components/common/AppEmpty.vue'
 
 const route = useRoute()
 const taskStore = useTaskStore()
+const folderTree = ref([])
 const materialList = ref([])
+const cascaderValue = ref([])
 const questions = ref([])
 const userAnswers = ref([])
 const showAnswers = ref(false)
 const generating = ref(false)
+const submitting = ref(false)
 const generateProgress = ref(0)
 const generateMsg = ref('')
 const generateError = ref('')
@@ -272,13 +386,40 @@ const timerSeconds = ref(0)
 let timerInterval = null
 
 const quizForm = reactive({
-  materialId: '',
   batchName: '',
   choiceCount: 5,
   judgeCount: 3,
   shortAnswerCount: 2,
+  fillBlankCount: 0,
+  multiChoiceCount: 0,
+  mathFillCount: 0,
   difficulty: 'medium'
 })
+
+// 级联选择器配置
+const cascaderProps = {
+  value: 'value',
+  label: 'label',
+  children: 'children',
+  checkStrictly: false,
+  emitPath: true
+}
+
+// 构建级联选择器选项
+const cascaderOptions = computed(() => {
+  return buildCascaderOptions(folderTree.value, materialList.value)
+})
+
+// 解析选中项
+const selectedInfo = computed(() => {
+  if (!cascaderValue.value || cascaderValue.value.length === 0) return null
+  return parseCascaderValue(cascaderValue.value, cascaderOptions.value)
+})
+
+// 级联选择器变化处理
+function handleCascaderChange(value) {
+  cascaderValue.value = value || []
+}
 
 const timerDisplay = computed(() => {
   const h = Math.floor(timerSeconds.value / 3600)
@@ -299,15 +440,57 @@ const scoreColor = computed(() =>
   scorePercent.value >= 80 ? '#16a34a' : scorePercent.value >= 60 ? '#f59e0b' : '#dc2626'
 )
 
-function getTypeTag(t) { return { choice: '', judge: 'success', short_answer: 'warning' }[t] || 'info' }
-function getTypeLabel(t) { return { choice: '单选题', judge: '判断题', short_answer: '简答题' }[t] || t }
+function getTypeTag(t) {
+  return { choice: '', judge: 'success', short_answer: 'warning', fill_blank: 'info', multi_choice: 'danger', math_fill: 'warning' }[t] || 'info'
+}
+function getTypeLabel(t) {
+  return { choice: '单选题', judge: '判断题', short_answer: '简答题', fill_blank: '填空题', multi_choice: '多选题', math_fill: '数学题' }[t] || t
+}
 function getDifficultyTag(d) { return { easy: 'success', medium: 'warning', hard: 'danger' }[d] || 'info' }
 function getDifficultyLabel(d) { return { easy: '简单', medium: '中等', hard: '困难' }[d] || d }
 
 function isCorrect(q, index) {
   const ua = userAnswers.value[index]
   if (!ua) return false
+  // 多选题：集合比较
+  if (q.type === 'multi_choice') {
+    const refSet = parseChoiceSet(q.answer)
+    const stuSet = parseChoiceSet(ua)
+    return refSet.size === stuSet.size && [...refSet].every(x => stuSet.has(x))
+  }
   return String(ua).toLowerCase() === String(q.answer).toLowerCase()
+}
+
+function parseChoiceSet(answer) {
+  if (!answer) return new Set()
+  return new Set(answer.split(/[,，、\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean))
+}
+
+function selectOption(index, key) {
+  userAnswers.value[index] = key
+}
+
+/** 多选题：勾选/取消勾选选项 */
+function toggleMultiOption(index, key) {
+  const current = userAnswers.value[index] || ''
+  const set = parseChoiceSet(current)
+  if (set.has(key)) {
+    set.delete(key)
+  } else {
+    set.add(key)
+  }
+  userAnswers.value[index] = [...set].sort().join(',')
+}
+
+/** 多选题：判断选项是否被选中 */
+function isMultiSelected(index, key) {
+  const current = userAnswers.value[index] || ''
+  return parseChoiceSet(current).has(key)
+}
+
+/** 多选题：判断选项是否在正确答案中 */
+function isMultiCorrect(key, answer) {
+  return parseChoiceSet(answer).has(key)
 }
 
 function startTimer() {
@@ -319,13 +502,22 @@ function startTimer() {
 function stopTimer() { clearInterval(timerInterval) }
 
 async function handleGenerate() {
-  if (!quizForm.materialId) { ElMessage.warning('请先选择资料'); return }
+  if (!selectedInfo.value) { ElMessage.warning('请先选择资料或文件夹'); return }
   generating.value = true
   generateError.value = ''
   generateProgress.value = 0
   generateMsg.value = '正在创建任务...'
   try {
-    const { taskId } = await generateQuizAsync(quizForm.materialId, quizForm)
+    const params = { ...quizForm }
+
+    // 根据选择类型传递不同参数
+    if (selectedInfo.value.type === 'folder') {
+      params.folderId = selectedInfo.value.id
+    }
+
+    const materialId = selectedInfo.value.type === 'material' ? selectedInfo.value.id : null
+    const { taskId } = await generateQuizAsync(materialId, params)
+
     taskStore.watchTask(taskId, 'quiz', {
       onProgress(pct, msg) {
         generateProgress.value = pct
@@ -356,16 +548,30 @@ async function handleGenerate() {
 }
 
 async function handleSubmit() {
-  const unanswered = userAnswers.value.findIndex(a => !a && a !== 0)
-  if (unanswered !== -1) { ElMessage.warning(`请完成第 ${unanswered + 1} 题`); return }
+  const unanswered = userAnswers.value.findIndex(a => !a && String(a).trim() === '')
+  if (unanswered !== -1) {
+    try {
+      await ElMessageBox.confirm(
+        `还有题目未作答（如第 ${unanswered + 1} 题），确定要提前交卷吗？`,
+        '提示',
+        { confirmButtonText: '强制交卷', cancelButtonText: '继续作答', type: 'warning' }
+      )
+    } catch {
+      return
+    }
+  }
+  
+  submitting.value = true
   try {
-    const answers = questions.value.map((q, i) => ({ questionId: q.id || i, answer: userAnswers.value[i] }))
+    const answers = questions.value.map((q, i) => ({ questionId: q.id || i, answer: userAnswers.value[i] || '' }))
     if (batchId.value) await submitAnswers(batchId.value, answers)
     stopTimer()
     showAnswers.value = true
     ElMessage.success('答案已提交')
   } catch (err) {
     ElMessage.error(err?.message || '提交失败，请重试')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -386,12 +592,30 @@ function flagQuestion(i) {
 }
 
 onMounted(async () => {
-  materialList.value = await loadAvailableMaterials()
+  const [materials, folders] = await Promise.all([
+    loadAvailableMaterials(),
+    getFolderTree()
+  ])
+  materialList.value = materials || []
+  folderTree.value = folders || []
+
   // 支持从资料库跳转自动选择
   const queryId = route.query.materialId
   if (queryId) {
-    quizForm.materialId = Number(queryId)
+    const material = materialList.value.find(m => m.id === Number(queryId))
+    if (material) {
+      const path = []
+      if (material.folderId) {
+        const folderPath = findFolderPath(folderTree.value, material.folderId)
+        if (folderPath) {
+          path.push(...folderPath.map(f => `folder_${f.id}`))
+        }
+      }
+      path.push(`material_${material.id}`)
+      cascaderValue.value = path
+    }
   }
+
   // 恢复未完成的任务
   const activeTask = taskStore.getFirstActiveOfType('quiz')
   if (activeTask) {
@@ -415,59 +639,80 @@ onMounted(async () => {
       },
       onError(errMsg) {
         generating.value = false
-        generateError.value = errMsg || '任务恢复失败，请重新生成'
-        ElMessage.error(errMsg || '题目生成失败')
+        generateError.value = errMsg || '题目生成失败'
       }
     })
   }
 })
 
-watch(() => route.query.materialId, (newId) => {
-  if (newId) {
-    quizForm.materialId = Number(newId)
+// 查找文件夹路径（用于自动选中）
+function findFolderPath(tree, targetId, path = []) {
+  for (const node of tree) {
+    if (node.id === targetId) {
+      return [...path, { id: node.id, name: node.name }]
+    }
+    if (node.children?.length) {
+      const found = findFolderPath(node.children, targetId, [...path, { id: node.id, name: node.name }])
+      if (found) return found
+    }
   }
+  return null
+}
+
+onUnmounted(() => {
+  stopTimer()
 })
 
-onUnmounted(() => stopTimer())
+watch(() => route.query.materialId, (newId) => {
+  if (newId) {
+    const material = materialList.value.find(m => m.id === Number(newId))
+    if (material) {
+      const path = []
+      if (material.folderId) {
+        const folderPath = findFolderPath(folderTree.value, material.folderId)
+        if (folderPath) {
+          path.push(...folderPath.map(f => `folder_${f.id}`))
+        }
+      }
+      path.push(`material_${material.id}`)
+      cascaderValue.value = path
+    }
+  }
+})
 </script>
 
 <style scoped>
-.quiz-page { width: 100%; }
+.quiz-page {
+  width: 100%;
+}
 
 .quiz-layout {
   display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 24px;
+  grid-template-columns: 1fr 280px;
+  gap: var(--space-6);
   align-items: start;
 }
 
-.quiz-main {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.config-card {
+  border-radius: var(--radius-lg);
 }
-
-/* Config */
-.config-card { padding: 0; }
-.config-card :deep(.card-body) { padding: 20px 24px; }
 
 .quiz-config {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .config-row {
   display: flex;
+  gap: var(--space-4);
   flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-end;
 }
 
 .config-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .config-label {
@@ -481,386 +726,569 @@ onUnmounted(() => stopTimer())
   justify-content: flex-end;
 }
 
-.generate-btn {
-  display: inline-flex;
+/* 级联选择器节点样式 */
+.cascader-node {
+  display: flex;
   align-items: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 24px;
+  width: 100%;
+}
+
+.cascader-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.folder-icon {
+  color: var(--color-primary);
+}
+
+.material-icon {
+  color: var(--color-text-tertiary);
+}
+
+.cascader-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cascader-count {
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+  margin-left: auto;
+}
+
+/* Generate Button */
+.generate-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 24px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: #fff;
   font-size: var(--text-ui);
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-default);
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
-.generate-btn:hover { background: var(--color-primary-hover); }
-.generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.spinning { animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.quiz-empty-area {
-  padding: var(--space-8) 0;
+.generate-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
-/* Generate Progress */
-.generate-progress-card { margin-bottom: 0; }
-.generate-progress-card :deep(.card-body) { padding: 24px; }
+.generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Progress Card */
+.generate-progress-card {
+  border-radius: var(--radius-lg);
+}
+
 .generate-progress-wrap {
   display: flex;
   align-items: center;
-  gap: 20px;
-}
-.generate-progress-info {
-  flex: 1;
-  min-width: 0;
-}
-.generate-progress-title {
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 6px 0;
-}
-.generate-progress-msg {
-  font-size: var(--text-small);
-  color: var(--color-text-secondary);
-  margin: 0 0 12px 0;
-}
-.generate-progress-bar {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--surface-container);
-  overflow: hidden;
-}
-.generate-progress-fill {
-  height: 100%;
-  border-radius: 3px;
-  background: var(--color-primary);
-  transition: width 0.5s var(--ease-default);
+  gap: var(--space-5);
+  padding: var(--space-4);
 }
 
-/* Generate Error */
-.generate-error-card { margin-bottom: 0; }
-.generate-error-card :deep(.card-body) { padding: 24px; }
+.generate-progress-info {
+  flex: 1;
+}
+
+.generate-progress-title {
+  font-size: var(--text-heading-3);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.generate-progress-msg {
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.generate-progress-bar {
+  height: 6px;
+  background: var(--surface-container);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.generate-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Error Card */
+.generate-error-card {
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-error);
+}
+
 .generate-error-wrap {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--space-4);
+  padding: var(--space-4);
 }
+
 .generate-error-info {
   flex: 1;
-  min-width: 0;
 }
+
 .generate-error-title {
-  font-size: var(--text-body);
+  font-size: var(--text-heading-3);
   font-weight: 600;
   color: var(--color-error);
-  margin: 0 0 6px 0;
+  margin-bottom: var(--space-2);
 }
+
 .generate-error-msg {
-  font-size: var(--text-small);
-  color: var(--color-text-secondary);
-  margin: 0 0 16px 0;
-}
-.generate-error-actions {
-  display: flex;
-  gap: 10px;
-}
-
-/* Questions */
-.questions-area {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.question-card {
-  background: var(--surface-card);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow-xs);
-  transition: border-color var(--duration-fast) var(--ease-default),
-              background-color var(--duration-fast) var(--ease-default);
-}
-
-.question-card.q-correct { border-color: #bbf7d0; background: #f0fdf4; }
-.question-card.q-wrong { border-color: #fecaca; background: #fef2f2; }
-
-.q-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.q-number {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: var(--blue-50);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-small);
-  font-weight: 700;
-}
-
-.q-tags { display: flex; gap: 6px; }
-
-.q-text {
   font-size: var(--text-body);
-  line-height: 1.7;
-  color: var(--color-text-primary);
-  margin-bottom: 16px;
-  font-weight: 500;
+  color: var(--color-text-secondary);
 }
 
-.q-code-block {
-  background: #1e1e2e;
+.retry-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 16px;
-  overflow-x: auto;
+  font-size: var(--text-ui);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
-.q-code-block pre { margin: 0; }
-.q-code-block code { color: #cdd6f4; font-family: var(--font-mono); font-size: var(--text-small); line-height: 1.6; }
+.retry-btn:hover {
+  background: var(--color-primary-light-9);
+}
+
+/* Question Cards */
+.question-card {
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.question-card.is-current {
+  border-left: 4px solid var(--color-primary);
+}
+
+.question-card.is-correct {
+  border-left: 4px solid var(--color-success);
+}
+
+.question-card.is-wrong {
+  border-left: 4px solid var(--color-error);
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.question-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.question-number {
+  font-size: var(--text-small);
+  color: var(--color-text-tertiary);
+}
+
+.question-text {
+  font-size: var(--text-body);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  margin-bottom: var(--space-5);
+}
 
 /* Options */
-.q-options {
+.options-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
 }
 
-.q-option {
+.option-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 12px 16px;
-  border: 1px solid var(--outline);
+  background: var(--surface-container-low);
+  border: 2px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-default);
 }
 
-.q-option:hover { border-color: var(--color-primary); }
-
-.opt-selected {
-  border-color: var(--color-primary);
-  background: var(--blue-50);
-}
-
-.opt-correct {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.opt-wrong {
-  border-color: #fca5a5;
-  background: #fef2f2;
-}
-
-.opt-key {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+.option-item:hover:not(.correct):not(.wrong) {
   background: var(--surface-container);
-  color: var(--color-text-secondary);
+}
+
+.option-item.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light-9);
+}
+
+.option-item.correct {
+  border-color: var(--color-success);
+  background: var(--color-success-light-9);
+}
+
+.option-item.wrong {
+  border-color: var(--color-error);
+  background: var(--color-error-light-9);
+}
+
+.option-key {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-small);
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.opt-selected .opt-key { background: var(--color-primary); color: #fff; }
-.opt-correct .opt-key { background: #16a34a; color: #fff; }
-.opt-wrong .opt-key { background: #dc2626; color: #fff; }
-
-.opt-val { font-size: var(--text-ui); color: var(--color-text-primary); }
-
-/* Result */
-.q-result {
-  padding-top: 16px;
-  border-top: 1px solid var(--outline-variant);
-}
-
-.result-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-small);
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.badge-ok { background: #dcfce7; color: #16a34a; }
-.badge-fail { background: #ffe4e6; color: #e11d48; }
-
-.result-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.result-row {
-  display: flex;
-  gap: 8px;
-}
-
-.result-label {
+  width: 28px;
+  height: 28px;
+  background: var(--surface-card);
+  border-radius: 50%;
   font-size: var(--text-small);
   font-weight: 600;
   color: var(--color-text-secondary);
   flex-shrink: 0;
-  width: 64px;
 }
 
-.result-value {
-  font-size: var(--text-small);
+.option-value {
+  flex: 1;
+  font-size: var(--text-body);
   color: var(--color-text-primary);
+}
+
+.correct-icon {
+  margin-left: auto;
+}
+
+/* Short Answer */
+.short-answer {
+  margin-bottom: var(--space-4);
+}
+
+.fill-blank,
+.math-fill {
+  margin-bottom: var(--space-4);
+}
+
+.fill-blank .el-input,
+.math-fill .el-input {
+  max-width: 400px;
+}
+
+/* Multi choice checkbox style */
+.multi-choice .option-item {
+  cursor: pointer;
+}
+
+.option-checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin-right: var(--space-2);
+  color: var(--color-text-tertiary);
+}
+
+.option-item.multi.selected .option-checkbox {
+  color: var(--color-primary);
+}
+
+/* Answer Explanation */
+.answer-explanation {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--color-primary);
+}
+
+.explanation-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--space-3);
+}
+
+.explanation-text {
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
-/* Submit */
-.submit-area {
+.score-display {
   display: flex;
-  justify-content: center;
-  padding: 8px 0;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--outline-variant);
+}
+
+.score-label {
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+}
+
+.score-value {
+  font-size: var(--text-heading-3);
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.score-value.full-score {
+  color: var(--color-success);
+}
+
+/* Action Card */
+.action-card {
+  border-radius: var(--radius-lg);
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 10;
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.action-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 500;
+}
+
+.submit-btn,
+.reset-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .submit-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 32px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-success);
-  color: #fff;
-  font-size: var(--text-body);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-default);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
-.submit-btn:hover { background: #15803d; }
-.retry-btn { background: var(--color-primary); }
-.retry-btn:hover { background: var(--color-primary-hover); }
+.submit-btn:hover {
+  background: var(--color-primary-hover);
+}
 
-/* Right Panel */
-.quiz-panel {
+.reset-btn {
+  background: var(--surface-container);
+  color: var(--color-text-primary);
+}
+
+.reset-btn:hover {
+  background: var(--surface-container-high);
+}
+
+/* Empty State */
+.empty-state {
+  padding: var(--space-10) 0;
+}
+
+/* Sidebar */
+.quiz-sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6));
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  position: sticky;
-  top: calc(var(--header-height) + 32px);
+  gap: var(--space-4);
 }
 
-.panel-card :deep(.card-body) { padding: 20px; }
-
-.timer-display {
-  text-align: center;
+.panel-card {
+  border-radius: var(--radius-lg);
 }
 
-.timer-label {
-  font-size: var(--text-small);
-  color: var(--color-text-secondary);
-  margin-bottom: 4px;
-}
-
-.timer-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.answer-grid {
+.question-nav {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
 }
 
-.answer-square {
-  aspect-ratio: 1;
-  border-radius: var(--radius-sm);
-  background: var(--surface-container);
-  color: var(--color-text-secondary);
+.nav-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-small);
-  font-weight: 600;
+  width: 40px;
+  height: 40px;
+  background: var(--surface-container-low);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-default);
 }
 
-.answer-square:hover { background: var(--surface-hover); }
-.sq-current { border: 2px solid var(--color-primary); }
-.sq-answered { background: var(--blue-100); color: var(--color-primary); }
-.sq-correct { background: #dcfce7; color: #16a34a; }
-.sq-wrong { background: #ffe4e6; color: #e11d48; }
+.nav-item:hover {
+  background: var(--surface-container);
+}
+
+.nav-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light-9);
+  color: var(--color-primary);
+}
+
+.nav-item.answered {
+  background: var(--color-primary-light-9);
+  color: var(--color-primary);
+}
+
+.nav-item.correct {
+  background: var(--color-success-light-9);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.nav-item.wrong {
+  background: var(--color-error-light-9);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.current-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.current-number {
+  font-size: var(--text-heading-3);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.current-type {
+  font-size: var(--text-body);
+  color: var(--color-text-secondary);
+}
 
 .flag-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
-  justify-content: center;
-  padding: 8px 0;
-  border: 1px solid var(--outline);
+  gap: var(--space-2);
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid var(--outline-variant);
   border-radius: var(--radius-md);
-  background: var(--surface-card);
-  color: var(--color-text-secondary);
   font-size: var(--text-small);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-default);
 }
 
-.flag-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.flag-btn:hover {
+  background: var(--surface-container);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
 
 .score-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 0;
+  gap: var(--space-4);
 }
 
 .score-text {
-  font-size: var(--text-small);
+  font-size: var(--text-ui);
+  font-weight: 500;
   color: var(--color-text-secondary);
-  margin-top: 12px;
 }
 
 /* Responsive */
 @media (max-width: 1279px) {
-  .quiz-layout { grid-template-columns: 1fr; }
-  .quiz-panel {
+  .quiz-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-sidebar {
     position: static;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .quiz-sidebar > * {
+    flex: 1;
+    min-width: 200px;
   }
 }
 
 @media (max-width: 767px) {
-  .config-row { flex-direction: column; }
-  .config-field { width: 100% !important; }
-  .quiz-panel { grid-template-columns: 1fr; }
+  .config-row {
+    flex-direction: column;
+  }
+
+  .config-field {
+    width: 100% !important;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-info {
+    justify-content: center;
+  }
+
+  .submit-btn,
+  .reset-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

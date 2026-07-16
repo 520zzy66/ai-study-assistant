@@ -109,10 +109,18 @@ public class PromptTemplates {
             1. 生成 {choiceCount} 道单选题，选项 A/B/C/D
             2. 生成 {judgeCount} 道判断题，答案为 true/false
             3. 生成 {shortAnswerCount} 道简答题
-            4. 难度等级：{difficulty}
-            5. 每题附带正确答案和详细解析
-            6. 题目必须基于文档内容，不得编造
-            7. 选项分布均匀（答案不全是 C）
+            4. 生成 {fillBlankCount} 道填空题，答案为填空处应填入的文本
+            5. 生成 {multiChoiceCount} 道多选题，选项 A/B/C/D/E，答案为多个选项字母（如 "A,C,D"）
+            6. 生成 {mathFillCount} 道数学填空题，答案为数值或数学表达式（如 "1/3"、"0.5"、"√2"、"π"）
+            7. 难度等级：{difficulty}
+            8. 每题附带正确答案和详细解析
+            9. 题目必须基于文档内容，不得编造
+            10. 选项分布均匀（答案不全是 C）
+
+            难度说明：
+            - easy：基础概念记忆、直接应用、单一知识点
+            - medium：概念理解、简单分析、需要 1-2 步推理
+            - hard：综合分析、多步推理、跨知识点应用
 
             严格返回以下 JSON 格式（不要包含 markdown 代码块标记）：
             \\{
@@ -137,6 +145,28 @@ public class PromptTemplates {
                   "difficulty": "hard",
                   "question": "题干",
                   "answer": "参考答案",
+                  "explanation": "解析"
+                \\},
+                \\{
+                  "type": "fill_blank",
+                  "difficulty": "medium",
+                  "question": "题干，____处为需要填写的内容",
+                  "answer": "填空答案",
+                  "explanation": "解析"
+                \\},
+                \\{
+                  "type": "multi_choice",
+                  "difficulty": "hard",
+                  "question": "题干（多选）",
+                  "options": \\{"A": "选项A", "B": "选项B", "C": "选项C", "D": "选项D", "E": "选项E"\\},
+                  "answer": "A,C,D",
+                  "explanation": "解析"
+                \\},
+                \\{
+                  "type": "math_fill",
+                  "difficulty": "hard",
+                  "question": "计算题题干",
+                  "answer": "1/3",
                   "explanation": "解析"
                 \\}
               ]
@@ -245,16 +275,24 @@ public class PromptTemplates {
      * @param choiceCount       单选题数量
      * @param judgeCount        判断题数量
      * @param shortAnswerCount  简答题数量
+     * @param fillBlankCount    填空题数量
+     * @param multiChoiceCount  多选题数量
+     * @param mathFillCount     数学填空题数量
      * @param difficulty        难度
      * @return 提示词
      */
     public static String buildQuizPrompt(String content, int choiceCount, int judgeCount,
-                                          int shortAnswerCount, String difficulty) {
+                                          int shortAnswerCount, int fillBlankCount,
+                                          int multiChoiceCount, int mathFillCount,
+                                          String difficulty) {
         return render(QUIZ_TEMPLATE, Map.of(
                 "content", (Object) content,
                 "choiceCount", (Object) String.valueOf(choiceCount),
                 "judgeCount", (Object) String.valueOf(judgeCount),
                 "shortAnswerCount", (Object) String.valueOf(shortAnswerCount),
+                "fillBlankCount", (Object) String.valueOf(fillBlankCount),
+                "multiChoiceCount", (Object) String.valueOf(multiChoiceCount),
+                "mathFillCount", (Object) String.valueOf(mathFillCount),
                 "difficulty", difficulty
         ));
     }
@@ -375,6 +413,97 @@ public class PromptTemplates {
             sb.append(role).append("：").append(msg.getContent()).append("\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * 知识图谱生成提示词模板（概念层级树）
+     */
+    private static final String KNOWLEDGE_GRAPH_TEMPLATE = """
+            你是一个知识图谱生成专家。请根据以下学习资料，提取核心概念并生成概念层级树。
+
+            文档内容：
+            {content}
+
+            要求：
+            1. 提取文档中的核心概念、子概念和关键知识点
+            2. 按层级关系组织为树形结构
+            3. 每个节点包含概念名称和与父节点的关系标注
+            4. 层级不超过 4 层，每层节点不超过 8 个
+            5. 根节点为文档主题
+
+            严格返回以下 JSON 格式（不要包含 markdown 代码块标记、不要有任何额外文字）：
+            \\{
+              "name": "根主题名称",
+              "relation": "核心概念",
+              "children": [
+                \\{
+                  "name": "子概念A",
+                  "relation": "包含/属于/派生/组成",
+                  "children": [
+                    \\{
+                      "name": "知识点1",
+                      "relation": "详细说明",
+                      "children": []
+                    \\}
+                  ]
+                \\}
+              ]
+            \\}
+            """;
+
+    /**
+     * 思维导图生成提示词模板
+     */
+    private static final String MIND_MAP_TEMPLATE = """
+            你是一个思维导图生成专家。请根据以下学习资料，提取关键知识点并生成思维导图结构。
+
+            文档内容：
+            {content}
+
+            要求：
+            1. 提取文档的核心主题和关键分支
+            2. 按逻辑关系组织为树形结构
+            3. 每个节点为简洁的关键词或短语（不超过 15 字）
+            4. 层级深度可达 5-6 层，根据实际知识点合理划分，尽可能详尽还原文章细节
+            5. 根节点为文档主题，第一层为主要知识模块，后续层级逐步细化
+
+            严格返回以下 JSON 格式（不要包含 markdown 代码块标记、不要有任何额外文字）：
+            \\{
+              "name": "中心主题",
+              "children": [
+                \\{
+                  "name": "分支1",
+                  "children": [
+                    \\{ "name": "子节点1", "children": [] \\},
+                    \\{ "name": "子节点2", "children": [] \\}
+                  ]
+                \\},
+                \\{
+                  "name": "分支2",
+                  "children": []
+                \\}
+              ]
+            \\}
+            """;
+
+    /**
+     * 构建知识图谱提示词
+     *
+     * @param content 文档内容
+     * @return 提示词
+     */
+    public static String buildKnowledgeGraphPrompt(String content) {
+        return render(KNOWLEDGE_GRAPH_TEMPLATE, Map.of("content", (Object) content));
+    }
+
+    /**
+     * 构建思维导图提示词
+     *
+     * @param content 文档内容
+     * @return 提示词
+     */
+    public static String buildMindMapPrompt(String content) {
+        return render(MIND_MAP_TEMPLATE, Map.of("content", (Object) content));
     }
 
     /**

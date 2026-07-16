@@ -79,45 +79,53 @@ public class HybridSearchService {
      *
      * @param materialId 资料 ID
      * @param userId     用户 ID（安全隔离；materialId 和 userId 至少传一个）
+     * @param folderId   文件夹 ID（可选，按文件夹筛选）
      * @param query      查询文本
      * @param topK       最终返回数（覆盖配置项 ai.rag.final-top-k）
      * @return 融合后的搜索结果列表
      */
-    public List<ChunkSearchResult> search(Long materialId, Long userId, String query, int topK) {
+    public List<ChunkSearchResult> search(Long materialId, Long userId, Long folderId, String query, int topK) {
         if (topK <= 0) topK = finalTopK;
         if (query == null || query.isBlank()) {
             return List.of();
         }
-        if (materialId == null && userId == null) {
-            log.warn("Reject hybrid search without materialId or userId.");
+        if (materialId == null && userId == null && folderId == null) {
+            log.warn("Reject hybrid search without materialId, userId or folderId.");
             return List.of();
         }
 
         // 1. 向量语义检索
-        List<ChunkSearchResult> vectorResults = searchVector(materialId, userId, query, vectorTopK);
+        List<ChunkSearchResult> vectorResults = searchVector(materialId, userId, folderId, query, vectorTopK);
 
         // 2. BM25 关键词检索
-        List<ChunkSearchResult> bm25Results = searchBm25(materialId, userId, query, bm25TopK);
+        List<ChunkSearchResult> bm25Results = searchBm25(materialId, userId, folderId, query, bm25TopK);
 
         // 3. RRF 融合
         List<ChunkSearchResult> merged = fuse(vectorResults, bm25Results, topK);
 
-        log.debug("混合检索完成：vector={}, bm25={}, merged={}, materialId={}",
-                vectorResults.size(), bm25Results.size(), merged.size(), materialId);
+        log.debug("混合检索完成：vector={}, bm25={}, merged={}, materialId={}, folderId={}",
+                vectorResults.size(), bm25Results.size(), merged.size(), materialId, folderId);
 
         return merged;
+    }
+
+    /**
+     * 重载方法：不指定文件夹
+     */
+    public List<ChunkSearchResult> search(Long materialId, Long userId, String query, int topK) {
+        return search(materialId, userId, null, query, topK);
     }
 
     /**
      * 重载方法：使用配置默认值
      */
     public List<ChunkSearchResult> search(Long materialId, Long userId, String query) {
-        return search(materialId, userId, query, finalTopK);
+        return search(materialId, userId, null, query, finalTopK);
     }
 
     // ==================== 向量检索 ====================
 
-    private List<ChunkSearchResult> searchVector(Long materialId, Long userId, String query, int topK) {
+    private List<ChunkSearchResult> searchVector(Long materialId, Long userId, Long folderId, String query, int topK) {
         if (vectorStore == null) {
             return List.of();
         }
@@ -128,7 +136,7 @@ public class HybridSearchService {
                     .topK(topK)
                     .similarityThreshold(similarityThreshold);
 
-            String filterExpression = buildMetadataFilter(materialId, userId);
+            String filterExpression = buildMetadataFilter(materialId, userId, folderId);
             if (!filterExpression.isBlank()) {
                 requestBuilder.filterExpression(filterExpression);
             }
@@ -162,7 +170,7 @@ public class HybridSearchService {
 
     // ==================== BM25 检索 ====================
 
-    private List<ChunkSearchResult> searchBm25(Long materialId, Long userId, String query, int topK) {
+    private List<ChunkSearchResult> searchBm25(Long materialId, Long userId, Long folderId, String query, int topK) {
         // 加载切片
         LambdaQueryWrapper<MaterialChunk> wrapper = new LambdaQueryWrapper<MaterialChunk>()
                 .orderByAsc(MaterialChunk::getChunkIndex)
@@ -172,6 +180,9 @@ public class HybridSearchService {
         }
         if (userId != null) {
             wrapper.eq(MaterialChunk::getUserId, userId);
+        }
+        if (folderId != null) {
+            wrapper.eq(MaterialChunk::getFolderId, folderId);
         }
 
         List<MaterialChunk> chunks = chunkMapper.selectList(wrapper);
@@ -269,13 +280,16 @@ public class HybridSearchService {
         return null;
     }
 
-    private String buildMetadataFilter(Long materialId, Long userId) {
+    private String buildMetadataFilter(Long materialId, Long userId, Long folderId) {
         List<String> filters = new ArrayList<>();
         if (materialId != null) {
             filters.add("material_id == " + materialId);
         }
         if (userId != null) {
             filters.add("user_id == " + userId);
+        }
+        if (folderId != null) {
+            filters.add("folder_id == " + folderId);
         }
         return String.join(" AND ", filters);
     }

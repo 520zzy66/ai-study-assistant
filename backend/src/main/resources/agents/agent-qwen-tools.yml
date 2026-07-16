@@ -1,0 +1,10 @@
+id: qwen-tools
+name: "Qwen 本地工具"
+description: "本地 qwen 模型，用于知识图谱/思维导图/学习计划生成"
+type: GENERAL
+order: 10
+model:
+  base-url: http://localhost:11434
+  api-key: ollama
+  model: qwen2.5:7b
+  temperature: 0.3

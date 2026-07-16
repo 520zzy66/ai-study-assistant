@@ -18,6 +18,117 @@ export async function generateSummary(materialId, force = false) {
 }
 
 /**
+ * 流式生成文档总结（SSE Token Streaming）
+ * 使用 fetch + ReadableStream 实现逐 token 渲染（打字机效果）
+ *
+ * @param {number} materialId 资料ID
+ * @param {Object} callbacks { onToken(token, fullText), onComplete(fullText), onError(error) }
+ * @returns {Function} abort() - 调用以取消请求
+ */
+export function generateSummaryStream(materialId, callbacks) {
+  const controller = new AbortController()
+  const token = localStorage.getItem('token')
+
+  fetch(`/api/ai/summary/stream/${materialId}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'text/event-stream',
+      Authorization: `Bearer ${token}`
+    },
+    signal: controller.signal
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        if (response.status === 401) {
+          const userStore = useUserStore()
+          userStore.logout()
+          router.push('/login')
+        }
+        const errText = await response.text().catch(() => '')
+        callbacks.onError?.(new Error(errText || `HTTP ${response.status}`))
+        return
+      }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullText = ''
+      let streamDone = false
+
+      while (!streamDone) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        // SSE 事件以 \n\n 分隔
+        const events = buffer.split('\n\n')
+        buffer = events.pop() || ''
+
+        for (const event of events) {
+          if (streamDone) break
+          const dataLines = event.split('\n')
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.slice(5).trim())
+
+          if (dataLines.length === 0) continue
+
+          const chunk = dataLines.join('\n')
+
+          if (chunk === '[DONE]') {
+            streamDone = true
+            break
+          }
+
+          fullText += chunk
+          callbacks.onToken?.(chunk, fullText)
+        }
+      }
+      callbacks.onComplete?.(fullText)
+    })
+    .catch((err) => {
+      if (err.name === 'AbortError') return
+      callbacks.onError?.(err)
+    })
+
+  return () => controller.abort()
+}
+
+/**
+ * 生成思维导图
+ * @param {number} materialId 资料ID
+ */
+export async function generateMindMap(materialId) {
+  const res = await api.post(`/ai/summary/mindmap/${materialId}`)
+  return res.data
+}
+
+/**
+ * 获取已生成的思维导图
+ * @param {number} materialId 资料ID
+ */
+export async function getMindMap(materialId) {
+  const res = await api.get(`/ai/summary/mindmap/${materialId}`)
+  return res.data
+}
+
+/**
+ * 生成文件夹思维导图
+ * @param {number} folderId 文件夹ID
+ */
+export async function generateFolderMindMap(folderId) {
+  const res = await api.post(`/ai/summary/folder/mindmap/${folderId}`)
+  return res.data
+}
+
+/**
+ * 获取已生成的文件夹思维导图
+ * @param {number} folderId 文件夹ID
+ */
+export async function getFolderMindMap(folderId) {
+  const res = await api.get(`/ai/summary/folder/mindmap/${folderId}`)
+  return res.data
+}
+
+/**
  * RAG 文档问答
  * @param {Object} params { materialId, question, historyLimit }
  */
@@ -163,16 +274,31 @@ export async function generatePlan(params) {
 
 /**
  * 异步生成练习题（立即返回 taskId，后台执行）
+ * @param {number|null} materialId 资料ID（与 folderId 二选一）
+ * @param {Object} params { choiceCount, judgeCount, shortAnswerCount, difficulty, folderId }
  */
 export async function generateQuizAsync(materialId, params) {
+  // 如果 params 中包含 folderId，使用文件夹级别的接口
+  if (params.folderId) {
+    const res = await api.post(`/ai/task/quiz/folder/${params.folderId}`, params)
+    return res.data
+  }
   const res = await api.post(`/ai/task/quiz/${materialId}`, params)
   return res.data
 }
 
 /**
  * 异步生成文档总结
+ * @param {number|null} materialId 资料ID（与 folderId 二选一）
+ * @param {Object} options { force, folderId }
  */
-export async function generateSummaryAsync(materialId, force = false) {
+export async function generateSummaryAsync(materialId, options = {}) {
+  const force = options.force || false
+  // 如果 options 中包含 folderId，使用文件夹级别的接口
+  if (options.folderId) {
+    const res = await api.post(`/ai/task/summary/folder/${options.folderId}`, { force })
+    return res.data
+  }
   const res = await api.post(`/ai/task/summary/${materialId}`, { force })
   return res.data
 }

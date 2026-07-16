@@ -1,9 +1,11 @@
 package com.study.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.study.common.JsonbTypeHandler;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * AI 题库实体
@@ -37,7 +39,8 @@ public class AiQuestionBank {
     private String question;
 
     /** 选项JSON（选择题专用） */
-    private String options;
+    @TableField(typeHandler = JsonbTypeHandler.class)
+    private Map<String, String> options;
 
     /** 正确答案 */
     private String answer;

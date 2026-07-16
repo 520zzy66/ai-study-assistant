@@ -166,17 +166,17 @@ const loading = reactive({
 
 // Stats
 const stats = ref([
-  { key: 'hours', label: '学习时长', value: '0h', icon: 'Clock', iconBg: '#eff6ff', iconColor: '#2563eb', trend: null, trendValue: '', path: '/history' },
-  { key: 'material', label: '学习资料', value: 0, icon: 'Document', iconBg: '#f0fdf4', iconColor: '#16a34a', trend: null, trendValue: '', path: '/material' },
-  { key: 'summary', label: 'AI 总结', value: 0, icon: 'MagicStick', iconBg: '#fef3c7', iconColor: '#d97706', trend: null, trendValue: '', path: '/ai/summary' },
-  { key: 'quiz', label: '练习次数', value: 0, icon: 'EditPen', iconBg: '#fef2f2', iconColor: '#dc2626', trend: null, trendValue: '', path: '/ai/quiz' }
+  { key: 'hours', label: '学习时长', value: '0h', icon: 'Clock', iconBg: 'var(--bg-sidebar)', iconColor: 'var(--text-secondary)', trend: null, trendValue: '', path: '/history' },
+  { key: 'material', label: '学习资料', value: 0, icon: 'Document', iconBg: 'var(--bg-tag-green)', iconColor: 'var(--color-primary)', trend: null, trendValue: '', path: '/material' },
+  { key: 'summary', label: 'AI 总结', value: 0, icon: 'DocumentCopy', iconBg: 'var(--bg-tag-blue)', iconColor: 'var(--color-tag-blue)', trend: null, trendValue: '', path: '/ai/summary' },
+  { key: 'quiz', label: '练习次数', value: 0, icon: 'EditPen', iconBg: 'var(--bg-tag-amber)', iconColor: 'var(--color-tag-amber)', trend: null, trendValue: '', path: '/ai/quiz' }
 ])
 
 const quickActions = [
-  { label: '上传资料', icon: 'Upload', path: '/material', bg: '#eff6ff', color: '#2563eb' },
-  { label: 'AI 问答', icon: 'ChatDotRound', path: '/ai/chat', bg: '#f0fdf4', color: '#16a34a' },
-  { label: 'AI 出题', icon: 'EditPen', path: '/ai/quiz', bg: '#fef3c7', color: '#d97706' },
-  { label: '学习计划', icon: 'Calendar', path: '/ai/plan', bg: '#f3e8ff', color: '#7c3aed' }
+  { label: '上传资料', icon: 'Upload', path: '/material', bg: 'var(--bg-sidebar)', color: 'var(--text-secondary)' },
+  { label: 'AI 问答', icon: 'ChatDotRound', path: '/ai/chat', bg: 'var(--bg-tag-green)', color: 'var(--color-primary)' },
+  { label: 'AI 出题', icon: 'EditPen', path: '/ai/quiz', bg: 'var(--bg-tag-amber)', color: 'var(--color-tag-amber)' },
+  { label: '学习计划', icon: 'Calendar', path: '/ai/plan', bg: 'var(--bg-tag-blue)', color: 'var(--color-tag-blue)' }
 ]
 
 const recentMaterials = ref([])

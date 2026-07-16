@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * 用户实体
  */
 @Data
-@TableName("`user`")
+@TableName("app_user")
 public class User {
 
     @TableId(type = IdType.AUTO)

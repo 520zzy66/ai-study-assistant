@@ -1437,7 +1437,7 @@ watch(() => route.query.materialId, newId => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--blue-50);
+  background: var(--bg-tag-green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1495,7 +1495,7 @@ watch(() => route.query.materialId, newId => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
 }
@@ -1528,11 +1528,12 @@ watch(() => route.query.materialId, newId => {
   max-width: 70%;
   padding: 14px 18px;
   background: var(--chat-user-bubble);
-  color: var(--color-on-primary);
+  color: var(--color-text-primary);
   border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
   font-size: var(--text-body);
   line-height: 1.6;
   word-break: break-word;
+  border: 1px solid var(--border-color);
 }
 
 /* 消息内文件卡片 */
@@ -1599,7 +1600,7 @@ watch(() => route.query.materialId, newId => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--blue-100);
+  background: var(--bg-tag-green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1637,6 +1638,8 @@ watch(() => route.query.materialId, newId => {
   font-size: var(--text-body);
   line-height: 1.8;
   color: var(--color-text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .message-assistant .message-text :deep(p) {
@@ -1792,7 +1795,7 @@ watch(() => route.query.materialId, newId => {
 }
 
 .input-wrapper {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 

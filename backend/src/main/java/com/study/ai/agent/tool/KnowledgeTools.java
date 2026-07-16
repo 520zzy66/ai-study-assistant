@@ -42,25 +42,31 @@ public class KnowledgeTools {
     /**
      * Search the built-in system knowledge bank for a domain-specific answer.
      *
-     * @param domain exam domain, such as CIVIL, GRADUATE or GENERAL
-     * @param query  search keywords or the user question
+     * @param domain     exam domain, such as CIVIL, GRADUATE or GENERAL
+     * @param query      search keywords or the user question
+     * @param folderName optional specific folder name to restrict search range (e.g. '素材金句积累', '判断推理', '蒙题秒杀技巧', '党政党史', '政策热点')
      * @return JSON array of matched knowledge chunks
      */
-    @Tool(description = "Search the built-in exam knowledge bank by domain")
+    @Tool(description = "Search the built-in exam knowledge bank by domain and optional folder name for precise scoping")
     public String searchDomainKnowledge(
             @ToolParam(description = "Exam domain: CIVIL, GRADUATE or GENERAL") String domain,
-            @ToolParam(description = "Search keywords or user question") String query) {
+            @ToolParam(description = "Search keywords or user question") String query,
+            @ToolParam(description = "Optional folder name to narrow down search range, e.g. '素材金句积累', '判断推理', '蒙题秒杀技巧', '党政党史', '政策热点'") String folderName) {
         long start = System.currentTimeMillis();
         String normalizedDomain = normalizeDomain(domain);
         ToolCallEventPublisher.toolCall("searchDomainKnowledge", params(
                 "domain", normalizedDomain,
-                "query", truncate(query)));
+                "query", truncate(query),
+                "folderName", truncate(folderName)));
         if (isBlank(query) || vectorStore == null) {
             ToolCallEventPublisher.toolResult("searchDomainKnowledge", 0, elapsed(start), false);
             return EMPTY_JSON_ARRAY;
         }
 
         String filterExpression = "source == 'system_knowledge_bank' AND domain == '" + normalizedDomain + "'";
+        if (!isBlank(folderName)) {
+            filterExpression += " AND folderName == '" + folderName.trim().replace("'", "\\'") + "'";
+        }
         try {
             List<Document> documents = searchVectorStore(query, filterExpression, DEFAULT_TOP_K);
             ToolCallEventPublisher.toolResult("searchDomainKnowledge", documents.size(), elapsed(start), false);

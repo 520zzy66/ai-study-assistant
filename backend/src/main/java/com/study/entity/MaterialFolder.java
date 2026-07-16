@@ -45,6 +45,12 @@ public class MaterialFolder {
     /** 更新时间 */
     private LocalDateTime updateTime;
 
+    /** AI生成的摘要 */
+    private String summary;
+
+    /** AI生成的思维导图 JSON */
+    private String mindMap;
+
     /** 子文件夹（非 DB 字段，Service 查询后装配） */
     @TableField(exist = false)
     private java.util.List<MaterialFolder> children;

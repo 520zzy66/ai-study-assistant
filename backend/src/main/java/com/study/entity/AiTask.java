@@ -1,6 +1,7 @@
 package com.study.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.study.common.JsonStringTypeHandler;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class AiTask {
     private String message;
 
     /** 任务结果JSON */
+    @TableField(typeHandler = JsonStringTypeHandler.class)
     private String result;
 
     /** 错误信息 */

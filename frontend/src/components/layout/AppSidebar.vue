@@ -1,5 +1,5 @@
 <template>
-  <aside class="app-sidebar">
+  <aside class="app-sidebar" :class="{ collapsed: uiStore.sidebarCollapsed }">
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="logo-mark">AI</div>
@@ -60,10 +60,10 @@ const uiStore = useUiStore()
 const topNavItems = [
   { path: '/dashboard', title: '首页', icon: 'HomeFilled' },
   { path: '/material', title: '学习资料', icon: 'Document' },
-  { path: '/resource/search', title: '在线资源', icon: 'Search' },
   { path: '/ai/summary', title: 'AI 总结', icon: 'MagicStick' },
   { path: '/ai/chat', title: 'AI 问答', icon: 'ChatDotRound' },
   { path: '/ai/quiz', title: '自动出题', icon: 'EditPen' },
+  { path: '/ai/mindmap', title: '导图工作台', icon: 'Connection' },
   { path: '/ai/plan', title: '学习计划', icon: 'Calendar' }
 ]
 
@@ -71,7 +71,7 @@ const bottomNavItems = [
   { path: '/ai/question-bank', title: '题库', icon: 'Collection' },
   { path: '/quiz/wrong', title: '错题本', icon: 'Notebook' },
   { path: '/history', title: '历史记录', icon: 'Clock' },
-  { path: '/settings', title: '设置', icon: 'Setting' }
+  { path: '/profile', title: '用户中心', icon: 'User' }
 ]
 
 function isActive(path) {
@@ -99,6 +99,36 @@ function goToProfile() {
   display: flex;
   flex-direction: column;
   z-index: var(--z-sticky);
+  transition: width var(--duration-emphasis) var(--ease-default);
+}
+
+.app-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.app-sidebar.collapsed .logo-text,
+.app-sidebar.collapsed .nav-label,
+.app-sidebar.collapsed .mini-name {
+  display: none;
+}
+
+.app-sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 0;
+}
+
+.app-sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.app-sidebar.collapsed .nav-item.active::before {
+  left: 0;
+}
+
+.app-sidebar.collapsed .mini-profile {
+  justify-content: center;
+  padding: var(--space-2) 0;
 }
 
 .sidebar-header {

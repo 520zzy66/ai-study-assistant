@@ -18,5 +18,9 @@ public class FolderVO {
     private Long parentId;
     private Integer sortOrder;
     private LocalDateTime createTime;
+
+    /** 该文件夹下的资料数量（不含子文件夹） */
+    private Integer materialCount;
+
     private List<FolderVO> children;
 }

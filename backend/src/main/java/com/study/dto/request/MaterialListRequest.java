@@ -10,6 +10,12 @@ import lombok.Data;
 @Data
 public class MaterialListRequest {
 
+    /** 文件夹ID筛选（可选，null表示未分类） */
+    private Long folderId;
+
+    /** 文件名搜索（可选） */
+    private String fileName;
+
     /** 分类筛选（可选） */
     private String category;
 

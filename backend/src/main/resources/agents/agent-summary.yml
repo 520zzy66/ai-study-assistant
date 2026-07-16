@@ -1,0 +1,17 @@
+# ============================================================
+# 总结 Agent 配置
+# 职责：生成知识总结 + 调用 QwenTools 生成思维导图
+# ============================================================
+
+id: summary
+type: GENERAL
+name: 总结助手
+description: 生成知识总结，可调用思维导图工具
+icon: "📝"
+order: 5
+
+# 模型绑定（使用 MiMo API，复用全局配置）
+# 不配置独立 base-url，走全局 spring.ai.openai.* 配置
+
+# System Prompt
+system-prompt-file: prompts/summary-agent.txt

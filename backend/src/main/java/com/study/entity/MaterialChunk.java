@@ -21,6 +21,9 @@ public class MaterialChunk {
     /** 用户ID */
     private Long userId;
 
+    /** 所属文件夹ID（冗余字段，便于按文件夹筛选切片） */
+    private Long folderId;
+
     /** 切片序号 */
     private Integer chunkIndex;
 

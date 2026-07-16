@@ -27,6 +27,12 @@ public class MaterialVO {
     /** 分类 */
     private String category;
 
+    /** 所属文件夹ID */
+    private Long folderId;
+
+    /** 所属文件夹名称 */
+    private String folderName;
+
     /** AI摘要（列表中可能为null） */
     private String summary;
 

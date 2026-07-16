@@ -150,7 +150,11 @@ public class MaterialAsyncProcessor {
         }
 
         try {
-            // 2. 解析文档为纯文本
+            // 2. 获取资料信息（包含 folderId）
+            LearningMaterial material = materialMapper.selectById(materialId);
+            Long folderId = material != null ? material.getFolderId() : null;
+
+            // 3. 解析文档为纯文本
             // filePath 是相对路径（如 userId/dateDir/uuid.ext），需拼接 uploadDir
             Path fullPath = Paths.get(uploadDir, filePath);
             String text;
@@ -163,14 +167,14 @@ public class MaterialAsyncProcessor {
                 return;
             }
 
-            // 3. 切片
+            // 4. 切片
             List<String> chunks = chunkSplitter.split(text);
             if (chunks.isEmpty()) {
                 updateStatus(materialId, "failed", "文档切片失败");
                 return;
             }
 
-            // 4. 批量保存切片到数据库
+            // 5. 批量保存切片到数据库（包含 folderId 冗余字段）
             // 注意：Db.saveBatch 通过静态工具类自行获取 SqlSession，
             // 不参与 Spring 托管事务，适合当前无 @Transactional 的 @Async 方法。
             // 若未来加 @Transactional，需改用注入的 Mapper 以保持事务一致性。
@@ -179,6 +183,7 @@ public class MaterialAsyncProcessor {
                 MaterialChunk chunk = new MaterialChunk();
                 chunk.setMaterialId(materialId);
                 chunk.setUserId(userId);
+                chunk.setFolderId(folderId);
                 chunk.setChunkIndex(i);
                 chunk.setContent(chunks.get(i));
                 chunk.setChunkSize(chunks.get(i).length());

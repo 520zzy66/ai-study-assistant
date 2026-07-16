@@ -46,6 +46,20 @@ public class AiTaskController {
     }
 
     /**
+     * 异步生成文件夹练习题（混合出题）
+     */
+    @Operation(summary = "异步生成文件夹练习题", description = "创建后台文件夹出题任务，从文件夹所有资料中混合出题")
+    @PostMapping("/quiz/folder/{folderId}")
+    public Result<Map<String, String>> generateFolderQuizAsync(
+            @PathVariable Long folderId,
+            @Valid @RequestBody GenerateQuizRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+        AiTask task = taskService.createTask(Constants.CHAT_TYPE_QUIZ, folderId, userId);
+        taskService.executeFolderQuizTask(task.getTaskId(), folderId, request, userId);
+        return Result.success(Map.of("taskId", task.getTaskId()));
+    }
+
+    /**
      * 异步生成文档总结
      */
     @Operation(summary = "异步生成总结", description = "创建后台总结任务，返回 taskId 供轮询")
@@ -57,6 +71,21 @@ public class AiTaskController {
         boolean force = request != null && Boolean.TRUE.equals(request.getForce());
         AiTask task = taskService.createTask(Constants.CHAT_TYPE_SUMMARY, materialId, userId);
         taskService.executeSummaryTask(task.getTaskId(), materialId, force, userId);
+        return Result.success(Map.of("taskId", task.getTaskId()));
+    }
+
+    /**
+     * 异步生成文件夹总结
+     */
+    @Operation(summary = "异步生成文件夹总结", description = "创建后台文件夹总结任务，从文件夹所有资料中生成综合总结")
+    @PostMapping("/summary/folder/{folderId}")
+    public Result<Map<String, String>> generateFolderSummaryAsync(
+            @PathVariable Long folderId,
+            @RequestBody(required = false) GenerateSummaryRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+        boolean force = request != null && Boolean.TRUE.equals(request.getForce());
+        AiTask task = taskService.createTask(Constants.CHAT_TYPE_SUMMARY, folderId, userId);
+        taskService.executeFolderSummaryTask(task.getTaskId(), folderId, force, userId);
         return Result.success(Map.of("taskId", task.getTaskId()));
     }
 

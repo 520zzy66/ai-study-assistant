@@ -79,10 +79,8 @@ public class SystemKnowledgeBankLoader implements ApplicationRunner {
         // 生成本次启动的批次号（用于 importBatch 字段）
         currentBatch = LocalDateTime.now().toString();
 
-        Path rootPath = Paths.get(knowledgeBankRoot);
-        File rootFile = rootPath.toFile();
-
-        if (!rootFile.exists() || !rootFile.isDirectory()) {
+        File rootFile = resolveKnowledgeBankRoot();
+        if (rootFile == null) {
             log.info("[KnowledgeBank] 知识库目录不存在：{}，跳过初始化", knowledgeBankRoot);
             return;
         }
@@ -314,6 +312,18 @@ public class SystemKnowledgeBankLoader implements ApplicationRunner {
         meta.put("filePath", relativePath);
         meta.put("importBatch", currentBatch);
 
+        // 动态提取叶子文件夹名称（直接所属父目录名）作为元数据
+        String pathForFolder = relativePath.replace("\\", "/");
+        int lastSlash = pathForFolder.lastIndexOf('/');
+        if (lastSlash > 0) {
+            String subStr = pathForFolder.substring(0, lastSlash);
+            int prevSlash = subStr.lastIndexOf('/');
+            String folderName = prevSlash >= 0 ? subStr.substring(prevSlash + 1) : subStr;
+            meta.put("folderName", folderName);
+        } else {
+            meta.put("folderName", "root");
+        }
+
         // 统一转为小写做判断
         String path = relativePath.toLowerCase().replace("\\", "/");
 
@@ -447,5 +457,37 @@ public class SystemKnowledgeBankLoader implements ApplicationRunner {
             return rootPath.relativize(filePath).toString().replace("\\", "/");
         }
         return rootFile.toPath().relativize(file.toPath()).toString().replace("\\", "/");
+    }
+
+    /**
+     * 解析并探测知识库根目录。如果配置的路径不存在，则自动尝试备选相对路径，并更新 knowledgeBankRoot 成员变量。
+     *
+     * @return 实际存在的知识库根目录，若均不存在则返回 null
+     */
+    public File resolveKnowledgeBankRoot() {
+        Path rootPath = Paths.get(knowledgeBankRoot);
+        File rootFile = rootPath.toFile();
+
+        if (rootFile.exists() && rootFile.isDirectory()) {
+            return rootFile;
+        }
+
+        // 自动探测逻辑：如果配置的路径不存在，尝试从常见路径中探测
+        String[] fallbackPaths = {
+            "src/main/resources/knowledge-bank",
+            "backend/src/main/resources/knowledge-bank",
+            "resources/knowledge-bank"
+        };
+        
+        for (String fallback : fallbackPaths) {
+            File temp = new File(fallback);
+            if (temp.exists() && temp.isDirectory()) {
+                log.info("[KnowledgeBank] 自动探测到实际知识库目录：{}", fallback);
+                this.knowledgeBankRoot = fallback; // 更新成员变量以保持一致
+                return temp;
+            }
+        }
+        
+        return null;
     }
 }

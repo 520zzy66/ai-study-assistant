@@ -14,10 +14,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +39,7 @@ public class AiController {
     private final AiQuizService quizService;
     private final AiPlanService planService;
     private final WorkflowGraphService workflowGraphService;
+    private final WrongQuestionPdfService wrongQuestionPdfService;
 
     // ==================== Spec-08: Workflow 编排器（专家 Agent 路由） ====================
 
@@ -75,6 +79,51 @@ public class AiController {
         String summary = summaryService.generateSummary(materialId, force);
 
         return Result.success(new SummaryVO(materialId, summary));
+    }
+
+    /**
+     * 流式生成文档总结（SSE）
+     * 逐 token 返回总结内容，实现打字机效果
+     */
+    @Operation(summary = "流式生成文档总结", description = "SSE 逐字返回总结内容，支持打字机效果")
+    @GetMapping(value = "/summary/stream/{materialId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> generateSummaryStream(@PathVariable Long materialId) {
+        return summaryService.generateSummaryStream(materialId);
+    }
+
+    /**
+     * 生成思维导图
+     * 调用本地 Qwen 模型生成思维导图 JSON
+     */
+    @Operation(summary = "生成思维导图", description = "根据学习资料生成思维导图 JSON 结构")
+    @PostMapping("/summary/mindmap/{materialId}")
+    public Result<Map<String, Object>> generateMindMap(@PathVariable Long materialId) {
+        String mindMapJson = summaryService.generateMindMap(materialId);
+        return Result.success(Map.of("materialId", materialId, "mindMap", mindMapJson));
+    }
+
+    /**
+     * 获取已生成的思维导图
+     */
+    @Operation(summary = "获取思维导图", description = "获取已生成的思维导图 JSON")
+    @GetMapping("/summary/mindmap/{materialId}")
+    public Result<Map<String, Object>> getMindMap(@PathVariable Long materialId) {
+        String mindMapJson = summaryService.getMindMap(materialId);
+        return Result.success(Map.of("materialId", materialId, "mindMap", mindMapJson != null ? mindMapJson : ""));
+    }
+
+    @Operation(summary = "生成文件夹思维导图", description = "根据文件夹资料生成思维导图 JSON 结构")
+    @PostMapping("/summary/folder/mindmap/{folderId}")
+    public Result<Map<String, Object>> generateFolderMindMap(@PathVariable Long folderId) {
+        String mindMapJson = summaryService.generateFolderMindMap(folderId);
+        return Result.success(Map.of("folderId", folderId, "mindMap", mindMapJson));
+    }
+
+    @Operation(summary = "获取文件夹思维导图", description = "获取已生成的文件夹思维导图 JSON")
+    @GetMapping("/summary/folder/mindmap/{folderId}")
+    public Result<Map<String, Object>> getFolderMindMap(@PathVariable Long folderId) {
+        String mindMapJson = summaryService.getFolderMindMap(folderId);
+        return Result.success(Map.of("folderId", folderId, "mindMap", mindMapJson != null ? mindMapJson : ""));
     }
 
     // ==================== Spec-05: RAG 文档问答 ====================
@@ -147,6 +196,58 @@ public class AiController {
     public Result<Void> markMastered(@PathVariable Long id) {
         quizService.markWrongQuestionMastered(id);
         return Result.successMsg("已标记为掌握");
+    }
+
+    /**
+     * 导出错题为 PDF
+     */
+    @Operation(summary = "导出错题 PDF", description = "将错题本导出为 PDF 文件")
+    @GetMapping("/quiz/wrong/export")
+    public ResponseEntity<byte[]> exportWrongQuestions(
+            @RequestParam(required = false) Boolean mastered) {
+
+        byte[] pdfBytes = wrongQuestionPdfService.exportWrongQuestions(mastered);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "wrong-questions.pdf");
+        headers.setContentLength(pdfBytes.length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdfBytes);
+    }
+
+    /**
+     * 重做错题 — 随机抽取未掌握的错题
+     */
+    @Operation(summary = "重做错题", description = "随机抽取未掌握的错题用于复习")
+    @GetMapping("/quiz/wrong/repractice")
+    public Result<List<WrongQuestionVO>> getWrongQuestionsForRepractice(
+            @RequestParam(defaultValue = "10") int count) {
+        List<WrongQuestionVO> list = quizService.getWrongQuestionsForRepractice(count);
+        return Result.success(list);
+    }
+
+    /**
+     * 错题统计 — 按题型、日期、来源分布
+     */
+    @Operation(summary = "错题统计", description = "获取错题统计数据（按题型/日期/来源分布）")
+    @GetMapping("/quiz/wrong/stats")
+    public Result<Map<String, Object>> getWrongQuestionStats(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+
+        LocalDateTime start = null, end = null;
+        if (startDate != null && !startDate.isBlank()) {
+            start = LocalDateTime.parse(startDate + "T00:00:00");
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            end = LocalDateTime.parse(endDate + "T23:59:59");
+        }
+
+        Map<String, Object> stats = quizService.getWrongQuestionStats(start, end);
+        return Result.success(stats);
     }
 
     // ==================== 题库管理 ====================

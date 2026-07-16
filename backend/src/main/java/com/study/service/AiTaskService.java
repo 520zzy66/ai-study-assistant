@@ -69,13 +69,15 @@ public class AiTaskService {
      * 设置任务结果（成功）
      */
     private void completeTask(String taskId, Object result) {
-        taskMapper.update(null, new LambdaUpdateWrapper<AiTask>()
-                .eq(AiTask::getTaskId, taskId)
-                .set(AiTask::getStatus, Constants.TASK_STATUS_SUCCESS)
-                .set(AiTask::getProgress, 100)
-                .set(AiTask::getMessage, "完成")
-                .set(AiTask::getResult, JsonUtils.toJson(result))
-                .set(AiTask::getUpdateTime, LocalDateTime.now()));
+        AiTask updateEntity = new AiTask();
+        updateEntity.setStatus(Constants.TASK_STATUS_SUCCESS);
+        updateEntity.setProgress(100);
+        updateEntity.setMessage("完成");
+        updateEntity.setResult(JsonUtils.toJson(result));
+        updateEntity.setUpdateTime(LocalDateTime.now());
+
+        taskMapper.update(updateEntity, new LambdaUpdateWrapper<AiTask>()
+                .eq(AiTask::getTaskId, taskId));
     }
 
     /**
@@ -124,6 +126,36 @@ public class AiTaskService {
     }
 
     /**
+     * 异步生成文件夹练习题（混合出题）
+     * 从向量数据库读取该文件夹下所有资料的切片内容，由AI混合出题
+     */
+    @Async("taskExecutor")
+    public void executeFolderQuizTask(String taskId, Long folderId, GenerateQuizRequest request, Long userId) {
+        UserContext.setCurrentUser(new UserContext.UserInfo(userId, "system"));
+        try {
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 10, "正在读取文件夹资料...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 30, "正在从向量数据库检索内容...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 50, "AI 正在分析知识点...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 70, "AI 正在生成混合题目...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 90, "正在整理结果...");
+            if (isCancelled(taskId)) return;
+            Map<String, Object> result = quizService.generateFolderQuiz(folderId, request);
+            if (isCancelled(taskId)) return;
+            completeTask(taskId, result);
+            log.info("异步文件夹出题完成: taskId={}, folderId={}", taskId, folderId);
+        } catch (Exception e) {
+            log.error("异步文件夹出题失败: taskId={}", taskId, e);
+            failTask(taskId, e);
+        } finally {
+            UserContext.clear();
+        }
+    }
+
+    /**
      * 异步生成文档总结
      */
     @Async("taskExecutor")
@@ -148,6 +180,34 @@ public class AiTaskService {
             log.info("异步总结完成: taskId={}, materialId={}, force={}", taskId, materialId, force);
         } catch (Exception e) {
             log.error("异步总结失败: taskId={}", taskId, e);
+            failTask(taskId, e);
+        } finally {
+            UserContext.clear();
+        }
+    }
+
+    /**
+     * 异步生成文件夹总结
+     * 从向量数据库读取该文件夹下所有资料的切片内容，由AI做综合总结
+     */
+    @Async("taskExecutor")
+    public void executeFolderSummaryTask(String taskId, Long folderId, boolean force, Long userId) {
+        UserContext.setCurrentUser(new UserContext.UserInfo(userId, "system"));
+        try {
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 10, "正在读取文件夹资料...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 30, "正在从向量数据库检索内容...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 50, "AI 正在生成综合总结...");
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 80, "正在优化排版...");
+            if (isCancelled(taskId)) return;
+            String summary = summaryService.generateFolderSummary(folderId, force);
+            if (isCancelled(taskId)) return;
+            completeTask(taskId, Map.of("folderId", folderId, "summary", summary));
+            log.info("异步文件夹总结完成: taskId={}, folderId={}", taskId, folderId);
+        } catch (Exception e) {
+            log.error("异步文件夹总结失败: taskId={}", taskId, e);
             failTask(taskId, e);
         } finally {
             UserContext.clear();

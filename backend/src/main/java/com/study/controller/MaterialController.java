@@ -2,7 +2,9 @@ package com.study.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.study.common.Result;
+import com.study.common.UserContext;
 import com.study.dto.request.MaterialListRequest;
+import com.study.dto.request.MaterialMoveRequest;
 import com.study.service.MaterialService;
 import com.study.vo.MaterialUploadVO;
 import com.study.vo.MaterialVO;
@@ -37,8 +39,9 @@ public class MaterialController {
     @PostMapping("/upload")
     public Result<MaterialUploadVO> upload(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "category", required = false) String category) {
-        MaterialUploadVO vo = materialService.upload(file, category);
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "folderId", required = false) Long folderId) {
+        MaterialUploadVO vo = materialService.upload(file, category, folderId);
         return Result.success("上传成功", vo);
     }
 
@@ -66,6 +69,37 @@ public class MaterialController {
     public Result<MaterialVO> getDetail(@PathVariable Long id) {
         MaterialVO vo = materialService.getDetail(id);
         return Result.success(vo);
+    }
+
+    /**
+     * 预览文件
+     *
+     * @param id 资料ID
+     * @return 文件资源流
+     */
+    @Operation(summary = "预览学习资料", description = "返回文件的字节流，用于前端预览")
+    @GetMapping("/{id}/preview")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> preview(@PathVariable Long id) {
+        org.springframework.core.io.Resource resource = materialService.preview(id);
+        
+        String contentType = "application/octet-stream";
+        String filename = resource.getFilename();
+        if (filename != null) {
+            if (filename.toLowerCase().endsWith(".pdf")) {
+                contentType = "application/pdf";
+            } else if (filename.toLowerCase().endsWith(".txt")) {
+                contentType = "text/plain";
+            } else if (filename.toLowerCase().endsWith(".doc")) {
+                contentType = "application/msword";
+            } else if (filename.toLowerCase().endsWith(".docx")) {
+                contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            }
+        }
+        
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(resource);
     }
 
     /**
@@ -137,5 +171,19 @@ public class MaterialController {
     public Result<List<MaterialVO>> available() {
         List<MaterialVO> list = materialService.listAvailable();
         return Result.success(list);
+    }
+
+    /**
+     * 批量移动资料到文件夹
+     *
+     * @param request 移动请求（包含资料ID列表和目标文件夹ID）
+     * @return 操作结果
+     */
+    @Operation(summary = "移动资料到文件夹", description = "批量移动资料到指定文件夹，folderId为null时移出文件夹")
+    @PutMapping("/move")
+    public Result<Void> moveMaterials(@Valid @RequestBody MaterialMoveRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+        materialService.moveMaterials(userId, request.getMaterialIds(), request.getFolderId());
+        return Result.successMsg("移动成功");
     }
 }

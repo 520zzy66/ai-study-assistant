@@ -1,6 +1,7 @@
 package com.study.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.study.common.JsonbTypeHandler;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -55,12 +56,12 @@ public class UserProfile {
     /** 学习风格：visual / auditory / practice */
     private String learningStyle;
 
-    /** 薄弱知识点列表（JSONB 列，JacksonTypeHandler 序列化） */
-    @TableField(value = "weak_points", typeHandler = com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler.class)
+    /** 薄弱知识点列表（JSONB 列，JsonbTypeHandler 序列化） */
+    @TableField(value = "weak_points", typeHandler = JsonbTypeHandler.class)
     private List<String> weakPoints;
 
-    /** 擅长知识点列表（JSONB 列，JacksonTypeHandler 序列化） */
-    @TableField(value = "strong_points", typeHandler = com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler.class)
+    /** 擅长知识点列表（JSONB 列，JsonbTypeHandler 序列化） */
+    @TableField(value = "strong_points", typeHandler = JsonbTypeHandler.class)
     private List<String> strongPoints;
 
     /** 综合水平评估 0~100 */

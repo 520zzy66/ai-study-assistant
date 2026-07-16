@@ -46,6 +46,11 @@ api.interceptors.response.use(
       localStorage.setItem('token', newToken)
     }
 
+    // 如果是二进制文件下载（如导出 PDF），直接返回数据流
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
+
     const { data } = response
     if (data.code === 200) {
       return data

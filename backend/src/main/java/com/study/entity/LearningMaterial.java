@@ -36,8 +36,14 @@ public class LearningMaterial {
     /** 分类 */
     private String category;
 
+    /** 所属文件夹ID（NULL表示未分类） */
+    private Long folderId;
+
     /** AI生成的摘要 */
     private String summary;
+
+    /** AI生成的思维导图 JSON */
+    private String mindMap;
 
     /** 状态 processing/ready/failed */
     private String status;

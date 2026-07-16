@@ -54,6 +54,12 @@ const routes = [
         meta: { title: 'AI 总结' }
       },
       {
+        path: 'ai/mindmap',
+        name: 'MindMapWorkbench',
+        component: () => import('@/views/MindMapWorkbench.vue'),
+        meta: { title: '导图工作台' }
+      },
+      {
         path: 'ai/quiz',
         name: 'AiQuiz',
         component: () => import('@/views/AiQuiz.vue'),
@@ -70,12 +76,6 @@ const routes = [
         name: 'QuestionBank',
         component: () => import('@/views/QuestionBank.vue'),
         meta: { title: '题库' }
-      },
-      {
-        path: 'resource/search',
-        name: 'OnlineSearch',
-        component: () => import('@/views/OnlineSearch.vue'),
-        meta: { title: '在线资源' }
       },
       {
         path: 'quiz/wrong',

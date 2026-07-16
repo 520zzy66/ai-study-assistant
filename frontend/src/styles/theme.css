@@ -1,65 +1,63 @@
 /* ============================================
    AI Study Assistant — Design System Tokens
-   Version: 3.0 Blue System
-   Primary: Blue 600   Neutral: Slate
-   Grid: 8pt   Ref: ui-design-spec.md / Apple HIG / Linear
+   Version: 4.0 Quiet Apple & Linear (Oatmeal & Peat)
    ============================================ */
 
 :root {
-  /* ---------- Primary Blue Tonal Palette ---------- */
-  --blue-0: #ffffff;
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-300: #93c5fd;
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a8a;
+  /* ---------- Primary Quiet Apple Tonal Palette ---------- */
+  --bg-page: #faf9f6;           /* 宣纸燕麦底色 */
+  --bg-sidebar: #f4f3ef;        /* 稍深的侧栏色 */
+  --bg-card: #ffffff;           /* 净白卡片 */
+  --border-color: rgba(28, 28, 26, 0.08);
+  --border-color-hover: rgba(28, 28, 26, 0.15);
+  
+  --text-primary: #1c1c1a;
+  --text-secondary: #4a4a46;
+  --text-tertiary: #7d7d77;
+  
+  --color-primary: #2d5a27;         /* 森林绿 */
+  --color-accent: #0071e3;          /* 苹果蓝 */
+  
+  --bg-tag-green: #e6f0e6;
+  --color-tag-green: #2d5a27;
+  --bg-tag-blue: #e0f2fe;
+  --color-tag-blue: #0369a1;
+  --bg-tag-amber: #fef3c7;
+  --color-tag-amber: #b45309;
+  --bg-tag-red: #fee2e2;
+  --color-tag-red: #b91c1c;
 
-  /* ---------- Neutral Slate Tonal Palette ---------- */
-  --slate-0: #ffffff;
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
+  /* ---------- AI 气泡的专有质感代币 ---------- */
+  --chat-user-bubble: #e6f0fa;       /* 柔和淡蓝色 */
+  --chat-assistant-bubble: #ffffff;  /* 宣纸净白 */
 
-  /* ---------- Surface & On-Color ---------- */
-  --surface-page: var(--slate-50);
-  --surface-card: var(--slate-0);
-  --surface-container-low: var(--slate-50);
-  --surface-container: var(--slate-100);
-  --surface-container-high: var(--slate-0);
-  --surface-container-highest: var(--blue-50);
-  --surface-hover: var(--slate-100);
-  --surface-active: var(--blue-50);
+  /* ---------- Surface & On-Color (覆写老变量以向前兼容) ---------- */
+  --surface-page: var(--bg-page);
+  --surface-card: var(--bg-card);
+  --surface-container-low: var(--bg-sidebar);
+  --surface-container: var(--bg-sidebar);
+  --surface-container-high: var(--bg-card);
+  --surface-container-highest: var(--bg-page);
+  --surface-hover: rgba(0,0,0,0.02);
+  --surface-active: rgba(0,0,0,0.04);
 
-  --on-surface: var(--slate-900);
-  --on-surface-variant: var(--slate-600);
-  --on-primary: var(--slate-0);
-  --outline: #e5e7eb;
-  --outline-variant: #f1f5f9;
+  --on-surface: var(--text-primary);
+  --on-surface-variant: var(--text-secondary);
+  --on-primary: #ffffff;
+  --outline: var(--border-color);
+  --outline-variant: var(--border-color);
 
   /* ---------- Text ---------- */
-  --color-text-primary: #111827;
-  --color-text-secondary: #374151;
-  --color-text-tertiary: #6b7280;
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
   --color-text-disabled: #9ca3af;
 
   /* ---------- Primary & Semantic ---------- */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-active: #1e40af;
-  --color-primary-light: #eff6ff;
-  --color-primary-ring: rgba(37, 99, 235, 0.12);
+  --color-primary-hover: #224a1e;
+  --color-primary-active: #173314;
+  --color-primary-light: var(--bg-tag-green);
+  --color-primary-ring: rgba(45, 90, 39, 0.12);
   --color-on-primary: #ffffff;
 
   --color-success: #16a34a;
@@ -76,9 +74,9 @@
   --color-info-on: #075985;
 
   /* ---------- State Layers ---------- */
-  --state-hover: rgba(0, 0, 0, 0.04);
-  --state-pressed: rgba(0, 0, 0, 0.08);
-  --state-focus: rgba(37, 99, 235, 0.12);
+  --state-hover: rgba(0, 0, 0, 0.03);
+  --state-pressed: rgba(0, 0, 0, 0.06);
+  --state-focus: rgba(0, 113, 227, 0.12); /* 苹果蓝外框 */
   --state-drag: rgba(0, 0, 0, 0.12);
   --state-disabled-opacity: 0.38;
 
@@ -95,19 +93,19 @@
   --space-16: 64px;
 
   /* ---------- Radius ---------- */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-2xl: 20px;
   --radius-full: 9999px;
 
   /* ---------- Shadows ---------- */
   --shadow-none: none;
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(28, 28, 26, 0.02);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(28, 28, 26, 0.03);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.04), 0 24px 48px rgba(28, 28, 26, 0.04);
 
   /* Legacy shadow aliases */
   --shadow-1: var(--shadow-xs);
@@ -116,71 +114,25 @@
   --shadow-4: var(--shadow-lg);
   --shadow-5: var(--shadow-lg);
 
-  /* ---------- Z-Index ---------- */
-  --z-base: 0;
-  --z-sticky: 100;
-  --z-dropdown: 200;
-  --z-drawer: 300;
-  --z-modal-backdrop: 350;
-  --z-modal: 400;
-  --z-toast: 500;
-  --z-tooltip: 600;
-
-  /* ---------- Typography (aligned to spec) ---------- */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  /* ---------- Typography ---------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: 'Georgia', '华文宋体', serif;
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
-
-  /* Spec: Display 36 → H1 32 → H2 24 → H3 20 → Title 18 → Body 16 → Secondary 14 → Caption 12 */
-  --text-display: 36px;
-  --text-hero: 32px;
-  --text-heading-1: 24px;
-  --text-heading-2: 20px;
-  --text-heading-3: 18px;
-  --text-heading-4: 16px;
-  --text-body-large: 16px;
-  --text-body: 16px;
-  --text-ui: 14px;
-  --text-small: 12px;
-  --text-micro: 12px;
-
-  --line-display: 44px;
-  --line-hero: 40px;
-  --line-heading-1: 32px;
-  --line-heading-2: 28px;
-  --line-heading-3: 24px;
-  --line-heading-4: 20px;
-  --line-body-large: 24px;
-  --line-body: 24px;
-  --line-ui: 20px;
-  --line-small: 16px;
-  --line-micro: 16px;
 
   /* ---------- Layout ---------- */
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
-  --header-height: 64px;
-  --content-max-width: 1280px;
+  --header-height: 60px;
+  --content-max-width: 100%;
 
   /* ---------- Motion ---------- */
   --duration-instant: 0ms;
   --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-emphasis: 200ms;
-  --duration-complex: 300ms;
-  --ease-default: ease;
-  --ease-in: ease-in;
-  --ease-out: ease-out;
-  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* ---------- Icon ---------- */
-  --icon-xs: 12px;
-  --icon-sm: 16px;
-  --icon-md: 20px;
-  --icon-lg: 24px;
-  --icon-xl: 24px;
-  --icon-2xl: 32px;
-  --icon-3xl: 48px;
+  --duration-normal: 250ms;
+  --duration-emphasis: 300ms;
+  --duration-complex: 400ms;
+  --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ---------- Legacy aliases (backward compatibility) ---------- */
   --color-bg-page: var(--surface-page);
@@ -196,12 +148,12 @@
   --spacing-xl: var(--space-8);
   --spacing-2xl: var(--space-12);
   --font-family: var(--font-sans);
-  --sidebar-bg: var(--surface-card);
-  --sidebar-border: var(--outline-variant);
+  --sidebar-bg: var(--bg-sidebar);
+  --sidebar-border: var(--border-color);
   --sidebar-item-hover: var(--surface-hover);
   --sidebar-item-active: var(--surface-active);
   --sidebar-indicator: var(--color-primary);
-  --header-bg: rgba(255, 255, 255, 0.85);
+  --header-bg: rgba(250, 249, 246, 0.85);
 }
 
 /* ============================================
@@ -209,13 +161,13 @@
    ============================================ */
 
 :root {
-  --el-color-primary: #2563eb;
-  --el-color-primary-light-3: #60a5fa;
-  --el-color-primary-light-5: #93c5fd;
-  --el-color-primary-light-7: #bfdbfe;
-  --el-color-primary-light-8: #dbeafe;
-  --el-color-primary-light-9: #eff6ff;
-  --el-color-primary-dark-2: #1d4ed8;
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: #528b4f;
+  --el-color-primary-light-5: #79ab76;
+  --el-color-primary-light-7: #a1cba0;
+  --el-color-primary-light-8: #b6d9b4;
+  --el-color-primary-light-9: var(--bg-tag-green);
+  --el-color-primary-dark-2: var(--color-primary-hover);
 
   --el-color-success: var(--color-success);
   --el-color-warning: var(--color-warning);
@@ -250,4 +202,29 @@
 
   --el-tag-border-radius: var(--radius-sm);
   --el-message-close-hover-color: var(--color-primary);
+}
+
+html.dark {
+  --bg-page: #121212;
+  --bg-sidebar: #1a1a19;
+  --bg-card: #222120;
+  --border-color: rgba(230, 229, 223, 0.08);
+  --border-color-hover: rgba(230, 229, 223, 0.15);
+  
+  --text-primary: #e6e5df;
+  --text-secondary: #b2b1a9;
+  --text-tertiary: #7d7c75;
+  
+  --color-primary: #528b4f;
+  --bg-tag-green: #223e22;
+  --color-tag-green: #8bc388;
+  --bg-tag-blue: #1e3a4f;
+  --color-tag-blue: #38bdf8;
+  --bg-tag-amber: #3d2f1c;
+  --color-tag-amber: #f59e0b;
+  --bg-tag-red: #3f2020;
+  --color-tag-red: #f87171;
+
+  --chat-user-bubble: #1e3a5f;
+  --chat-assistant-bubble: #222120;
 }

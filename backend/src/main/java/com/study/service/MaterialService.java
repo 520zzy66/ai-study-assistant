@@ -18,9 +18,10 @@ public interface MaterialService {
      *
      * @param file     文件
      * @param category 分类（可选）
+     * @param folderId 目标文件夹ID（可选，null表示未分类）
      * @return 上传结果
      */
-    MaterialUploadVO upload(MultipartFile file, String category);
+    MaterialUploadVO upload(MultipartFile file, String category, Long folderId);
 
     /**
      * 分页查询当前用户的资料列表
@@ -37,6 +38,14 @@ public interface MaterialService {
      * @return 资料详情
      */
     MaterialVO getDetail(Long id);
+
+    /**
+     * 预览或下载资料文件
+     *
+     * @param id 资料ID
+     * @return Resource 文件资源
+     */
+    org.springframework.core.io.Resource preview(Long id);
 
     /**
      * 删除资料（逻辑删除）
@@ -77,4 +86,13 @@ public interface MaterialService {
      * @return 资料列表
      */
     List<MaterialVO> listAvailable();
+
+    /**
+     * 批量移动资料到文件夹
+     *
+     * @param userId      当前用户ID
+     * @param materialIds 资料ID列表
+     * @param folderId    目标文件夹ID（null表示移出文件夹）
+     */
+    void moveMaterials(Long userId, List<Long> materialIds, Long folderId);
 }
