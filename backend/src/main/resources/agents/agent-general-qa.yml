@@ -1,0 +1,19 @@
+# ============================================================
+# 通用专家 Agent 配置
+# 职责：回答 GeneralNode 无法直接处理、且不属于考公/考研的复杂问题
+# ============================================================
+
+id: general-qa
+type: GENERAL_EXPERT
+name: 通用专家
+description: 处理跨学科、通用学习及其他复杂问题
+icon: "🧠"
+order: 3
+
+model:
+  base-url: ${AI_BASE_URL}
+  api-key: ${AI_API_KEY}
+  model: ${AI_CHAT_MODEL:mimo-v2.5}
+  temperature: 0.5
+
+system-prompt-file: prompts/general-qa-system.txt

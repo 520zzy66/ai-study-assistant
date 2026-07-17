@@ -153,10 +153,12 @@
 
             <!-- Options (choice type) -->
             <div v-if="q.type === 'choice'" class="options-list">
-              <div
+              <button
                 v-for="(value, key) in q.options"
                 :key="key"
                 class="option-item"
+                type="button"
+                :disabled="showAnswers"
                 :class="{
                   selected: userAnswers[index] === key,
                   correct: showAnswers && key === q.answer,
@@ -169,15 +171,17 @@
                 <el-icon v-if="showAnswers && key === q.answer" class="correct-icon" :size="16">
                   <CircleCheckFilled />
                 </el-icon>
-              </div>
+              </button>
             </div>
 
             <!-- Judge options -->
             <div v-else-if="q.type === 'judge'" class="options-list">
-              <div
+              <button
                 v-for="opt in [{ key: 'T', label: '正确' }, { key: 'F', label: '错误' }]"
                 :key="opt.key"
                 class="option-item"
+                type="button"
+                :disabled="showAnswers"
                 :class="{
                   selected: userAnswers[index] === opt.key,
                   correct: showAnswers && opt.key === q.answer,
@@ -190,7 +194,7 @@
                 <el-icon v-if="showAnswers && opt.key === q.answer" class="correct-icon" :size="16">
                   <CircleCheckFilled />
                 </el-icon>
-              </div>
+              </button>
             </div>
 
             <!-- Short answer input -->
@@ -216,10 +220,12 @@
 
             <!-- Multi choice (checkboxes) -->
             <div v-else-if="q.type === 'multi_choice'" class="options-list multi-choice">
-              <div
+              <button
                 v-for="(value, key) in q.options"
                 :key="key"
                 class="option-item multi"
+                type="button"
+                :disabled="showAnswers"
                 :class="{
                   selected: isMultiSelected(index, key),
                   correct: showAnswers && isMultiCorrect(key, q.answer),
@@ -236,7 +242,7 @@
                 <el-icon v-if="showAnswers && isMultiCorrect(key, q.answer)" class="correct-icon" :size="16">
                   <CircleCheckFilled />
                 </el-icon>
-              </div>
+              </button>
             </div>
 
             <!-- Math fill input -->
@@ -313,6 +319,7 @@
               v-for="(q, index) in questions"
               :key="index"
               class="nav-item"
+              type="button"
               :class="{
                 active: currentQuestionIndex === index,
                 answered: userAnswers[index] || userAnswers[index] === 0,
@@ -332,7 +339,7 @@
           <div class="current-info">
             <p class="current-number">第 {{ currentQuestionIndex + 1 }} 题</p>
             <p class="current-type">{{ getTypeLabel(questions[currentQuestionIndex]?.type) }}</p>
-            <button class="flag-btn" @click="flagQuestion(currentQuestionIndex)">
+            <button class="flag-btn" type="button" @click="flagQuestion(currentQuestionIndex)">
               <el-icon :size="14"><Flag /></el-icon> 标记题目
             </button>
           </div>
@@ -688,13 +695,14 @@ watch(() => route.query.materialId, (newId) => {
 
 .quiz-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 264px;
   gap: var(--space-6);
   align-items: start;
 }
 
 .config-card {
   border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
 }
 
 .quiz-config {
@@ -887,7 +895,7 @@ watch(() => route.query.materialId, (newId) => {
 /* Question Cards */
 .question-card {
   border-radius: var(--radius-lg);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
   transition: all var(--duration-fast) var(--ease-default);
 }
 
@@ -922,7 +930,7 @@ watch(() => route.query.materialId, (newId) => {
 }
 
 .question-text {
-  font-size: var(--text-body);
+  font-size: var(--text-heading-3);
   color: var(--color-text-primary);
   line-height: 1.6;
   margin-bottom: var(--space-5);
@@ -936,6 +944,7 @@ watch(() => route.query.materialId, (newId) => {
 }
 
 .option-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -945,10 +954,17 @@ watch(() => route.query.materialId, (newId) => {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-default);
+  text-align: left;
+  font-family: inherit;
 }
 
 .option-item:hover:not(.correct):not(.wrong) {
   background: var(--surface-container);
+}
+
+.option-item:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .option-item.selected {
@@ -1075,7 +1091,8 @@ watch(() => route.query.materialId, (newId) => {
   border-radius: var(--radius-lg);
   position: sticky;
   bottom: var(--space-4);
-  z-index: 10;
+  z-index: var(--z-base);
+  box-shadow: var(--shadow-md);
 }
 
 .action-bar {

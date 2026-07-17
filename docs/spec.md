@@ -133,7 +133,7 @@ spring:
     name: ai-study-assistant
 
 server:
-  port: 8080
+  port: 3001
   servlet:
     context-path: /api
 
@@ -148,18 +148,18 @@ file:
   max-size: 52428800  # 50MB
 
 ai:
-  provider: deepseek
+  provider: xiaomi
   chat:
-    model: deepseek-chat
+    model: mimo-v2.5
     temperature: 0.7
     timeout: 60000
   embedding:
     provider: ${EMBEDDING_PROVIDER:local}
-    model: bge-small-zh
-    dimension: 512
+    model: ${EMBEDDING_MODEL:bge-m3}
+    dimension: 1024
 
 spring-ai:
-  version: 1.0.0  # 正式版
+  version: 1.1.2  # GA 正式版
 ```
 
 ### 00.2 JWT 过滤器
@@ -707,7 +707,7 @@ public List<String> split(String text) {
 
 | Provider | 模型 | 维度 | 说明 |
 |----------|------|------|------|
-| 本地 | bge-small-zh | 512 | 推荐，零成本 |
+| 本地 Ollama | bge-m3 | 1024 | 当前默认方案，与 PgVector 表维度一致 |
 | 阿里通义 | text-embedding-v2 | 1536 | 国内可用 |
 | OpenAI | text-embedding-3-small | 1536 | 需代理 |
 
@@ -720,9 +720,8 @@ public interface EmbeddingProvider {
 }
 
 @Component
-@ConditionalOnProperty(name = "ai.embedding.provider", havingValue = "local")
-public class LocalBgeEmbedding implements EmbeddingProvider {
-    // 加载 ONNX 模型
+public class OllamaEmbeddingProvider implements EmbeddingProvider {
+    // 通过 Spring AI OllamaEmbeddingModel 调用本地 bge-m3
 }
 ```
 
@@ -1647,20 +1646,34 @@ CREATE TABLE IF NOT EXISTS ai_task (
 ## Spec-10: StateGraph 工作流
 
 > **架构**：Spring AI Alibaba StateGraph 状态图引擎
-> **详细设计**：`docs/workflow-orchestrator-spec.md`
 > **实现说明**：`docs/workflow-implementation-guide.md`
 
 ### 10.1 整体架构
 
-AI 对话功能封装为 StateGraph 状态图工作流：
+AI 对话功能封装为 StateGraph 状态图工作流。已有学习资料和临时会话资料必须采用不同生命周期：
 
 ```
-START → GeneralNode → (localAnswer | expertAgent) → END
+START → MultimodalNode（无临时资料时透传）→ GeneralNode → (localAnswer | expertAgent + RAG Tool) → END
 ```
 
 - **GeneralNode**：路由决策 + 上下文注入（画像/记忆/历史/资料）+ 会话向量化 + 简单问题回答
 - **LocalAnswerNode**：返回 Level 0/1 的本地回答
 - **ExpertAgentNode**：内部路由到三个专家 Agent Service（Civil/Graduate/General）
+- **已有学习资料**：上传时完成解析、切片和 PgVector 索引；问答时只传 `materialId`，由专家通过 RAG Tool 检索，不重复解析全文
+- **临时会话资料**：不得直接写入 `learning_material`；预处理结果和临时切片按 `userId + conversationId + uploadToken` 隔离，默认保留 7 天
+- **添加至我的资料**：用户主动点击后才复用正式资料上传/索引流程，成功后删除临时索引；该操作必须幂等
+- **MultimodalNode**：仅消费临时 `uploadToken`；校验归属，首次提问时生成并缓存结构化摘要，不读取正式资料
+- **格式范围**：文本资料支持 PDF/DOC/DOCX/TXT/MD；图片支持 PNG/JPG/JPEG/WEBP，由 Ollama `qwen2.5vl:3b` 提取文字、公式、表格和图示含义；当前不支持音频、视频
+
+**临时资料接口**
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/material/temporary/upload` | multipart 上传，参数 `file + conversationId`，返回 `uploadToken` |
+| GET | `/material/temporary` | 当前用户未过期临时资料列表 |
+| GET | `/material/temporary/{uploadToken}` | 查询处理状态与到期时间 |
+| DELETE | `/material/temporary/{uploadToken}` | 删除文件、切片和临时向量 |
+| POST | `/material/temporary/{uploadToken}/promote` | 选择 `folderId/category` 后添加至我的资料 |
 
 ### 10.2 接口
 
@@ -1674,6 +1687,7 @@ Content-Type: application/json
 {
   "question": "什么是申论？",
   "materialId": null,
+  "temporaryMaterialToken": null,
   "conversationId": "xxx",
   "history": []
 }
@@ -1745,11 +1759,14 @@ GeneralNode 在路由前必须注入以下上下文：
 | GRADUATE_EXPERT | GraduateExpertAgentService | 考研（高数、英语、政治） |
 | GENERAL_EXPERT | GeneralQaAgentService | 通用学习助手 |
 
-每个专家通过 `@Tool` 注解暴露 3 个工具，Spring AI 自动 ReAct 循环：
+每个专家通过 `@Tool` 注解暴露检索工具，Spring AI 自动 ReAct 循环。用户 ID、会话 ID、正式资料 ID、临时资料令牌和压缩用户画像通过服务端 `ToolContext` 注入，不允许由模型生成：
 
-- `searchDomainKnowledge(domain, query)` — 检索系统知识库
-- `searchPersonalMaterial(userId, query)` — 检索用户资料
-- `searchConversationHistory(userId, query)` — 检索历史对话
+- `searchDomainKnowledge(domain, query, folderName?)` — 检索系统知识库
+- `searchPersonalMaterial(query, quizType?)` — 检索用户资料；选择资料时按 `userId + materialId` 双重限定
+- `searchTemporaryMaterial(query)` — 按 `userId + conversationId + uploadToken` 检索当前临时资料
+- `searchConversationHistory(query)` — 检索历史对话
+
+用户画像用于回答阶段的个性化控制，并随可信工具上下文传递；默认不拼接进向量/BM25 查询，避免画像词污染事实检索召回。
 
 ### 10.6 会话向量化
 

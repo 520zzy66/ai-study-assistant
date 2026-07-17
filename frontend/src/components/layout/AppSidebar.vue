@@ -5,44 +5,34 @@
         <div class="logo-mark">AI</div>
         <span class="logo-text">Study</span>
       </div>
-      <button class="close-button" @click="uiStore.closeMobileSidebar">
+      <button class="close-button" type="button" aria-label="关闭导航" @click="uiStore.closeMobileSidebar">
         <el-icon :size="18"><Close /></el-icon>
       </button>
     </div>
 
-    <nav class="sidebar-nav">
-      <router-link
-        v-for="item in topNavItems"
-        :key="item.path"
-        :to="item.path"
-        :class="['nav-item', { active: isActive(item.path) }]"
-        @click="uiStore.closeMobileSidebar"
-      >
-        <el-icon :size="20"><component :is="item.icon" /></el-icon>
-        <span class="nav-label">{{ item.title }}</span>
-      </router-link>
-
-      <div class="nav-divider" />
-
-      <router-link
-        v-for="item in bottomNavItems"
-        :key="item.path"
-        :to="item.path"
-        :class="['nav-item', { active: isActive(item.path) }]"
-        @click="uiStore.closeMobileSidebar"
-      >
-        <el-icon :size="20"><component :is="item.icon" /></el-icon>
-        <span class="nav-label">{{ item.title }}</span>
-      </router-link>
+    <nav class="sidebar-nav" aria-label="主导航">
+      <section v-for="group in navGroups" :key="group.label" class="nav-group">
+        <div class="nav-group-label">{{ group.label }}</div>
+        <router-link
+          v-for="item in group.items"
+          :key="item.path"
+          :to="item.path"
+          :class="['nav-item', { active: isActive(item.path) }]"
+          @click="uiStore.closeMobileSidebar"
+        >
+          <el-icon :size="18"><component :is="item.icon" /></el-icon>
+          <span class="nav-label">{{ item.title }}</span>
+        </router-link>
+      </section>
     </nav>
 
     <div class="sidebar-footer">
-      <div class="mini-profile" @click="goToProfile">
+      <button class="mini-profile" type="button" aria-label="打开用户中心" @click="goToProfile">
         <el-avatar :size="28" class="mini-avatar">
           {{ (userStore.userInfo?.nickname || '用')[0] }}
         </el-avatar>
         <span class="mini-name truncate">{{ userStore.userInfo?.nickname || '用户' }}</span>
-      </div>
+      </button>
     </div>
   </aside>
 </template>
@@ -57,21 +47,33 @@ const router = useRouter()
 const userStore = useUserStore()
 const uiStore = useUiStore()
 
-const topNavItems = [
-  { path: '/dashboard', title: '首页', icon: 'HomeFilled' },
-  { path: '/material', title: '学习资料', icon: 'Document' },
-  { path: '/ai/summary', title: 'AI 总结', icon: 'MagicStick' },
-  { path: '/ai/chat', title: 'AI 问答', icon: 'ChatDotRound' },
-  { path: '/ai/quiz', title: '自动出题', icon: 'EditPen' },
-  { path: '/ai/mindmap', title: '导图工作台', icon: 'Connection' },
-  { path: '/ai/plan', title: '学习计划', icon: 'Calendar' }
-]
-
-const bottomNavItems = [
-  { path: '/ai/question-bank', title: '题库', icon: 'Collection' },
-  { path: '/quiz/wrong', title: '错题本', icon: 'Notebook' },
-  { path: '/history', title: '历史记录', icon: 'Clock' },
-  { path: '/profile', title: '用户中心', icon: 'User' }
+const navGroups = [
+  {
+    label: '学习',
+    items: [
+      { path: '/dashboard', title: '首页', icon: 'HomeFilled' },
+      { path: '/material', title: '学习资料', icon: 'Document' },
+      { path: '/ai/plan', title: '学习计划', icon: 'Calendar' }
+    ]
+  },
+  {
+    label: 'AI 工具',
+    items: [
+      { path: '/ai/chat', title: 'AI 问答', icon: 'ChatDotRound' },
+      { path: '/ai/summary', title: 'AI 总结', icon: 'MagicStick' },
+      { path: '/ai/resource-package', title: '资源工坊', icon: 'Box' },
+      { path: '/ai/quiz', title: '自动出题', icon: 'EditPen' },
+      { path: '/ai/mindmap', title: '导图工作台', icon: 'Connection' }
+    ]
+  },
+  {
+    label: '复习',
+    items: [
+      { path: '/ai/question-bank', title: '题库', icon: 'Collection' },
+      { path: '/quiz/wrong', title: '错题本', icon: 'Notebook' },
+      { path: '/history', title: '历史记录', icon: 'Clock' }
+    ]
+  }
 ]
 
 function isActive(path) {
@@ -94,7 +96,7 @@ function goToProfile() {
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  background: var(--surface-card);
+  background: var(--bg-sidebar);
   border-right: 1px solid var(--outline-variant);
   display: flex;
   flex-direction: column;
@@ -107,6 +109,7 @@ function goToProfile() {
 }
 
 .app-sidebar.collapsed .logo-text,
+.app-sidebar.collapsed .nav-group-label,
 .app-sidebar.collapsed .nav-label,
 .app-sidebar.collapsed .mini-name {
   display: none;
@@ -187,14 +190,29 @@ function goToProfile() {
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-4);
+}
+
+.nav-group + .nav-group {
+  margin-top: var(--space-4);
+}
+
+.nav-group-label {
+  padding: 0 var(--space-3);
+  margin-bottom: var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  height: 40px;
+  min-height: 40px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
@@ -230,12 +248,6 @@ function goToProfile() {
   border-radius: 0 2px 2px 0;
 }
 
-.nav-divider {
-  height: 1px;
-  background: var(--outline-variant);
-  margin: var(--space-3) var(--space-3);
-}
-
 .sidebar-footer {
   padding: var(--space-3);
   border-top: 1px solid var(--outline-variant);
@@ -243,11 +255,16 @@ function goToProfile() {
 }
 
 .mini-profile {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-default);
 }

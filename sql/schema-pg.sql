@@ -90,12 +90,58 @@ CREATE INDEX idx_material_chunk_folder_id ON material_chunk(folder_id);
 COMMENT ON TABLE material_chunk IS '文档切片表';
 COMMENT ON COLUMN material_chunk.folder_id IS '所属文件夹ID（冗余字段，便于按文件夹筛选）';
 
+-- 3.1 会话临时资料表（默认保留7天）
+CREATE TABLE IF NOT EXISTS temporary_material (
+    id BIGSERIAL PRIMARY KEY,
+    upload_token VARCHAR(64) NOT NULL UNIQUE,
+    user_id BIGINT NOT NULL,
+    conversation_id VARCHAR(64) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL,
+    file_type VARCHAR(20) NOT NULL,
+    file_size BIGINT NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    summary TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'processing',
+    error_msg VARCHAR(500),
+    chunk_count INT DEFAULT 0,
+    expires_at TIMESTAMP NOT NULL,
+    converted_material_id BIGINT,
+    deleted SMALLINT DEFAULT 0,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_temp_material_user_expiry
+    ON temporary_material(user_id, expires_at);
+CREATE INDEX IF NOT EXISTS idx_temp_material_conversation
+    ON temporary_material(user_id, conversation_id);
+COMMENT ON TABLE temporary_material IS 'AI问答会话临时资料表';
+
+CREATE TABLE IF NOT EXISTS temporary_material_chunk (
+    id BIGSERIAL PRIMARY KEY,
+    temporary_material_id BIGINT NOT NULL,
+    upload_token VARCHAR(64) NOT NULL,
+    user_id BIGINT NOT NULL,
+    conversation_id VARCHAR(64) NOT NULL,
+    chunk_index INT NOT NULL,
+    content TEXT NOT NULL,
+    chunk_size INT NOT NULL,
+    deleted SMALLINT DEFAULT 0,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_temp_chunk_scope
+    ON temporary_material_chunk(user_id, conversation_id, upload_token);
+CREATE INDEX IF NOT EXISTS idx_temp_chunk_material
+    ON temporary_material_chunk(temporary_material_id);
+COMMENT ON TABLE temporary_material_chunk IS '会话临时资料切片表';
+
 -- 4. AI对话历史表
 CREATE TABLE IF NOT EXISTS ai_chat_history (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     chat_type VARCHAR(20) NOT NULL,
     material_id BIGINT,
+    temporary_material_token VARCHAR(64),
     user_message TEXT,
     ai_response TEXT,
     batch_id VARCHAR(64),
@@ -111,6 +157,7 @@ COMMENT ON COLUMN ai_chat_history.user_message IS '用户输入';
 COMMENT ON COLUMN ai_chat_history.ai_response IS 'AI回复';
 COMMENT ON COLUMN ai_chat_history.batch_id IS '批次ID（出题专用）';
 COMMENT ON COLUMN ai_chat_history.conversation_id IS '会话ID（多轮对话专用）';
+COMMENT ON COLUMN ai_chat_history.temporary_material_token IS '会话临时资料令牌（最多保留7天）';
 
 -- 5. AI题库表
 CREATE TABLE IF NOT EXISTS ai_question_bank (

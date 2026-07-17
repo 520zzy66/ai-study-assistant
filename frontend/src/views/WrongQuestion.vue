@@ -2,14 +2,14 @@
   <div class="wrong-question-page">
     <BasePageHeader
       title="错题本"
-      description="回顾错题，针对詟复习，巩固薄弱知识点"
+      description="回顾错题，针对性复习，巩固薄弱知识点"
     />
 
     <!-- Stats Panel -->
     <BaseCard v-if="stats" class="stats-card">
       <template #header>
         <div class="stats-header">
-          <span class="stats-title">📊 错题统计</span>
+          <span class="stats-title">错题统计</span>
           <div class="stats-filter">
             <el-date-picker
               v-model="dateRange"
@@ -116,17 +116,30 @@
         </div>
         <div class="toolbar-right">
           <el-button text @click="handleReset">重置</el-button>
+          <el-button
+            :disabled="selectedWrongQuestions.length === 0"
+            :loading="exportSelectedLoading"
+            @click="handleExportSelectedPdf"
+          >
+            导出选中（{{ selectedWrongQuestions.length }}）
+          </el-button>
           <el-button @click="handleExportPdf" :loading="exportLoading">
-            📄 导出 PDF
+            导出全部 PDF
           </el-button>
           <el-button type="primary" @click="handleRepractice" :loading="repracticeLoading">
-            🔄 重做错题
+            重做错题
           </el-button>
         </div>
       </div>
 
       <!-- Table -->
-      <el-table :data="wrongList" v-loading="loading" class="wrong-table">
+      <el-table
+        :data="wrongList"
+        v-loading="loading"
+        class="wrong-table"
+        @selection-change="handleWrongSelectionChange"
+      >
+        <el-table-column type="selection" width="48" />
         <el-table-column label="题型" width="90">
           <template #default="{ row }">
             <span class="type-tag">{{ getTypeLabel(row.questionType) }}</span>
@@ -318,7 +331,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getWrongQuestions, markWrongQuestionMastered, getRepracticeQuestions, getWrongQuestionStats, exportWrongQuestionsPdf } from '@/api/quiz'
+import { getWrongQuestions, markWrongQuestionMastered, getRepracticeQuestions, getWrongQuestionStats, exportWrongQuestionsPdf, exportSelectedWrongQuestionsPdf } from '@/api/quiz'
 import { loadAvailableMaterials } from '@/api/material'
 import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import BaseCard from '@/components/common/BaseCard.vue'
@@ -332,6 +345,7 @@ const total = ref(0)
 const materialList = ref([])
 const showDetail = ref(false)
 const currentQuestion = ref(null)
+const selectedWrongQuestions = ref([])
 
 const queryParams = reactive({
   materialId: '',
@@ -356,6 +370,7 @@ const isRepracticeCorrect = ref(false)
 
 // ========== 导出 ==========
 const exportLoading = ref(false)
+const exportSelectedLoading = ref(false)
 
 // 统计图表辅助
 const typeMax = computed(() => {
@@ -456,8 +471,10 @@ async function handleSearch() {
       wrongList.value = data.records || []
       total.value = data.total || 0
     }
+    selectedWrongQuestions.value = []
   } catch {
     wrongList.value = []
+    selectedWrongQuestions.value = []
   } finally {
     loading.value = false
   }
@@ -565,21 +582,50 @@ function exitRepractice() {
   isRepracticeCorrect.value = false
 }
 
+function handleWrongSelectionChange(selection) {
+  selectedWrongQuestions.value = selection
+}
+
+function downloadPdfBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(url)
+}
+
+async function handleExportSelectedPdf() {
+  if (selectedWrongQuestions.value.length === 0) {
+    ElMessage.warning('请先选择要导出的错题')
+    return
+  }
+
+  exportSelectedLoading.value = true
+  try {
+    const ids = selectedWrongQuestions.value.map(item => item.id)
+    const blob = await exportSelectedWrongQuestionsPdf(ids)
+    const date = new Date().toISOString().split('T')[0]
+    downloadPdfBlob(blob, `错题本-选中题目-${date}.pdf`)
+    ElMessage.success('PDF 导出成功')
+  } catch (error) {
+    if (!error?.message) ElMessage.error('PDF 导出失败')
+  } finally {
+    exportSelectedLoading.value = false
+  }
+}
+
 async function handleExportPdf() {
   exportLoading.value = true
   try {
     const blob = await exportWrongQuestionsPdf()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = '错题本_' + new Date().toISOString().split('T')[0] + '.pdf'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
+    const date = new Date().toISOString().split('T')[0]
+    downloadPdfBlob(blob, `错题本-全部-${date}.pdf`)
     ElMessage.success('PDF 导出成功')
-  } catch {
-    ElMessage.error('PDF 导出失败')
+  } catch (error) {
+    if (!error?.message) ElMessage.error('PDF 导出失败')
   } finally {
     exportLoading.value = false
   }
@@ -599,7 +645,7 @@ onMounted(() => {
 
 /* ========== Stats ========== */
 .stats-card {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
   border-radius: var(--radius-lg);
 }
 
@@ -618,16 +664,16 @@ onMounted(() => {
 
 .stats-summary {
   display: flex;
-  gap: var(--space-6);
+  gap: var(--space-3);
   margin-bottom: var(--space-5);
 }
 
 .stat-item {
-  text-align: center;
+  text-align: left;
   padding: var(--space-3) var(--space-5);
   background: var(--surface-container);
   border-radius: var(--radius-md);
-  min-width: 100px;
+  min-width: 112px;
 }
 
 .stat-item.warn .stat-value {
@@ -658,7 +704,7 @@ onMounted(() => {
 }
 
 .chart-box {
-  background: var(--surface-container);
+  background: var(--surface-container-low);
   border-radius: var(--radius-md);
   padding: var(--space-4);
 }

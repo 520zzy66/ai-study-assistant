@@ -4,7 +4,7 @@
 #   export JWT_SECRET=your_jwt_secret_here    # Base64 编码，≥256 位
 #   export DB_PASSWORD=your_db_password
 #   export AI_API_KEY=your_api_key_here
-# 可选：DB_USERNAME（默认 postgres）、DB_PORT（默认 5433）
+# 可选：DB_USERNAME（默认 postgres）、DB_PORT（默认 5433）、OLLAMA_BASE_URL
 # ============================================================
 
 # ---- JWT（开发环境默认值，生产环境必须通过环境变量覆盖） ----
@@ -16,7 +16,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:${DB_PORT:5433}/ai_study
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:123456789zzy}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   # ---- Xiaomi MiMo API ----
@@ -31,7 +31,7 @@ spring:
 
 # ---- 文件上传 ----
 file:
-  upload-dir: C:/Users/20370/Desktop/AI学习助手/backend/uploads
+  upload-dir: ${FILE_UPLOAD_DIR:./uploads}
 
 # ---- MyBatis-Plus ----
 mybatis-plus:

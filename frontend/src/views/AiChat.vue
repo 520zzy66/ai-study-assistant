@@ -2,15 +2,15 @@
   <div class="chat-container">
     <!-- 左侧会话管理侧边栏 -->
     <aside class="chat-sidebar" :class="{ collapsed: sidebarCollapsed }">
-      <!-- 顶部品牌区 -->
+      <!-- 会话区标题 -->
       <div class="sidebar-brand">
         <div class="brand-content" v-if="!sidebarCollapsed">
           <div class="brand-logo">
-            <el-icon :size="24"><ChatDotRound /></el-icon>
-            <span class="brand-name">AI 学习助手</span>
+            <el-icon :size="18"><ChatDotRound /></el-icon>
+            <span class="brand-name">对话记录</span>
           </div>
         </div>
-        <button class="collapse-btn" @click="toggleSidebar">
+        <button class="collapse-btn" type="button" :aria-label="sidebarCollapsed ? '展开对话记录' : '收起对话记录'" @click="toggleSidebar">
           <el-icon :size="18">
             <component :is="sidebarCollapsed ? 'Expand' : 'Fold'" />
           </el-icon>
@@ -19,27 +19,34 @@
 
       <!-- 新建对话按钮 -->
       <div class="sidebar-new-chat" v-if="!sidebarCollapsed">
-        <button class="new-chat-btn" @click="createNewChat">
+        <button class="new-chat-btn" type="button" @click="createNewChat">
           <el-icon :size="16"><Plus /></el-icon>
           <span>新建对话</span>
         </button>
       </div>
       <div class="sidebar-new-chat collapsed" v-else>
-        <button class="new-chat-btn icon-only" @click="createNewChat">
+        <button class="new-chat-btn icon-only" type="button" aria-label="新建对话" @click="createNewChat">
           <el-icon :size="18"><Plus /></el-icon>
         </button>
       </div>
 
       <!-- 会话列表区 -->
       <div class="sidebar-conversations" v-if="!sidebarCollapsed">
-        <!-- 今天 -->
-        <div class="conversation-group" v-if="todayConversations.length > 0">
-          <div class="group-title">今天</div>
+        <div
+          v-for="group in conversationGroups"
+          :key="group.label"
+          v-show="group.items.length > 0"
+          class="conversation-group"
+        >
+          <div class="group-title">{{ group.label }}</div>
           <div
-            v-for="conv in todayConversations"
+            v-for="conv in group.items"
             :key="conv.id"
             :class="['conversation-item', { active: conv.id === activeConversationId }]"
+            role="button"
+            tabindex="0"
             @click="switchConversation(conv.id)"
+            @keydown.enter="switchConversation(conv.id)"
           >
             <div class="conversation-icon">
               <el-icon :size="16"><ChatLineRound /></el-icon>
@@ -50,91 +57,7 @@
             </div>
             <div class="conversation-actions" @click.stop>
               <el-dropdown trigger="click" @command="(cmd) => handleConversationAction(cmd, conv)">
-                <button class="more-btn">
-                  <el-icon :size="14"><MoreFilled /></el-icon>
-                </button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="rename">
-                      <el-icon><Edit /></el-icon>
-                      重命名
-                    </el-dropdown-item>
-                    <el-dropdown-item command="pin">
-                      <el-icon><Star /></el-icon>
-                      {{ conv.pinned ? '取消固定' : '固定' }}
-                    </el-dropdown-item>
-                    <el-dropdown-item command="delete" divided>
-                      <el-icon><Delete /></el-icon>
-                      删除
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </div>
-        </div>
-
-        <!-- 过去7天 -->
-        <div class="conversation-group" v-if="weekConversations.length > 0">
-          <div class="group-title">过去7天</div>
-          <div
-            v-for="conv in weekConversations"
-            :key="conv.id"
-            :class="['conversation-item', { active: conv.id === activeConversationId }]"
-            @click="switchConversation(conv.id)"
-          >
-            <div class="conversation-icon">
-              <el-icon :size="16"><ChatLineRound /></el-icon>
-            </div>
-            <div class="conversation-info">
-              <div class="conversation-title">{{ conv.title }}</div>
-              <div class="conversation-preview">{{ conv.preview }}</div>
-            </div>
-            <div class="conversation-actions" @click.stop>
-              <el-dropdown trigger="click" @command="(cmd) => handleConversationAction(cmd, conv)">
-                <button class="more-btn">
-                  <el-icon :size="14"><MoreFilled /></el-icon>
-                </button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="rename">
-                      <el-icon><Edit /></el-icon>
-                      重命名
-                    </el-dropdown-item>
-                    <el-dropdown-item command="pin">
-                      <el-icon><Star /></el-icon>
-                      {{ conv.pinned ? '取消固定' : '固定' }}
-                    </el-dropdown-item>
-                    <el-dropdown-item command="delete" divided>
-                      <el-icon><Delete /></el-icon>
-                      删除
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </div>
-        </div>
-
-        <!-- 更早 -->
-        <div class="conversation-group" v-if="olderConversations.length > 0">
-          <div class="group-title">更早</div>
-          <div
-            v-for="conv in olderConversations"
-            :key="conv.id"
-            :class="['conversation-item', { active: conv.id === activeConversationId }]"
-            @click="switchConversation(conv.id)"
-          >
-            <div class="conversation-icon">
-              <el-icon :size="16"><ChatLineRound /></el-icon>
-            </div>
-            <div class="conversation-info">
-              <div class="conversation-title">{{ conv.title }}</div>
-              <div class="conversation-preview">{{ conv.preview }}</div>
-            </div>
-            <div class="conversation-actions" @click.stop>
-              <el-dropdown trigger="click" @command="(cmd) => handleConversationAction(cmd, conv)">
-                <button class="more-btn">
+                <button class="more-btn" type="button" :aria-label="`${conv.title}的更多操作`">
                   <el-icon :size="14"><MoreFilled /></el-icon>
                 </button>
                 <template #dropdown>
@@ -167,20 +90,12 @@
 
       <!-- 底部用户/设置区 -->
       <div class="sidebar-footer">
-        <div class="user-info" v-if="!sidebarCollapsed">
-          <div class="user-avatar">
-            <el-icon :size="20"><User /></el-icon>
-          </div>
-          <div class="user-name">{{ userName }}</div>
-        </div>
+        <span v-if="!sidebarCollapsed" class="autosave-hint">对话自动保存</span>
         <div class="footer-actions">
-          <button class="icon-btn" @click="toggleTheme" :title="isDarkMode ? '切换到浅色模式' : '切换到深色模式'">
+          <button class="icon-btn" type="button" :aria-label="isDarkMode ? '切换到浅色模式' : '切换到深色模式'" @click="toggleTheme" :title="isDarkMode ? '切换到浅色模式' : '切换到深色模式'">
             <el-icon :size="18">
               <component :is="isDarkMode ? 'Sunny' : 'Moon'" />
             </el-icon>
-          </button>
-          <button class="icon-btn" @click="openSettings" title="设置">
-            <el-icon :size="18"><Setting /></el-icon>
           </button>
         </div>
       </div>
@@ -205,16 +120,36 @@
           />
         </div>
         <div class="header-right">
-          <!-- 模型选择器 -->
+          <div class="material-selector">
+            <el-select
+              v-model="aiStore.selectedMaterialId"
+              clearable
+              filterable
+              size="small"
+              placeholder="关联学习资料"
+              class="material-select"
+              @change="onMaterialChange"
+            >
+              <el-option
+                v-for="material in materialList"
+                :key="material.id"
+                :label="material.originalName"
+                :value="material.id"
+                :disabled="material.status !== 'ready'"
+              />
+            </el-select>
+          </div>
           <div class="model-selector">
-            <el-select v-model="selectedModel" size="small" class="model-select">
+            <el-select v-model="selectedModel" size="small" class="model-select" aria-label="选择对话模型">
               <el-option label="DeepSeek-V3" value="deepseek-chat" />
               <el-option label="DeepSeek-R1" value="deepseek-reasoner" />
             </el-select>
           </div>
-          <!-- 联网搜索开关 -->
           <button
             :class="['search-toggle', { active: webSearchEnabled }]"
+            type="button"
+            :aria-pressed="webSearchEnabled"
+            aria-label="切换联网搜索"
             @click="webSearchEnabled = !webSearchEnabled"
             title="联网搜索"
           >
@@ -266,6 +201,7 @@
                   <div class="file-card-info">
                     <div class="file-card-name">{{ msg.material.name }}</div>
                     <div class="file-card-meta">
+                      <span v-if="msg.material.isTemporary" class="file-card-type">临时资料</span>
                       <span class="file-card-type">{{ (msg.material.fileType || '').toUpperCase() }}</span>
                       <span v-if="msg.material.fileSize" class="file-card-size">{{ formatFileSize(msg.material.fileSize) }}</span>
                     </div>
@@ -286,21 +222,23 @@
               <div class="message-bubble assistant-bubble">
                 <div class="message-text markdown-body" v-html="renderMarkdown(msg.content)" />
                 <div class="message-actions">
-                  <button class="action-btn" @click="copyMessage(msg.content)" title="复制">
+              <button class="action-btn" type="button" aria-label="复制回答" @click="copyMessage(msg.content)" title="复制">
                     <el-icon :size="14"><CopyDocument /></el-icon>
                   </button>
                   <button
                     v-if="isLastAssistantMessage(index)"
                     class="action-btn"
+                    type="button"
+                    aria-label="重新生成回答"
                     @click="regenerateLast"
                     title="重新生成"
                   >
                     <el-icon :size="14"><Refresh /></el-icon>
                   </button>
-                  <button class="action-btn" @click="likeMessage(index)" title="点赞">
+                  <button class="action-btn" type="button" aria-label="点赞回答" @click="likeMessage(index)" title="点赞">
                     <el-icon :size="14"><Pointer /></el-icon>
                   </button>
-                  <button class="action-btn" @click="dislikeMessage(index)" title="点踩">
+                  <button class="action-btn" type="button" aria-label="点踩回答" @click="dislikeMessage(index)" title="点踩">
                     <el-icon :size="14"><Pointer style="transform: rotate(180deg)" /></el-icon>
                   </button>
                 </div>
@@ -351,11 +289,12 @@
             <div :class="['material-tag', { processing: isMaterialProcessing }]">
               <el-icon :size="14"><Document /></el-icon>
               <span class="tag-name">{{ selectedMaterial.originalName }}</span>
+              <span v-if="selectedMaterial.isTemporary" class="temporary-label">临时 · 7天</span>
               <span v-if="isMaterialProcessing" class="tag-status">
                 <span class="dot-pulse"></span>
                 处理中
               </span>
-              <button class="tag-close" @click="clearMaterial">
+              <button class="tag-close" type="button" aria-label="移除关联资料" @click="clearMaterial">
                 <el-icon :size="12"><Close /></el-icon>
               </button>
             </div>
@@ -364,7 +303,7 @@
           <!-- 输入框 -->
           <div class="input-box">
             <div class="input-left">
-              <button class="icon-btn" @click="triggerFileUpload" title="上传附件">
+              <button class="icon-btn" type="button" aria-label="上传附件" :disabled="temporaryUploading" @click="triggerFileUpload" title="上传附件">
                 <el-icon :size="20"><Paperclip /></el-icon>
               </button>
               <input
@@ -372,7 +311,7 @@
                 ref="fileInput"
                 style="display: none"
                 @change="handleFileUpload"
-                accept=".pdf,.doc,.docx,.md,.txt"
+                accept=".pdf,.doc,.docx,.md,.txt,.png,.jpg,.jpeg,.webp"
               />
             </div>
             <textarea
@@ -389,6 +328,8 @@
               <button
                 v-if="!aiStore.isStreaming"
                 class="send-btn"
+                type="button"
+                aria-label="发送消息"
                 :disabled="!canSend"
                 @click="handleSend"
               >
@@ -399,6 +340,8 @@
               <button
                 v-else
                 class="stop-btn"
+                type="button"
+                aria-label="停止生成"
                 @click="stopStream"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -423,16 +366,18 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ChatDotRound, ChatLineRound, Promotion, Refresh, CopyDocument,
+  ChatDotRound, ChatLineRound, Refresh, CopyDocument,
   User, MagicStick, Delete, WarningFilled,
-  CircleCloseFilled, VideoPause, Plus, MoreFilled,
-  Edit, Star, Setting, Moon, Sunny, Search, Paperclip, Pointer,
+  CircleCloseFilled, Plus, MoreFilled,
+  Edit, Star, Moon, Sunny, Search, Paperclip, Pointer,
   Expand, Fold, Close, Document
 } from '@element-plus/icons-vue'
 import { useMarkdown } from '@/composables/useMarkdown'
 import { useAiStore } from '@/stores/ai'
 import { askQuestionStream } from '@/api/ai'
-import { loadAvailableMaterials, uploadMaterial, getMaterialDetail } from '@/api/material'
+import {
+  loadAvailableMaterials, getTemporaryMaterial, uploadTemporaryMaterial
+} from '@/api/material'
 import { getChatHistory } from '@/api/history'
 
 const route = useRoute()
@@ -481,20 +426,23 @@ const olderConversations = computed(() => {
   })
 })
 
+const conversationGroups = computed(() => [
+  { label: '今天', items: todayConversations.value },
+  { label: '过去 7 天', items: weekConversations.value },
+  { label: '更早', items: olderConversations.value }
+])
+
+// 保留现有模型和联网搜索交互状态；后端接入不属于本次 UI 优化范围。
+const selectedModel = ref('deepseek-chat')
+const webSearchEnabled = ref(false)
+
 // 标题编辑
 const isEditingTitle = ref(false)
 const editedTitle = ref('')
 const titleInput = ref(null)
 
-// 模型选择
-const selectedModel = ref('deepseek-chat')
-const webSearchEnabled = ref(false)
-
 // 主题
 const isDarkMode = ref(false)
-
-// 用户信息
-const userName = ref('学习者')
 
 // 消息相关
 const messagesContainer = ref(null)
@@ -502,18 +450,28 @@ const materialList = ref([])
 const inputText = ref('')
 const fileInput = ref(null)
 const textareaRef = ref(null)
+const temporaryUploading = ref(false)
 let pollTimer = null
+let pollGeneration = 0
 
-const selectedMaterial = computed(() =>
-  materialList.value.find(m => m.id === aiStore.selectedMaterialId) || null
-)
+const selectedMaterial = computed(() => {
+  if (aiStore.selectedTemporaryMaterial) {
+    return { ...aiStore.selectedTemporaryMaterial, isTemporary: true }
+  }
+  return materialList.value.find(m => m.id === aiStore.selectedMaterialId) || null
+})
 
 const isMaterialProcessing = computed(() =>
   selectedMaterial.value && selectedMaterial.value.status === 'processing'
 )
 
+const isMaterialUnavailable = computed(() =>
+  selectedMaterial.value && selectedMaterial.value.status !== 'ready'
+)
+
 const canSend = computed(() =>
-  inputText.value.trim() && !aiStore.loading && !aiStore.isStreaming
+  inputText.value.trim() && !temporaryUploading.value && !aiStore.loading
+    && !aiStore.isStreaming && !isMaterialUnavailable.value
 )
 
 const currentConversationTitle = computed(() => {
@@ -576,11 +534,16 @@ function toggleSidebar() {
 function createNewChat() {
   activeConversationId.value = crypto.randomUUID()
   aiStore.clearMessages()
+  aiStore.setSelectedTemporaryMaterial(null)
+  aiStore.setSelectedMaterial(null)
 }
 
 async function switchConversation(conversationId) {
+  stopPolling()
   activeConversationId.value = conversationId
   aiStore.clearMessages()
+  aiStore.setSelectedTemporaryMaterial(null)
+  aiStore.setSelectedMaterial(null)
 
   try {
     const result = await getChatHistory({ type: 'workflow', page: 1, size: 100 })
@@ -601,6 +564,25 @@ async function switchConversation(conversationId) {
               name: mat.originalName,
               fileType: mat.fileType,
               fileSize: mat.fileSize
+            }
+          }
+        } else if (msg.temporaryMaterialToken) {
+          try {
+            const temp = await getTemporaryMaterial(msg.temporaryMaterialToken)
+            materialInfo = {
+              uploadToken: temp.uploadToken,
+              isTemporary: true,
+              name: temp.originalName,
+              fileType: temp.fileType,
+              fileSize: temp.fileSize
+            }
+          } catch {
+            materialInfo = {
+              uploadToken: msg.temporaryMaterialToken,
+              isTemporary: true,
+              name: '临时资料（已过期）',
+              fileType: '',
+              fileSize: null
             }
           }
         }
@@ -676,24 +658,22 @@ function toggleTheme() {
   document.documentElement.classList.toggle('dark', isDarkMode.value)
 }
 
-function openSettings() {
-  ElMessage.info('设置功能开发中')
-}
-
 // 文件上传
 function triggerFileUpload() {
+  if (temporaryUploading.value) return
   fileInput.value?.click()
 }
 
 async function handleFileUpload(event) {
+  if (temporaryUploading.value) return
   const file = event.target.files[0]
   if (!file) return
 
   // 校验文件类型
-  const allowedTypes = ['.pdf', '.doc', '.docx', '.md', '.txt']
+  const allowedTypes = ['.pdf', '.doc', '.docx', '.md', '.txt', '.png', '.jpg', '.jpeg', '.webp']
   const ext = '.' + file.name.split('.').pop().toLowerCase()
   if (!allowedTypes.includes(ext)) {
-    ElMessage.error('不支持的文件类型，仅支持 PDF/DOC/DOCX/MD/TXT')
+    ElMessage.error('仅支持 PDF、Word、TXT、Markdown、PNG、JPG 和 WEBP')
     return
   }
 
@@ -705,34 +685,21 @@ async function handleFileUpload(event) {
 
   const formData = new FormData()
   formData.append('file', file)
+  if (!activeConversationId.value) activeConversationId.value = crypto.randomUUID()
+  formData.append('conversationId', activeConversationId.value)
 
   try {
+    temporaryUploading.value = true
     ElMessage.info('正在上传文件...')
-    const result = await uploadMaterial(formData)
-    ElMessage.success(`文件 "${file.name}" 上传成功，正在处理中`)
-
-    // 上传成功后自动关联该资料到当前对话
-    aiStore.setSelectedMaterial(result.id)
-
-    // 将新上传的资料添加到列表（避免等待异步处理）
-    const newMaterial = {
-      id: result.id,
-      originalName: result.originalName || file.name,
-      fileType: result.fileType || ext.replace('.', ''),
-      fileSize: result.fileSize || file.size,
-      status: 'processing'
-    }
-    // 避免重复添加
-    if (!materialList.value.find(m => m.id === newMaterial.id)) {
-      materialList.value.unshift(newMaterial)
-    }
-
-    // 开始轮询资料处理状态
-    startPollingMaterial(result.id)
+    const result = await uploadTemporaryMaterial(formData)
+    ElMessage.success(`临时资料“${file.name}”已上传，正在处理中`)
+    aiStore.setSelectedTemporaryMaterial(result)
+    startPollingTemporaryMaterial(result.uploadToken)
   } catch (err) {
     console.error('文件上传失败:', err)
     ElMessage.error('文件上传失败: ' + (err.message || '未知错误'))
   } finally {
+    temporaryUploading.value = false
     // 清空 file input，允许重复上传同一文件
     if (fileInput.value) {
       fileInput.value.value = ''
@@ -755,11 +722,13 @@ function isFailedMessage(content) {
 }
 
 function onMaterialChange() {
-  // selectedMaterialId 已通过 v-model 直接绑定到 store，无需额外同步
+  stopPolling()
+  if (aiStore.selectedMaterialId) aiStore.setSelectedTemporaryMaterial(null)
 }
 
 function clearMaterial() {
   aiStore.setSelectedMaterial(null)
+  aiStore.setSelectedTemporaryMaterial(null)
   stopPolling()
 }
 
@@ -768,38 +737,37 @@ function clearMaterial() {
  * 上传后异步处理需要时间，每 3 秒检查一次直到 ready/failed
  * 最多重试 20 次（约 1 分钟），避免无限轮询
  */
-function startPollingMaterial(materialId) {
+function startPollingTemporaryMaterial(uploadToken) {
   stopPolling()
-  let retryCount = 0
-  const MAX_RETRY = 20
+  const generation = pollGeneration
+  let pollCount = 0
+  const MAX_POLL_COUNT = 20
   pollTimer = setInterval(async () => {
+    pollCount++
     try {
-      const detail = await getMaterialDetail(materialId)
-      retryCount = 0 // 请求成功重置计数
-      const idx = materialList.value.findIndex(m => m.id === materialId)
-      if (idx !== -1) {
-        materialList.value[idx].status = detail.status
-      }
+      const detail = await getTemporaryMaterial(uploadToken)
+      if (generation !== pollGeneration) return
+      aiStore.setSelectedTemporaryMaterial(detail)
       if (detail.status === 'ready' || detail.status === 'failed') {
         stopPolling()
         if (detail.status === 'ready') {
-          ElMessage.success(`"${detail.originalName}" 处理完成，可以开始对话`)
+          ElMessage.success(`“${detail.originalName}”处理完成，可以开始对话`)
         } else {
           ElMessage.error(`"${detail.originalName}" 处理失败: ${detail.errorMsg || '未知错误'}`)
         }
       }
     } catch (e) {
-      retryCount++
       console.error('轮询资料状态失败:', e)
-      if (retryCount >= MAX_RETRY) {
-        stopPolling()
-        ElMessage.error('资料处理状态查询超时，请手动刷新页面')
-      }
+    }
+    if (pollCount >= MAX_POLL_COUNT && pollTimer) {
+      stopPolling()
+      ElMessage.error('资料处理状态查询超时，请稍后在临时资料中刷新状态')
     }
   }, 3000)
 }
 
 function stopPolling() {
+  pollGeneration++
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
@@ -843,7 +811,9 @@ async function sendMessage(text) {
   // 捕获当前关联的文件信息，嵌入到消息中
   const materialInfo = selectedMaterial.value
     ? {
-        id: selectedMaterial.value.id,
+        id: selectedMaterial.value.id || null,
+        uploadToken: selectedMaterial.value.uploadToken || null,
+        isTemporary: Boolean(selectedMaterial.value.isTemporary),
         name: selectedMaterial.value.originalName,
         fileType: selectedMaterial.value.fileType,
         fileSize: selectedMaterial.value.fileSize
@@ -854,10 +824,12 @@ async function sendMessage(text) {
 
   // 保存 materialId，因为清除状态后 store 中的值会丢失
   const currentMaterialId = materialInfo?.id || null
+  const currentTemporaryMaterialToken = materialInfo?.uploadToken || null
 
   // 文件已随消息发出，清除输入框上方的文件标签
   if (materialInfo) {
     aiStore.setSelectedMaterial(null)
+    aiStore.setSelectedTemporaryMaterial(null)
   }
 
   aiStore.setLoading(true)
@@ -874,6 +846,7 @@ async function sendMessage(text) {
     const abortFn = askQuestionStream(
       {
         materialId: currentMaterialId,
+        temporaryMaterialToken: currentTemporaryMaterialToken,
         question,
         history,
         conversationId: activeConversationId.value
@@ -972,8 +945,25 @@ async function loadMaterials() {
   }
 }
 
+async function loadTemporaryMaterialFromRoute() {
+  const token = route.query.temporaryMaterialToken
+  if (!token) return
+  try {
+    if (route.query.conversationId) {
+      activeConversationId.value = String(route.query.conversationId)
+    }
+    const material = await getTemporaryMaterial(String(token))
+    aiStore.setSelectedTemporaryMaterial(material)
+    if (material.status === 'processing') startPollingTemporaryMaterial(material.uploadToken)
+  } catch (e) {
+    console.error('加载临时资料失败:', e)
+    ElMessage.error('临时资料不存在或已过期')
+  }
+}
+
 onMounted(() => {
   loadMaterials()
+  loadTemporaryMaterialFromRoute()
   loadConversations()
   nextTick(() => scrollToBottom())
 })
@@ -987,6 +977,11 @@ watch(() => route.query.materialId, newId => {
   if (newId) {
     aiStore.setSelectedMaterial(Number(newId))
   }
+})
+
+
+watch(() => route.query.temporaryMaterialToken, () => {
+  loadTemporaryMaterialFromRoute()
 })
 </script>
 
@@ -2039,6 +2034,515 @@ watch(() => route.query.materialId, newId => {
 
   .model-selector {
     display: none;
+  }
+}
+
+.temporary-label {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-container-low);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-micro);
+  white-space: nowrap;
+}
+</style>
+
+<style scoped>
+/* 2026 desktop workbench refresh — loaded after legacy rules during incremental migration. */
+.chat-container {
+  --chat-sidebar-width: 264px;
+  --chat-sidebar-collapsed-width: 64px;
+  --chat-header-height: 64px;
+  height: calc(100vh - var(--header-height));
+  min-height: 620px;
+  margin: calc(-1 * var(--space-8));
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-page);
+}
+
+.chat-sidebar {
+  width: var(--chat-sidebar-width);
+  background: var(--surface-container-low);
+  border-right: 1px solid var(--outline-variant);
+}
+
+.chat-sidebar.collapsed {
+  width: var(--chat-sidebar-collapsed-width);
+}
+
+.sidebar-brand {
+  height: var(--chat-header-height);
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid transparent;
+}
+
+.brand-logo {
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+}
+
+.brand-logo .el-icon {
+  color: var(--color-primary);
+}
+
+.brand-name {
+  font-size: var(--text-ui);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.collapse-btn,
+.more-btn,
+.icon-btn,
+.action-btn,
+.tag-close {
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.collapse-btn:focus-visible,
+.more-btn:focus-visible,
+.icon-btn:focus-visible,
+.action-btn:focus-visible,
+.tag-close:focus-visible,
+.new-chat-btn:focus-visible,
+.question-card:focus-visible,
+.send-btn:focus-visible,
+.stop-btn:focus-visible,
+.conversation-item:focus-visible {
+  outline: 2px solid var(--color-primary-ring);
+  outline-offset: 2px;
+}
+
+.sidebar-new-chat {
+  padding: var(--space-3);
+}
+
+.new-chat-btn {
+  height: 40px;
+  justify-content: flex-start;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.new-chat-btn:hover {
+  border-color: var(--border-color-hover);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-sm);
+  transform: none;
+}
+
+.new-chat-btn .el-icon {
+  color: var(--color-primary);
+}
+
+.sidebar-conversations {
+  padding: var(--space-2) var(--space-3) var(--space-4);
+}
+
+.conversation-group {
+  margin-bottom: var(--space-5);
+}
+
+.group-title {
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.conversation-item {
+  min-height: 54px;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  margin-bottom: 2px;
+}
+
+.conversation-item:hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.conversation-item.active {
+  border-color: var(--outline);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.conversation-item.active::before {
+  display: none;
+}
+
+.conversation-icon {
+  color: var(--color-text-tertiary);
+}
+
+.conversation-title {
+  font-size: var(--text-ui);
+  font-weight: 550;
+}
+
+.conversation-preview {
+  margin-top: 2px;
+  font-size: var(--text-micro);
+  color: var(--color-text-tertiary);
+}
+
+.sidebar-footer {
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-container-low);
+}
+
+.autosave-hint {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-micro);
+}
+
+.chat-main {
+  min-width: 0;
+  background: var(--surface-page);
+}
+
+.chat-header {
+  height: var(--chat-header-height);
+  padding: 0 var(--space-6);
+  background: color-mix(in srgb, var(--surface-page) 88%, transparent);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.chat-title {
+  max-width: 360px;
+  font-size: var(--text-heading-3);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.header-right {
+  gap: var(--space-3);
+}
+
+.material-select {
+  width: 210px;
+}
+
+.material-select :deep(.el-select__wrapper) {
+  min-height: 34px;
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px var(--outline) inset;
+}
+
+.model-select {
+  width: 126px;
+}
+
+.model-select :deep(.el-select__wrapper) {
+  min-height: 34px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.search-toggle {
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-color: transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.search-toggle:hover,
+.search-toggle.active {
+  border-color: var(--outline);
+  background: var(--surface-container-low);
+}
+
+.messages-area {
+  padding: var(--space-10) var(--space-8) var(--space-6);
+  scroll-padding-bottom: 160px;
+}
+
+.messages-list {
+  width: min(100%, 880px);
+  margin: 0 auto;
+  padding-bottom: var(--space-8);
+}
+
+.welcome-screen {
+  width: min(100%, 760px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6);
+  justify-content: center;
+}
+
+.welcome-icon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--outline);
+  border-radius: 18px;
+  background: var(--surface-card);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.welcome-screen h2 {
+  font-size: 1.75rem;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+}
+
+.welcome-desc {
+  max-width: 520px;
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-body);
+}
+
+.suggested-questions {
+  width: min(100%, 680px);
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+.question-card {
+  min-height: 58px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-card) 82%, transparent);
+  color: var(--color-text-secondary);
+  text-align: left;
+  box-shadow: none;
+}
+
+.question-card:hover {
+  border-color: var(--border-color-hover);
+  background: var(--surface-card);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.question-card .el-icon {
+  color: var(--color-primary);
+}
+
+.message-item {
+  margin-bottom: var(--space-7, 28px);
+}
+
+.message-user {
+  align-items: flex-start;
+}
+
+.message-user .user-bubble {
+  max-width: 72%;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 13%, transparent);
+  border-radius: 16px 16px 4px 16px;
+  background: var(--bg-tag-green);
+  color: var(--color-text-primary);
+  box-shadow: none;
+}
+
+.message-avatar {
+  width: 30px;
+  height: 30px;
+  margin-top: 2px;
+  border: 1px solid var(--outline);
+  box-shadow: none;
+}
+
+.assistant-avatar {
+  background: var(--surface-card);
+  color: var(--color-primary);
+}
+
+.message-assistant {
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.message-assistant .assistant-bubble {
+  width: min(calc(100% - 48px), 790px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.assistant-bubble .message-text {
+  color: var(--color-text-primary);
+  font-size: 15px;
+  line-height: 1.78;
+}
+
+.message-actions {
+  min-height: 32px;
+  margin-top: var(--space-3);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity var(--duration-fast) var(--ease-default),
+              transform var(--duration-fast) var(--ease-default);
+}
+
+.message-assistant:hover .message-actions,
+.message-actions:focus-within {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.action-btn {
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+}
+
+.system-banner {
+  width: min(100%, 790px);
+  margin-left: 42px;
+  border-radius: var(--radius-md);
+}
+
+.input-area {
+  padding: var(--space-3) var(--space-8) var(--space-5);
+  background: linear-gradient(to bottom, transparent, var(--surface-page) 26%);
+}
+
+.input-wrapper {
+  width: min(100%, 880px);
+  margin: 0 auto;
+}
+
+.material-tag-bar {
+  padding: 0 10px var(--space-2);
+}
+
+.material-tag {
+  border: 1px solid var(--outline);
+  background: var(--surface-card);
+  color: var(--color-text-secondary);
+}
+
+.input-box {
+  min-height: 54px;
+  padding: 7px 7px 7px 10px;
+  border: 1px solid var(--border-color-hover);
+  border-radius: 18px;
+  background: var(--surface-card);
+  box-shadow: 0 1px 2px rgba(28, 28, 26, 0.04), 0 8px 28px rgba(28, 28, 26, 0.06);
+}
+
+.input-box:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  box-shadow: 0 0 0 3px var(--color-primary-ring), 0 10px 30px rgba(28, 28, 26, 0.07);
+}
+
+.input-textarea {
+  min-height: 38px;
+  padding: 8px 6px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.send-btn,
+.stop-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+.send-btn {
+  background: var(--color-primary);
+  color: var(--on-primary);
+}
+
+.send-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: none;
+}
+
+.send-btn:disabled {
+  background: var(--surface-container);
+  color: var(--color-text-disabled);
+}
+
+.input-footer {
+  padding-top: var(--space-2);
+}
+
+html.dark .conversation-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 1279px) {
+  .chat-container {
+    margin: calc(-1 * var(--space-4));
+  }
+
+  .chat-sidebar {
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    box-shadow: var(--shadow-lg);
+  }
+
+  .chat-sidebar.collapsed {
+    width: 0;
+    border: 0;
+  }
+
+  .messages-area {
+    padding-inline: var(--space-5);
+  }
+}
+
+@media (max-width: 767px) {
+  .chat-header {
+    padding: 0 var(--space-4);
+  }
+
+  .chat-title {
+    max-width: 150px;
+  }
+
+  .model-selector,
+  .search-toggle {
+    display: none;
+  }
+
+  .material-select {
+    width: 170px;
+  }
+
+  .messages-area {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .welcome-screen {
+    padding-inline: 0;
+  }
+
+  .message-user .user-bubble {
+    max-width: 86%;
+  }
+
+  .message-actions {
+    opacity: 1;
+    transform: none;
+  }
+
+  .input-area {
+    padding: var(--space-2) var(--space-4) var(--space-4);
   }
 }
 </style>

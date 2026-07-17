@@ -74,8 +74,8 @@ AI Study Assistant
 # Project Structure
 
 ```text
-.Codex/
-├── AGENTS.md
+AGENTS.md
+.claude/
 ├── task-list.md
 └── prompts/
 
@@ -265,7 +265,7 @@ public class Result<T> {
 实现新功能时：
 
 - 新增接口必须同步更新 API 文档。
-- 完成任务后同步更新 `.Codex/task-list.md`。
+- 完成任务后同步更新 `.claude/task-list.md`。
 - 保证实现与 `docs/spec.md` 保持一致。
 - 如果实现方案与 Spec 存在冲突，应优先遵循 Spec，并说明原因。
 
@@ -275,16 +275,16 @@ public class Result<T> {
 
 在实现任何功能之前，Codex 应遵循以下流程：
 
-1. 阅读 `.Codex/AGENTS.md`；
+1. 阅读根目录 `AGENTS.md`；
 2. 阅读 `docs/spec.md`；
-3. 阅读 `.Codex/task-list.md`；
+3. 阅读 `.claude/task-list.md`；
 4. 找到当前未完成的任务；
 5. 分析并设计实现方案；
 6. 编写完整、可直接运行的代码；
 7. 添加必要注释和参数校验；
 8. 验证代码能够正常编译和运行；
 9. **对本次变更进行代码审查（见 Code Review Rules）**；
-10. 完成任务后更新 `.Codex/task-list.md`；
+10. 完成任务后更新 `.claude/task-list.md`；
 11. 不修改当前任务无关模块。
 
 ---
@@ -293,7 +293,7 @@ public class Result<T> {
 
 **每完成一个模块/任务后，或用户要求审查代码时，必须：**
 
-1. Read 并执行 `.Codex/prompts/code-review.md` — 其中包含完整的 6 维审查 Checklist 和修复工作流
+1. Read 并执行 `.claude/prompts/code-review.md` — 其中包含完整的 6 维审查 Checklist 和修复工作流
 2. 按 Checklist 逐项审查本次变更（或全局代码），不得跳过维度
 3. 对发现的 🔴 严重问题必须修复；🟡 建议问题择机修复
 4. 修复后再次扫描确认无新问题引入
@@ -304,7 +304,7 @@ public class Result<T> {
 
 # Prompt Workflow
 
-项目使用 `.Codex/prompts/` 目录中的 Prompt 模板辅助开发。
+项目使用 `.claude/prompts/` 目录中的 Prompt 模板辅助开发。
 
 常用工作流：
 
@@ -371,7 +371,7 @@ Codex 在执行任务时，可以参考对应 Prompt 的工作模式。
 
 ## Prompt Selection Rules
 
-当用户以意图描述而非显式指定 Prompt 文件时，Codex 应自动从 `.Codex/prompts/` 选择最合适的模板。
+当用户以意图描述而非显式指定 Prompt 文件时，Codex 应自动从 `.claude/prompts/` 选择最合适的模板。
 
 ### 选择映射表
 
@@ -412,3 +412,9 @@ Do not invent new styles.
 All pages must follow the Design System defined in ui-design-spec.md.
 
 Maintain consistent spacing, typography, colors, layout and interaction across the entire application.
+
+---
+
+# User Feedback & Communication Rules
+
+- 当用户对系统设计、维度配置、技术选型或实现细节提出疑问（如“我记得我项目要求的是XXX”）时，**必须先通过对话予以答复并确认，严禁在未得到用户明确指示前直接进行修改**。只有在用户同意或发出明确更改指令后，方可执行相关的代码与数据库调整。

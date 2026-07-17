@@ -17,7 +17,7 @@ import java.util.List;
  * <p>配置要求：
  * <ul>
  *   <li>Ollama 服务运行在 {@code spring.ai.ollama.base-url}（默认 http://localhost:11434）</li>
- *   <li>模型名称：{@code spring.ai.ollama.embedding.model}（默认 bge-m3）</li>
+ *   <li>模型名称：{@code ai.embedding.model}（兼容原 {@code spring.ai.ollama.embedding.model}）</li>
  * </ul>
  *
  * <p><b>业务逻辑零影响</b>：此类纯技术实现，不涉及任何业务规则。
@@ -29,7 +29,7 @@ public class OllamaEmbeddingProvider implements EmbeddingProvider {
     @Value("${spring.ai.ollama.base-url:http://localhost:11434}")
     private String ollamaBaseUrl;
 
-    @Value("${spring.ai.ollama.embedding.model:bge-m3}")
+    @Value("${ai.embedding.model:${spring.ai.ollama.embedding.model:bge-m3}}")
     private String embeddingModel;
 
     @Value("${ai.embedding.dimension:1024}")

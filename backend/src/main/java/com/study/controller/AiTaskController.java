@@ -5,6 +5,7 @@ import com.study.common.Result;
 import com.study.common.UserContext;
 import com.study.dto.request.GeneratePlanRequest;
 import com.study.dto.request.GenerateQuizRequest;
+import com.study.dto.request.GenerateResourcePackageRequest;
 import com.study.dto.request.GenerateSummaryRequest;
 import com.study.entity.AiTask;
 import com.study.service.AiTaskService;
@@ -105,6 +106,19 @@ public class AiTaskController {
     }
 
     /**
+     * 异步生成个性化资源包。
+     */
+    @Operation(summary = "异步生成资源包", description = "创建后台资源包生成任务，复用总结、导图、出题、计划和多模态脚本能力")
+    @PostMapping("/resource-package")
+    public Result<Map<String, String>> generateResourcePackageAsync(
+            @Valid @RequestBody GenerateResourcePackageRequest request) {
+        Long userId = UserContext.getCurrentUserId();
+        AiTask task = taskService.createTask(Constants.CHAT_TYPE_RESOURCE_PACKAGE, request.getMaterialId(), userId);
+        taskService.executeResourcePackageTask(task.getTaskId(), request, userId);
+        return Result.success(Map.of("taskId", task.getTaskId()));
+    }
+
+    /**
      * 查询单个任务
      */
     @Operation(summary = "查询任务状态", description = "根据 taskId 查询任务进度和结果")
@@ -121,6 +135,17 @@ public class AiTaskController {
     @GetMapping
     public Result<List<AiTaskVO>> getActiveTasks() {
         List<AiTask> tasks = taskService.getActiveTasks();
+        return Result.success(tasks.stream().map(this::toVO).collect(Collectors.toList()));
+    }
+
+    /**
+     * 获取最近生成的资源包任务。
+     */
+    @Operation(summary = "资源包历史", description = "获取当前用户最近生成的资源包任务")
+    @GetMapping("/resource-package")
+    public Result<List<AiTaskVO>> getResourcePackageTasks(
+            @RequestParam(defaultValue = "10") int size) {
+        List<AiTask> tasks = taskService.getRecentTasksByType(Constants.CHAT_TYPE_RESOURCE_PACKAGE, size);
         return Result.success(tasks.stream().map(this::toVO).collect(Collectors.toList()));
     }
 

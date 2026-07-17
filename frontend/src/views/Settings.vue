@@ -6,6 +6,34 @@
     />
 
     <div class="settings-grid">
+      <BaseCard class="settings-card" title="外观">
+        <div class="appearance-setting">
+          <div>
+            <div class="preference-title">界面主题</div>
+            <div class="preference-desc">可跟随电脑系统，也可以固定使用浅色或深色</div>
+          </div>
+          <el-radio-group
+            :model-value="uiStore.themeMode"
+            aria-label="界面主题"
+            @change="uiStore.setThemeMode"
+          >
+            <el-radio-button value="system">
+              <el-icon><Monitor /></el-icon>
+              <span>跟随系统</span>
+            </el-radio-button>
+            <el-radio-button value="light">
+              <el-icon><Sunny /></el-icon>
+              <span>浅色</span>
+            </el-radio-button>
+            <el-radio-button value="dark">
+              <el-icon><Moon /></el-icon>
+              <span>深色</span>
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+        <div class="theme-status">当前显示：{{ uiStore.resolvedTheme === 'dark' ? '深色' : '浅色' }}</div>
+      </BaseCard>
+
       <!-- 账号安全 -->
       <BaseCard class="settings-card" title="账号安全">
         <el-form label-position="top" class="settings-form">
@@ -67,8 +95,11 @@
 import { reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
+import { useUiStore } from '@/stores/ui'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BasePageHeader from '@/components/common/BasePageHeader.vue'
+
+const uiStore = useUiStore()
 
 const passwordForm = reactive({
   oldPassword: '',
@@ -121,17 +152,38 @@ async function handleChangePassword() {
 <style scoped>
 .settings-page {
   width: 100%;
-  max-width: 900px;
+  max-width: 820px;
 }
 
 .settings-grid {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 
 .settings-card {
   border-radius: var(--radius-lg);
+}
+
+.appearance-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.appearance-setting :deep(.el-radio-button__inner) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.theme-status {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--outline-variant);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-small);
 }
 
 .settings-form :deep(.el-form-item) {
@@ -198,5 +250,23 @@ async function handleChangePassword() {
 .about-value {
   font-size: var(--text-body);
   color: var(--color-text-primary);
+}
+
+@media (max-width: 767px) {
+  .appearance-setting {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .appearance-setting :deep(.el-radio-group) {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .appearance-setting :deep(.el-radio-button__inner) {
+    justify-content: center;
+    width: 100%;
+    padding-inline: var(--space-2);
+  }
 }
 </style>

@@ -1,23 +1,23 @@
 <template>
   <header class="app-header" :class="{ scrolled: isScrolled }">
     <div class="header-left">
-      <button class="menu-toggle desktop-toggle" @click="toggleSidebar">
+      <button class="menu-toggle desktop-toggle" type="button" aria-label="折叠或展开侧栏" @click="toggleSidebar">
         <el-icon :size="20"><Fold v-if="!uiStore.sidebarCollapsed" /><Expand v-else /></el-icon>
       </button>
-      <button class="menu-toggle mobile-toggle" @click="uiStore.toggleMobileSidebar">
+      <button class="menu-toggle mobile-toggle" type="button" aria-label="打开导航" @click="uiStore.toggleMobileSidebar">
         <el-icon :size="20"><Expand /></el-icon>
       </button>
-      <h1 class="page-title">{{ pageTitle }}</h1>
+      <span class="page-title">{{ pageTitle }}</span>
     </div>
     <div class="header-right">
       <el-dropdown trigger="click" @command="handleCommand">
-        <div class="user-trigger">
+        <button class="user-trigger" type="button" aria-label="打开账户菜单">
           <el-avatar :size="32" class="user-avatar">
             {{ (userStore.userInfo?.nickname || '用')[0] }}
           </el-avatar>
           <span class="user-name">{{ userStore.userInfo?.nickname || '用户' }}</span>
           <el-icon :size="12" class="user-arrow"><ArrowDown /></el-icon>
-        </div>
+        </button>
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="profile">
@@ -84,7 +84,7 @@ function handleCommand(command) {
   position: sticky;
   top: 0;
   height: var(--header-height);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--outline-variant);
   display: flex;
@@ -128,7 +128,7 @@ function handleCommand(command) {
 }
 
 .page-title {
-  font-size: var(--text-heading-1);
+  font-size: var(--text-ui);
   font-weight: 600;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
@@ -145,6 +145,9 @@ function handleCommand(command) {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  border: 0;
+  background: transparent;
+  font-family: inherit;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-default);

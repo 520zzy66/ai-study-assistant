@@ -17,6 +17,6 @@ public class GeneralQaAgentService extends AbstractExpertAgentService {
      * @param knowledgeTools     native Spring AI tools
      */
     public GeneralQaAgentService(AgentClientFactory agentClientFactory, KnowledgeTools knowledgeTools) {
-        super(agentClientFactory, knowledgeTools, "general", "GENERAL_EXPERT");
+        super(agentClientFactory, knowledgeTools, "general-qa", "GENERAL_EXPERT");
     }
 }

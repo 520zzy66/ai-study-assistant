@@ -207,15 +207,19 @@ public class AiController {
             @RequestParam(required = false) Boolean mastered) {
 
         byte[] pdfBytes = wrongQuestionPdfService.exportWrongQuestions(mastered);
+        return pdfResponse(pdfBytes, "wrong-questions.pdf");
+    }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "wrong-questions.pdf");
-        headers.setContentLength(pdfBytes.length);
+    /**
+     * 导出选中的错题为 PDF
+     */
+    @Operation(summary = "导出选中错题 PDF", description = "将用户勾选的错题导出为 PDF 文件")
+    @PostMapping("/quiz/wrong/export-selected")
+    public ResponseEntity<byte[]> exportSelectedWrongQuestions(
+            @Valid @RequestBody ExportSelectedWrongQuestionsRequest request) {
 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(pdfBytes);
+        byte[] pdfBytes = wrongQuestionPdfService.exportSelectedWrongQuestions(request.getWrongQuestionIds());
+        return pdfResponse(pdfBytes, "wrong-questions-selected.pdf");
     }
 
     /**
@@ -271,6 +275,16 @@ public class AiController {
     @GetMapping("/quiz/bank/batches/{batchId}")
     public Result<List<AiQuestionBank>> getBatchQuestions(@PathVariable String batchId) {
         return Result.success(quizService.getBatchQuestions(batchId));
+    }
+
+    /**
+     * 导出题库批次为 PDF
+     */
+    @Operation(summary = "导出题库批次 PDF", description = "将指定题库批次导出为试卷风格 PDF 文件")
+    @GetMapping("/quiz/bank/batches/{batchId}/export")
+    public ResponseEntity<byte[]> exportBatchQuestions(@PathVariable String batchId) {
+        byte[] pdfBytes = wrongQuestionPdfService.exportBatchQuestions(batchId);
+        return pdfResponse(pdfBytes, "question-bank-" + batchId + ".pdf");
     }
 
     /**
@@ -358,5 +372,15 @@ public class AiController {
     public Result<StudyPlan> getPlanDetail(@PathVariable Long id) {
         StudyPlan plan = planService.getPlanDetail(id);
         return Result.success(plan);
+    }
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdfBytes, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(pdfBytes.length);
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdfBytes);
     }
 }

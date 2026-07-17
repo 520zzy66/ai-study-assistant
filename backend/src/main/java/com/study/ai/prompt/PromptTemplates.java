@@ -224,6 +224,50 @@ public class PromptTemplates {
             """;
 
     /**
+     * 多模态资源脚本生成提示词模板。
+     */
+    private static final String RESOURCE_SCRIPT_TEMPLATE = """
+            你是高校课程资源设计专家，负责把课程资料改写为可交付的多模态学习资源脚本。
+
+            学生画像：
+            {profile}
+
+            学习目标：
+            {goal}
+
+            课程资料摘要：
+            {content}
+
+            生成要求：
+            1. 所有内容必须围绕资料内容和学习目标，不得编造资料外事实
+            2. PPT 大纲面向课堂/自学展示，8-10 页，包含每页标题和要点
+            3. 图像提示词用于讯飞图片生成，强调知识结构图、流程图、概念图，不生成真人肖像
+            4. 语音讲解稿适合 3-5 分钟微课，语言自然、有停顿提示
+            5. 微课分镜包含镜头、画面、旁白和学习动作
+            6. 代码/实操案例仅在资料适合实践时生成，否则给出可操作练习任务
+
+            严格返回以下 JSON（不要包含 markdown 代码块，不要有额外文字）：
+            \\{
+              "pptOutline": [
+                \\{"page": 1, "title": "页面标题", "bullets": ["要点1", "要点2"], "visualSuggestion": "页面视觉建议"\\}
+              ],
+              "imagePrompts": [
+                \\{"title": "图片用途", "prompt": "适合文生图/概念图生成的中文提示词", "size": "1024x1024"\\}
+              ],
+              "audioScript": "完整语音讲解稿",
+              "videoStoryboard": [
+                \\{"scene": 1, "duration": "20秒", "visual": "画面描述", "voiceover": "旁白", "learnerAction": "学生动作"\\}
+              ],
+              "practiceCase": \\{
+                "title": "实操案例标题",
+                "objective": "练习目标",
+                "steps": ["步骤1", "步骤2"],
+                "deliverable": "产出物"
+              \\}
+            \\}
+            """;
+
+    /**
      * 构建文档总结提示词
      *
      * @param content 文档内容
@@ -332,6 +376,22 @@ public class PromptTemplates {
                 "question", (Object) question,
                 "referenceAnswer", referenceAnswer,
                 "studentAnswer", studentAnswer
+        ));
+    }
+
+    /**
+     * 构建多模态资源脚本提示词。
+     *
+     * @param profile 学生画像摘要
+     * @param goal 学习目标
+     * @param content 资料摘要或正文
+     * @return 提示词
+     */
+    public static String buildResourceScriptPrompt(String profile, String goal, String content) {
+        return render(RESOURCE_SCRIPT_TEMPLATE, Map.of(
+                "profile", (Object) profile,
+                "goal", goal,
+                "content", content
         ));
     }
 

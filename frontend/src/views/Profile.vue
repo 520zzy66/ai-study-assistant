@@ -17,7 +17,7 @@
           <el-avatar :size="72" class="profile-avatar">
             {{ (userStore.userInfo?.nickname || '用')[0] }}
           </el-avatar>
-          <p class="avatar-hint">点击更换头像</p>
+          <p class="avatar-hint">头像由昵称自动生成</p>
         </div>
 
         <!-- 右侧表单 -->
@@ -433,12 +433,12 @@ function formatAccuracy(rate) {
 <style scoped>
 .profile-page {
   width: 100%;
-  max-width: 900px;
+  max-width: 960px;
 }
 
 .profile-card {
   border-radius: var(--radius-lg);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .card-title {
@@ -518,7 +518,7 @@ function formatAccuracy(rate) {
 /* AI 画像展示区域 */
 .ai-profile-section {
   background: var(--color-primary-light-9);
-  border: 1px solid var(--color-primary-light-5);
+  border: 1px solid var(--outline);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   margin-bottom: var(--space-6);
@@ -543,7 +543,7 @@ function formatAccuracy(rate) {
 
 .ai-profile-meta {
   margin-top: var(--space-2);
-  font-size: var(--text-caption);
+  font-size: var(--text-small);
   color: var(--color-text-tertiary);
 }
 
@@ -584,9 +584,9 @@ function formatAccuracy(rate) {
 }
 
 .stat-item {
-  text-align: center;
+  text-align: left;
   padding: var(--space-4);
-  background: var(--color-bg-secondary);
+  background: var(--surface-container-low);
   border-radius: var(--radius-md);
 }
 

@@ -235,11 +235,11 @@ onMounted(() => {
 }
 
 .history-card :deep(.card-body) {
-  padding: var(--space-5);
+  padding: var(--space-5) var(--space-6);
 }
 
 .history-tabs :deep(.el-tabs__header) {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .history-table {

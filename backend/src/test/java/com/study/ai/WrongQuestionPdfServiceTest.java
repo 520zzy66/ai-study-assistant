@@ -1,6 +1,7 @@
 package com.study.ai;
 
 import com.study.ai.service.WrongQuestionPdfService;
+import com.study.common.BusinessException;
 import com.study.common.UserContext;
 import com.study.entity.AiQuestionBank;
 import com.study.entity.LearningMaterial;
@@ -13,19 +14,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
-public class WrongQuestionPdfServiceTest {
+class WrongQuestionPdfServiceTest {
 
     private UserWrongQuestionMapper wrongQuestionMapper;
     private AiQuestionBankMapper questionBankMapper;
@@ -33,7 +33,7 @@ public class WrongQuestionPdfServiceTest {
     private WrongQuestionPdfService pdfService;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         wrongQuestionMapper = Mockito.mock(UserWrongQuestionMapper.class);
         questionBankMapper = Mockito.mock(AiQuestionBankMapper.class);
         materialMapper = Mockito.mock(LearningMaterialMapper.class);
@@ -44,58 +44,89 @@ public class WrongQuestionPdfServiceTest {
                 materialMapper
         );
 
-        // 设置当前用户上下文
         UserContext.setCurrentUser(new UserContext.UserInfo(1L, "test_user"));
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         UserContext.clear();
     }
 
     @Test
-    public void testExportWrongQuestions() throws Exception {
-        // 1. Mock 错题数据
-        UserWrongQuestion wq = new UserWrongQuestion();
-        wq.setId(1L);
-        wq.setUserId(1L);
-        wq.setQuestionId(101L);
-        wq.setMaterialId(201L);
-        wq.setQuestionType("choice");
-        wq.setUserAnswer("A");
-        wq.setCorrectAnswer("B");
-        wq.setWrongCount(3);
-        wq.setLastWrongTime(LocalDateTime.now());
-
-        when(wrongQuestionMapper.selectList(any())).thenReturn(List.of(wq));
-
-        // 2. Mock 题目数据
-        AiQuestionBank question = new AiQuestionBank();
-        question.setId(101L);
-        question.setQuestion("以下哪项是软件工程中关于高内聚低耦合的正确理解？测试中文字体是否正常渲染。");
-        when(questionBankMapper.selectBatchIds(Set.of(101L))).thenReturn(List.of(question));
-
-        // 3. Mock 资料数据
+    void exportWrongQuestionsCreatesPdf() {
+        UserWrongQuestion wrongQuestion = buildWrongQuestion();
+        AiQuestionBank question = buildQuestion();
         LearningMaterial material = new LearningMaterial();
         material.setId(201L);
         material.setOriginalName("软件工程导论.pdf");
-        when(materialMapper.selectBatchIds(Set.of(201L))).thenReturn(List.of(material));
 
-        // 4. 执行导出
+        when(wrongQuestionMapper.selectList(any())).thenReturn(List.of(wrongQuestion));
+        when(questionBankMapper.selectBatchIds(anyCollection())).thenReturn(List.of(question));
+        when(materialMapper.selectBatchIds(anyCollection())).thenReturn(List.of(material));
+
         byte[] pdfBytes = pdfService.exportWrongQuestions(null);
 
         assertNotNull(pdfBytes);
         assertTrue(pdfBytes.length > 0);
+    }
 
-        // 保存文件到本地以供检查是否乱码
-        File targetDir = new File("target");
-        if (!targetDir.exists()) {
-            targetDir.mkdirs();
-        }
-        File pdfFile = new File(targetDir, "wrong-questions-test.pdf");
-        try (FileOutputStream fos = new FileOutputStream(pdfFile)) {
-            fos.write(pdfBytes);
-        }
-        System.out.println("测试 PDF 已成功导出至：" + pdfFile.getAbsolutePath());
+    @Test
+    void exportSelectedWrongQuestionsCreatesPdf() {
+        UserWrongQuestion wrongQuestion = buildWrongQuestion();
+        AiQuestionBank question = buildQuestion();
+
+        when(wrongQuestionMapper.selectList(any())).thenReturn(List.of(wrongQuestion));
+        when(questionBankMapper.selectBatchIds(anyCollection())).thenReturn(List.of(question));
+        when(materialMapper.selectBatchIds(anyCollection())).thenReturn(List.of());
+
+        byte[] pdfBytes = pdfService.exportSelectedWrongQuestions(List.of(1L));
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+    }
+
+    @Test
+    void exportSelectedWrongQuestionsRejectsEmptySelection() {
+        assertThrows(BusinessException.class, () -> pdfService.exportSelectedWrongQuestions(List.of()));
+    }
+
+    @Test
+    void exportBatchQuestionsCreatesPdf() {
+        when(questionBankMapper.selectList(any())).thenReturn(List.of(buildQuestion()));
+
+        byte[] pdfBytes = pdfService.exportBatchQuestions("batch01");
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+    }
+
+    private UserWrongQuestion buildWrongQuestion() {
+        UserWrongQuestion wrongQuestion = new UserWrongQuestion();
+        wrongQuestion.setId(1L);
+        wrongQuestion.setUserId(1L);
+        wrongQuestion.setQuestionId(101L);
+        wrongQuestion.setMaterialId(201L);
+        wrongQuestion.setQuestionType("choice");
+        wrongQuestion.setUserAnswer("A");
+        wrongQuestion.setCorrectAnswer("B");
+        wrongQuestion.setWrongCount(3);
+        wrongQuestion.setLastWrongTime(LocalDateTime.now());
+        return wrongQuestion;
+    }
+
+    private AiQuestionBank buildQuestion() {
+        AiQuestionBank question = new AiQuestionBank();
+        question.setId(101L);
+        question.setUserId(1L);
+        question.setMaterialId(201L);
+        question.setBatchId("batch01");
+        question.setBatchName("软件工程练习");
+        question.setQuestionType("choice");
+        question.setDifficulty("medium");
+        question.setQuestion("以下哪一项是软件工程中关于高内聚低耦合的正确理解？");
+        question.setOptions(Map.of("A", "模块之间互相依赖越多越好", "B", "模块内部职责集中且模块间依赖较少"));
+        question.setAnswer("B");
+        question.setExplanation("高内聚强调模块内部职责集中，低耦合强调模块之间依赖尽量少。");
+        return question;
     }
 }

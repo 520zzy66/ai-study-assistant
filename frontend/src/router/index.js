@@ -54,6 +54,12 @@ const routes = [
         meta: { title: 'AI 总结' }
       },
       {
+        path: 'ai/resource-package',
+        name: 'ResourceWorkshop',
+        component: () => import('@/views/ResourceWorkshop.vue'),
+        meta: { title: '资源工坊' }
+      },
+      {
         path: 'ai/mindmap',
         name: 'MindMapWorkbench',
         component: () => import('@/views/MindMapWorkbench.vue'),

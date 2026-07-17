@@ -81,7 +81,14 @@
       "Bash(curl -s --noproxy localhost --max-time 10 http://localhost:3000/ai/summary -o /dev/null -w \"%{http_code}\\\\n\")",
       "Bash(git -C \"c:/Users/20370/Desktop/ai-study-assistant\" stash pop)",
       "Bash(./mvnw clean *)",
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(git push *)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d ai_study -c \"ALTER TABLE learning_material ADD COLUMN IF NOT EXISTS mind_map TEXT;\")",
+      "Bash(PGPASSWORD=123456789zzy psql -h localhost -p 5433 -U postgres -d ai_study -c \"ALTER TABLE material_chunk ADD COLUMN IF NOT EXISTS folder_id BIGINT;\")",
+      "Bash(PGPASSWORD=123456789zzy psql -h localhost -p 5433 -U postgres -d ai_study -c \"\\\\d material_chunk\")",
+      "Bash(PGPASSWORD=123456789zzy psql -h localhost -p 5433 -U postgres -d ai_study -c \"SELECT table_name, column_name, data_type FROM information_schema.columns WHERE data_type = 'jsonb' ORDER BY table_name, column_name;\")",
+      "Bash(docker start *)",
+      "Bash(docker rm *)"
     ],
     "additionalDirectories": [
       "\\tmp"

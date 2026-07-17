@@ -30,12 +30,13 @@
 想象一个快递站，包裹（用户问题）进来后要经过几个工位：
 
 ```
-包裹进来 → 【分拣工位】→ 轻件 → 【直接派送工位】→ 送达
+包裹进来 → 【临时资料预处理】→ 【分拣工位】→ 轻件 → 【直接派送工位】→ 送达
                     ↓
                    重件 → 【专业处理工位】→ 送达
 ```
 
 - **包裹** = 用户的问题
+- **临时资料预处理** = MultimodalNode（无临时资料时直接透传）
 - **分拣工位** = GeneralNode（路由节点）
 - **直接派送工位** = LocalAnswerNode（简单回答节点）
 - **专业处理工位** = ExpertAgentNode（专家回答节点）
@@ -66,13 +67,15 @@
 ```java
 private StateGraph buildGraph() throws Exception {
     return new StateGraph()
-        // 第一步：添加三个节点
+        // 第一步：添加四个节点
+        .addNode("multimodal", AsyncNodeAction.node_async(multimodalNode))
         .addNode("general", AsyncNodeAction.node_async(generalNode))
         .addNode("localAnswer", AsyncNodeAction.node_async(localAnswerNode))
         .addNode("expertAgent", AsyncNodeAction.node_async(expertAgentNode))
 
         // 第二步：添加连线
-        .addEdge(START, "general")           // 开始 → 分拣工位
+        .addEdge(START, "multimodal")
+        .addEdge("multimodal", "general")
         .addConditionalEdges("general",       // 分拣工位 → 根据条件走
             AsyncEdgeAction.edge_async(this::routeDecision),
             Map.of("local", "localAnswer",   // 条件"local" → 直接派送
@@ -88,7 +91,7 @@ private StateGraph buildGraph() throws Exception {
 |------|----------|--------|
 | `new StateGraph()` | 创建一个空的图 | 就像画一张空白流程图 |
 | `.addNode("general", ...)` | 添加"分拣工位"节点 | `AsyncNodeAction.node_async()` 把同步的 `NodeAction` 包装成异步的，这是框架要求 |
-| `.addEdge(START, "general")` | 从起点画一条线到分拣工位 | 所有问题先进分拣 |
+| `.addEdge(START, "multimodal")` | 从起点进入临时资料预处理 | 无临时资料时零开销透传 |
 | `.addConditionalEdges("general", ...)` | 从分拣工位画条件线 | 不同问题走不同路线 |
 | `this::routeDecision` | 条件判断方法的引用 | 告诉框架"用这个方法来决定走哪条路" |
 | `Map.of("local", "localAnswer", ...)` | 条件值到节点的映射 | 如果返回"local"就去localAnswer节点 |

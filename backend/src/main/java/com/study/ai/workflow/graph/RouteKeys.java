@@ -27,6 +27,12 @@ public final class RouteKeys {
     /** Optional material ID. */
     public static final String MATERIAL_ID = "materialId";
 
+    /** Optional temporary material upload token. */
+    public static final String TEMPORARY_MATERIAL_TOKEN = "temporaryMaterialToken";
+
+    /** Temporary or permanent material metadata prepared upstream. */
+    public static final String MATERIAL_META = "materialMeta";
+
     /** Conversation ID for multi-turn context. */
     public static final String CONVERSATION_ID = "conversationId";
 

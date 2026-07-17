@@ -225,16 +225,12 @@ defineExpose({
   align-items: center;
   gap: 4px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.85);
+  background: color-mix(in srgb, var(--surface-card) 88%, transparent);
   backdrop-filter: blur(12px);
   border: 1px solid var(--outline);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-md);
   z-index: 10;
-}
-
-.dark .mindmap-toolbar {
-  background: rgba(30, 30, 30, 0.85);
 }
 
 .toolbar-btn {

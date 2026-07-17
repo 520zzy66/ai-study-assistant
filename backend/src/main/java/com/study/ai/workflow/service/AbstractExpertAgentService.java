@@ -10,7 +10,9 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.document.Document;
 import reactor.core.publisher.Flux;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Shared Spring AI ChatClient implementation for expert agents.
@@ -59,6 +61,7 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
         // Spring AI 自动 ReAct：LLM 自主决定调用哪些 Tool
         String answer = client.prompt()
                 .user(prompt)
+                .toolContext(buildToolContext(state))
                 .tools(knowledgeTools)
                 .call()
                 .content();
@@ -77,6 +80,7 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
         // Spring AI 流式调用
         return client.prompt()
                 .user(prompt)
+                .toolContext(buildToolContext(state))
                 .tools(knowledgeTools)
                 .stream()
                 .content()
@@ -114,10 +118,14 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
         // 3a. 资料原文摘录（来自用户上传的当前资料）
         String materialText = state.value(RouteKeys.MATERIAL_TEXT, "");
         String materialSummary = state.value(RouteKeys.MATERIAL_SUMMARY, "");
-        if (!materialText.isBlank() || !materialSummary.isBlank()) {
+        String materialMeta = state.value(RouteKeys.MATERIAL_META, "");
+        if (!materialText.isBlank() || !materialSummary.isBlank() || !materialMeta.isBlank()) {
             sb.append("## 3. 资料向量检索结果\n");
             if (!materialSummary.isBlank()) {
                 sb.append("**资料描述**：").append(truncate(materialSummary, 800)).append("\n\n");
+            }
+            if (!materialMeta.isBlank()) {
+                sb.append("**资料元信息**：").append(truncate(materialMeta, 400)).append("\n\n");
             }
             if (!materialText.isBlank()) {
                 sb.append("**资料摘录**：\n").append(truncate(materialText, MAX_MATERIAL_CHARS)).append("\n\n");
@@ -148,13 +156,39 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
 
         // ========== 执行指引 ==========
         sb.append("## 执行指引\n");
-        sb.append("- 领域知识库检索结果需通过工具获取：searchDomainKnowledge(domain, query)\n");
-        sb.append("- 用户资料补充检索：searchPersonalMaterial(userId, query)\n");
-        sb.append("- 历史对话补充检索：searchConversationHistory(userId, query)\n");
+        sb.append("- 领域知识库检索结果需通过工具获取：searchDomainKnowledge(domain, query, folderName?)\n");
+        sb.append("- 用户资料补充检索：searchPersonalMaterial(query, quizType?)\n");
+        sb.append("- 当前会话临时资料检索：searchTemporaryMaterial(query)\n");
+        sb.append("- 历史对话补充检索：searchConversationHistory(query)\n");
         sb.append("- 如果上述上下文已足够回答，直接回答；否则先调用工具检索\n");
         sb.append("- 回答末尾列出引用来源清单和下一步学习建议\n");
 
         return sb.toString();
+    }
+
+    /**
+     * Builds trusted context that is available to tools but excluded from the model-generated schema.
+     */
+    private Map<String, Object> buildToolContext(OverAllState state) {
+        Map<String, Object> context = new HashMap<>();
+        putIfPresent(context, KnowledgeTools.CONTEXT_USER_ID,
+                state.value(RouteKeys.USER_ID));
+        putIfPresent(context, KnowledgeTools.CONTEXT_MATERIAL_ID,
+                state.value(RouteKeys.MATERIAL_ID));
+        putIfPresent(context, KnowledgeTools.CONTEXT_USER_PROFILE,
+                state.value(RouteKeys.COMPRESSED_PROFILE, ""));
+        putIfPresent(context, KnowledgeTools.CONTEXT_CONVERSATION_ID,
+                state.value(RouteKeys.CONVERSATION_ID, ""));
+        putIfPresent(context, KnowledgeTools.CONTEXT_TEMPORARY_MATERIAL_TOKEN,
+                state.value(RouteKeys.TEMPORARY_MATERIAL_TOKEN, ""));
+        return context;
+    }
+
+    private void putIfPresent(Map<String, Object> context, String key, Object value) {
+        if (value == null || (value instanceof String text && text.isBlank())) {
+            return;
+        }
+        context.put(key, value);
     }
 
     private void appendHistoryChunks(StringBuilder sb, Object value) {

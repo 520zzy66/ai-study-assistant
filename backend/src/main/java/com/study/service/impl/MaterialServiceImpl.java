@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.study.common.BusinessException;
 import com.study.common.Constants;
 import com.study.common.UserContext;
+import com.study.ai.rag.MaterialVectorIndexService;
 import com.study.dto.request.MaterialListRequest;
 import com.study.entity.LearningMaterial;
 import com.study.entity.MaterialChunk;
@@ -49,6 +50,7 @@ public class MaterialServiceImpl implements MaterialService {
     private final LearningMaterialMapper materialMapper;
     private final MaterialChunkMapper chunkMapper;
     private final MaterialAsyncProcessor asyncProcessor;
+    private final MaterialVectorIndexService vectorIndexService;
 
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
@@ -261,13 +263,17 @@ public class MaterialServiceImpl implements MaterialService {
             throw new BusinessException(403, "无权删除该资源");
         }
 
+        // 先读取并删除向量索引，再逻辑删除业务数据，避免残留可检索内容。
+        LambdaQueryWrapper<MaterialChunk> wrapper = new LambdaQueryWrapper<MaterialChunk>()
+                .eq(MaterialChunk::getMaterialId, id);
+        List<MaterialChunk> materialChunks = chunkMapper.selectList(wrapper);
+        vectorIndexService.deleteChunks(materialChunks);
+
         // 逻辑删除资料（@TableLogic 自动处理）
         materialMapper.deleteById(id);
         clearFolderSummary(material.getFolderId());
 
         // 逻辑删除关联的切片（与 Spec 2.4 保持一致）
-        LambdaQueryWrapper<MaterialChunk> wrapper = new LambdaQueryWrapper<MaterialChunk>()
-                .eq(MaterialChunk::getMaterialId, id);
         chunkMapper.delete(wrapper);  // MaterialChunk 已添加 @TableLogic，自动执行逻辑删除
 
         // 删除磁盘上的物理文件（filePath 是相对路径，需拼接 uploadDir）
@@ -422,9 +428,15 @@ public class MaterialServiceImpl implements MaterialService {
                 BeanUtils.copyProperties(chunk, newChunk, "id", "createTime");
                 newChunk.setMaterialId(copy.getId());
                 newChunk.setUserId(userId);
+                newChunk.setFolderId(copy.getFolderId());
                 newChunks.add(newChunk);
             }
             Db.saveBatch(newChunks);
+            List<MaterialChunk> persistedChunks = chunkMapper.selectList(
+                    new LambdaQueryWrapper<MaterialChunk>()
+                            .eq(MaterialChunk::getMaterialId, copy.getId())
+                            .orderByAsc(MaterialChunk::getChunkIndex));
+            vectorIndexService.indexChunks(persistedChunks, copy.getFileType());
         }
 
         log.info("资料复制成功: sourceId={}, newId={}, userId={}, chunks={}", libraryId, copy.getId(), userId, sourceChunks.size());
@@ -514,6 +526,15 @@ public class MaterialServiceImpl implements MaterialService {
                     .eq(MaterialChunk::getUserId, userId)
                     .set(MaterialChunk::getFolderId, folderId);
             chunkMapper.update(null, chunkUpdate);
+
+            if (!java.util.Objects.equals(oldFolderId, folderId)) {
+                List<MaterialChunk> movedChunks = chunkMapper.selectList(
+                        new LambdaQueryWrapper<MaterialChunk>()
+                                .eq(MaterialChunk::getMaterialId, materialId)
+                                .eq(MaterialChunk::getUserId, userId)
+                                .orderByAsc(MaterialChunk::getChunkIndex));
+                vectorIndexService.indexChunks(movedChunks, material.getFileType());
+            }
         }
 
         clearFolderSummary(folderId);

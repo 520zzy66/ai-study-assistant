@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.study.ai.parser.ChunkSplitter;
 import com.study.ai.parser.DocumentParser;
+import com.study.ai.rag.MaterialVectorIndexService;
 import com.study.entity.LearningMaterial;
 import com.study.entity.MaterialChunk;
 import com.study.mapper.LearningMaterialMapper;
+import com.study.mapper.MaterialChunkMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,8 +35,10 @@ import java.util.List;
 public class MaterialAsyncProcessor {
 
     private final LearningMaterialMapper materialMapper;
+    private final MaterialChunkMapper chunkMapper;
     private final DocumentParser documentParser;
     private final ChunkSplitter chunkSplitter;
+    private final MaterialVectorIndexService vectorIndexService;
 
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
@@ -154,6 +158,16 @@ public class MaterialAsyncProcessor {
             LearningMaterial material = materialMapper.selectById(materialId);
             Long folderId = material != null ? material.getFolderId() : null;
 
+            // 重试或上次处理中断时先清理旧切片及其向量，保证索引幂等。
+            List<MaterialChunk> oldChunks = chunkMapper.selectList(
+                    new LambdaQueryWrapper<MaterialChunk>()
+                            .eq(MaterialChunk::getMaterialId, materialId));
+            if (!oldChunks.isEmpty()) {
+                vectorIndexService.deleteChunks(oldChunks);
+                chunkMapper.delete(new LambdaQueryWrapper<MaterialChunk>()
+                        .eq(MaterialChunk::getMaterialId, materialId));
+            }
+
             // 3. 解析文档为纯文本
             // filePath 是相对路径（如 userId/dateDir/uuid.ext），需拼接 uploadDir
             Path fullPath = Paths.get(uploadDir, filePath);
@@ -191,7 +205,17 @@ public class MaterialAsyncProcessor {
             }
             Db.saveBatch(chunkEntities);
 
-            // 5. 更新状态为 ready，记录切片数
+            // saveBatch 完成后重新读取，确保获取数据库生成的切片 ID 和完整元数据。
+            List<MaterialChunk> persistedChunks = chunkMapper.selectList(
+                    new LambdaQueryWrapper<MaterialChunk>()
+                            .eq(MaterialChunk::getMaterialId, materialId)
+                            .orderByAsc(MaterialChunk::getChunkIndex));
+            if (persistedChunks.size() != chunks.size()) {
+                throw new IllegalStateException("切片持久化数量不一致");
+            }
+            vectorIndexService.indexChunks(persistedChunks, fileType);
+
+            // 6. 数据库切片和向量索引均成功后，再将资料标记为 ready。
             LearningMaterial update = new LearningMaterial();
             update.setId(materialId);
             update.setStatus("ready");

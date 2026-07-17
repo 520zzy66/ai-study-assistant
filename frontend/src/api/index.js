@@ -39,15 +39,25 @@ api.interceptors.request.use(
  * - 失败响应：统一弹出错误提示，401 时清除登录状态并跳转登录页
  */
 api.interceptors.response.use(
-  (response) => {
+  async (response) => {
     // Token 自动刷新：检查响应头中的新 token
     const newToken = response.headers['x-new-token']
     if (newToken) {
       localStorage.setItem('token', newToken)
     }
 
-    // 如果是二进制文件下载（如导出 PDF），直接返回数据流
+    // 如果是二进制文件下载（如导出 PDF），成功时直接返回数据流；
+    // 后端业务异常可能仍以 JSON Result 返回，需要在这里还原错误语义。
     if (response.config.responseType === 'blob') {
+      const contentType = response.headers['content-type'] || ''
+      if (contentType.includes('application/json')) {
+        const text = await response.data.text()
+        const result = JSON.parse(text)
+        if (result.code !== 200) {
+          ElMessage.error(result.message || '请求失败')
+          return Promise.reject(result)
+        }
+      }
       return response.data
     }
 

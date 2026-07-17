@@ -28,7 +28,7 @@ public class AiTask {
     /** 关联资源ID */
     private Long refId;
 
-    /** 状态 pending/running/success/failed */
+    /** 状态 pending/running/success/failed/cancelled */
     private String status;
 
     /** 进度 0-100 */

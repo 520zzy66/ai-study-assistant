@@ -74,7 +74,7 @@ const uiStore = useUiStore()
 
 .app-content {
   flex: 1;
-  padding: var(--space-8);
+  padding: var(--space-8) clamp(var(--space-6), 3vw, var(--space-12)) var(--space-12);
   background: var(--surface-page);
 }
 
@@ -122,6 +122,12 @@ const uiStore = useUiStore()
 
   .app-content {
     padding: var(--space-4);
+  }
+}
+
+@media (max-width: 767px) {
+  .app-content {
+    padding: var(--space-6) var(--space-4) var(--space-10);
   }
 }
 

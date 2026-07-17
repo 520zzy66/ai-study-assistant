@@ -9,6 +9,7 @@ import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.study.ai.workflow.node.ExpertAgentNode;
 import com.study.ai.workflow.node.GeneralNode;
 import com.study.ai.workflow.node.LocalAnswerNode;
+import com.study.ai.workflow.node.MultimodalNode;
 import com.study.ai.workflow.service.ExpertAgentService;
 import com.study.common.JsonUtils;
 import com.study.dto.request.WorkflowChatRequest;
@@ -31,7 +32,7 @@ import static com.alibaba.cloud.ai.graph.StateGraph.START;
  *
  * <p>构建并执行如下图结构：
  * <pre>
- * START → GeneralNode → (localAnswer | expertAgent) → END
+ * START → MultimodalNode → GeneralNode → (localAnswer | expertAgent) → END
  * </pre>
  *
  * <p>GeneralNode 负责路由决策 + 上下文注入 + 会话向量化 + 简单问题回答。
@@ -43,21 +44,25 @@ import static com.alibaba.cloud.ai.graph.StateGraph.START;
 public class WorkflowGraphService {
 
     private static final String NODE_GENERAL = "general";
+    private static final String NODE_MULTIMODAL = "multimodal";
     private static final String NODE_LOCAL_ANSWER = "localAnswer";
     private static final String NODE_EXPERT_AGENT = "expertAgent";
 
     private final GeneralNode generalNode;
+    private final MultimodalNode multimodalNode;
     private final LocalAnswerNode localAnswerNode;
     private final ExpertAgentNode expertAgentNode;
     private final AiChatHistoryMapper chatHistoryMapper;
     private final AgentExecutionLogService executionLogService;
 
     public WorkflowGraphService(GeneralNode generalNode,
+                                MultimodalNode multimodalNode,
                                 LocalAnswerNode localAnswerNode,
                                 ExpertAgentNode expertAgentNode,
                                 AiChatHistoryMapper chatHistoryMapper,
                                 AgentExecutionLogService executionLogService) {
         this.generalNode = generalNode;
+        this.multimodalNode = multimodalNode;
         this.localAnswerNode = localAnswerNode;
         this.expertAgentNode = expertAgentNode;
         this.chatHistoryMapper = chatHistoryMapper;
@@ -230,9 +235,11 @@ public class WorkflowGraphService {
      */
     private StateGraph buildRoutingGraph() throws Exception {
         return new StateGraph()
+                .addNode(NODE_MULTIMODAL, AsyncNodeAction.node_async(multimodalNode))
                 .addNode(NODE_GENERAL, AsyncNodeAction.node_async(generalNode))
                 .addNode(NODE_LOCAL_ANSWER, AsyncNodeAction.node_async(localAnswerNode))
-                .addEdge(START, NODE_GENERAL)
+                .addEdge(START, NODE_MULTIMODAL)
+                .addEdge(NODE_MULTIMODAL, NODE_GENERAL)
                 .addConditionalEdges(NODE_GENERAL,
                         AsyncEdgeAction.edge_async(this::routeDecision),
                         Map.of("local", NODE_LOCAL_ANSWER, "expert", END))
@@ -244,10 +251,12 @@ public class WorkflowGraphService {
      */
     private StateGraph buildGraph() throws Exception {
         return new StateGraph()
+                .addNode(NODE_MULTIMODAL, AsyncNodeAction.node_async(multimodalNode))
                 .addNode(NODE_GENERAL, AsyncNodeAction.node_async(generalNode))
                 .addNode(NODE_LOCAL_ANSWER, AsyncNodeAction.node_async(localAnswerNode))
                 .addNode(NODE_EXPERT_AGENT, AsyncNodeAction.node_async(expertAgentNode))
-                .addEdge(START, NODE_GENERAL)
+                .addEdge(START, NODE_MULTIMODAL)
+                .addEdge(NODE_MULTIMODAL, NODE_GENERAL)
                 .addConditionalEdges(NODE_GENERAL,
                         AsyncEdgeAction.edge_async(this::routeDecision),
                         Map.of("local", NODE_LOCAL_ANSWER, "expert", NODE_EXPERT_AGENT))
@@ -274,8 +283,10 @@ public class WorkflowGraphService {
         state.put(RouteKeys.QUERY, request.getQuestion());
         state.put(RouteKeys.USER_ID, userId);
         state.put(RouteKeys.MATERIAL_ID, request.getMaterialId());
+        state.put(RouteKeys.TEMPORARY_MATERIAL_TOKEN, request.getTemporaryMaterialToken());
         state.put(RouteKeys.MATERIAL_TEXT, request.getMaterialText());
         state.put(RouteKeys.MATERIAL_SUMMARY, request.getMaterialSummary());
+        state.put(RouteKeys.MATERIAL_META, request.getMaterialMeta());
         state.put(RouteKeys.CONVERSATION_ID, conversationId);
         state.put(RouteKeys.FRONTEND_HISTORY, request.getHistory());
         return new OverAllState(state);
@@ -314,6 +325,7 @@ public class WorkflowGraphService {
             history.setUserId(userId);
             history.setChatType("workflow");
             history.setMaterialId(request.getMaterialId());
+            history.setTemporaryMaterialToken(request.getTemporaryMaterialToken());
             history.setUserMessage(request.getQuestion());
             history.setAiResponse(result.getAnswer());
             history.setConversationId(result.getConversationId());

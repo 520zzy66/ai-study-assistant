@@ -371,12 +371,12 @@ onMounted(async () => {
 <style scoped>
 .plan-page {
   width: 100%;
-  max-width: 800px;
+  max-width: 880px;
 }
 
 .plan-form-card {
   border-radius: var(--radius-lg);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .plan-form-card :deep(.el-card__body) {
@@ -462,7 +462,7 @@ onMounted(async () => {
   background: var(--surface-card);
   border: 1px solid var(--outline);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 
 .stats-header {
@@ -659,8 +659,8 @@ onMounted(async () => {
 .day-card {
   background: var(--surface-card);
   border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
 }
 
 .day-topics {

@@ -27,6 +27,27 @@ body {
   min-height: 100vh;
 }
 
+body,
+.app-sidebar,
+.app-header,
+.base-card {
+  transition: background-color var(--duration-normal) var(--ease-default),
+              border-color var(--duration-normal) var(--ease-default),
+              color var(--duration-normal) var(--ease-default);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--state-focus);
+  outline-offset: 2px;
+}
+
 /* ---- Typography ---- */
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
@@ -111,6 +132,45 @@ a:hover {
 
 .page-content {
   width: 100%;
+}
+
+/* Page width follows the task: reading, focused work, or data management. */
+.summary-page,
+.plan-page,
+.profile-page,
+.settings-page {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
+.dashboard-page,
+.quiz-page,
+.mindmap-workbench {
+  width: 100%;
+  max-width: var(--content-work-width);
+  margin-inline: auto;
+}
+
+.qb-page,
+.wrong-question-page,
+.history-page {
+  width: 100%;
+  max-width: var(--content-data-width);
+  margin-inline: auto;
+}
+
+.summary-page,
+.plan-page,
+.quiz-page,
+.mindmap-workbench,
+.qb-page,
+.wrong-question-page,
+.history-page,
+.profile-page,
+.settings-page,
+.dashboard-page {
+  min-width: 0;
 }
 
 /* ============================================

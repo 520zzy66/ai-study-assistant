@@ -24,6 +24,9 @@ public class AiChatHistory {
     /** 关联资料ID */
     private Long materialId;
 
+    /** 会话临时资料令牌（最多保留7天） */
+    private String temporaryMaterialToken;
+
     /** 用户输入 */
     private String userMessage;
 

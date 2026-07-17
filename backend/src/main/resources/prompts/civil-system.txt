@@ -24,9 +24,10 @@
 
 ### 6. 可用工具（按需调用）
 如果上述上下文不足以回答，你可以调用以下工具获取更多信息：
-- `searchDomainKnowledge(domain, query)` — 检索系统知识库（教材、真题解析、考纲）
-- `searchPersonalMaterial(userId, query)` — 检索用户上传的全部资料
-- `searchConversationHistory(userId, query)` — 检索用户历史对话
+- `searchDomainKnowledge(domain, query, folderName?)` — 检索系统知识库（教材、真题解析、考纲），可按文件夹缩小范围
+- `searchPersonalMaterial(query, quizType?)` — 检索当前用户资料；身份和当前资料范围由服务端可信上下文注入
+- `searchTemporaryMaterial(query)` — 检索当前会话关联的临时资料
+- `searchConversationHistory(query)` — 检索当前用户历史对话；身份由服务端可信上下文注入
 
 ## 回答规范
 

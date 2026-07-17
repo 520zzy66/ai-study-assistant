@@ -21,7 +21,7 @@ export function formatFileSize(bytes) {
  * @returns {string} 状态标签
  */
 export function getStatusLabel(status) {
-  return { processing: '处理中', parsing: '解析中', ready: '可用', failed: '失败' }[status] || status
+  return { processing: '处理中', parsing: '解析中', indexing: '建立索引', converting: '正在添加', deleting: '正在删除', ready: '可用', failed: '失败' }[status] || status
 }
 
 /**
@@ -30,5 +30,5 @@ export function getStatusLabel(status) {
  * @returns {string} Tag 类型
  */
 export function getStatusType(status) {
-  return { processing: 'warning', parsing: 'warning', ready: 'success', failed: 'danger' }[status] || 'info'
+  return { processing: 'warning', parsing: 'warning', indexing: 'warning', converting: 'warning', deleting: 'info', ready: 'success', failed: 'danger' }[status] || 'info'
 }

@@ -58,4 +58,15 @@ public final class JsonUtils {
     public static String toJson(Object obj) {
         return toJson(obj, "{}");
     }
+
+    /**
+     * JSON 字符串转对象
+     *
+     * @param json JSON 字符串
+     * @param typeReference 类型引用
+     * @return 转换后的对象，转换失败抛出异常
+     */
+    public static <T> T fromJson(String json, com.fasterxml.jackson.core.type.TypeReference<T> typeReference) throws JsonProcessingException {
+        return OBJECT_MAPPER.readValue(json, typeReference);
+    }
 }

@@ -198,8 +198,8 @@ const handleDownload = async () => {
   width: 100%;
   height: 70vh;
   min-height: 500px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
+  background-color: var(--surface-container-low);
+  border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
   justify-content: center;
@@ -216,7 +216,7 @@ const handleDownload = async () => {
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  background: #fff;
+  background: var(--surface-card);
   padding: 24px 32px;
   box-sizing: border-box;
 }
@@ -227,7 +227,7 @@ const handleDownload = async () => {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.7;
-  color: #2d3748;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
@@ -235,7 +235,7 @@ const handleDownload = async () => {
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  background-color: #fff;
+  background-color: var(--surface-container-low);
   padding: 20px;
 }
 

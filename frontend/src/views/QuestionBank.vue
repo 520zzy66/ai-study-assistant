@@ -1,9 +1,6 @@
 <template>
   <div class="qb-page">
-    <div class="page-header">
-      <h2>我的题库</h2>
-      <p>管理生成的练习题，查看、收藏和重新作答</p>
-    </div>
+    <BasePageHeader title="我的题库" description="管理生成的练习题，查看、收藏和重新作答" />
 
     <!-- Toolbar -->
     <div class="qb-toolbar">
@@ -27,7 +24,14 @@
     <div v-loading="loading" class="qb-batch-list">
       <template v-if="batches.length > 0">
         <div v-for="batch in batches" :key="batch.batchId" class="batch-card">
-          <div class="batch-header" @click="toggleBatch(batch.batchId)">
+          <div
+            class="batch-header"
+            role="button"
+            tabindex="0"
+            :aria-expanded="expandedBatch === batch.batchId"
+            @click="toggleBatch(batch.batchId)"
+            @keydown.enter.space.prevent="toggleBatch(batch.batchId)"
+          >
             <div class="batch-info">
               <div class="batch-name">
                 <el-icon :size="18"><Collection /></el-icon>
@@ -42,6 +46,13 @@
               </div>
             </div>
             <div class="batch-actions" @click.stop>
+              <el-button
+                text
+                size="small"
+                :icon="Download"
+                :loading="exportingBatchId === batch.batchId"
+                @click="handleExportBatch(batch)"
+              >导出 PDF</el-button>
               <el-button text size="small" :icon="Edit" @click="startRename(batch)">重命名</el-button>
               <el-button text size="small" type="danger" :icon="Delete" @click="handleDelete(batch)">删除</el-button>
               <el-icon :size="16" class="expand-icon" :class="{ expanded: expandedBatch === batch.batchId }">
@@ -103,6 +114,7 @@
                     v-for="(val, key) in parseOptions(q.options)"
                     :key="key"
                     class="bq-reanswer-opt"
+                    type="button"
                     :class="{ selected: reAnswerText === key }"
                     @click="reAnswerText = key"
                   >{{ key }}. {{ val }}</button>
@@ -149,9 +161,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Collection, Edit, Delete, ArrowDown, Star, StarFilled, EditPen, CircleCheck, CircleClose } from '@element-plus/icons-vue'
-import { listBatches, getBatchQuestions, renameBatch, deleteBatch, toggleFavorite, reAnswer } from '@/api/questionBank'
+import { Search, Plus, Collection, Edit, Delete, ArrowDown, Star, StarFilled, EditPen, CircleCheck, CircleClose, Download } from '@element-plus/icons-vue'
+import { listBatches, getBatchQuestions, exportBatchQuestionsPdf, renameBatch, deleteBatch, toggleFavorite, reAnswer } from '@/api/questionBank'
 import AppEmpty from '@/components/common/AppEmpty.vue'
+import BasePageHeader from '@/components/common/BasePageHeader.vue'
 
 const loading = ref(false)
 const keyword = ref('')
@@ -159,6 +172,7 @@ const page = ref(1)
 const size = ref(10)
 const total = ref(0)
 const batches = ref([])
+const exportingBatchId = ref('')
 
 const expandedBatch = ref('')
 const expandedQuestions = ref([])
@@ -202,6 +216,37 @@ async function toggleBatch(batchId) {
   try {
     expandedQuestions.value = await getBatchQuestions(batchId)
   } catch { expandedQuestions.value = [] }
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function safeFileName(name) {
+  return String(name || '题库试卷')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .slice(0, 60)
+}
+
+async function handleExportBatch(batch) {
+  exportingBatchId.value = batch.batchId
+  try {
+    const blob = await exportBatchQuestionsPdf(batch.batchId)
+    const date = new Date().toISOString().split('T')[0]
+    downloadBlob(blob, `题库-${safeFileName(batch.batchName || batch.batchId)}-${date}.pdf`)
+    ElMessage.success('PDF 导出成功')
+  } catch (error) {
+    if (!error?.message) ElMessage.error('PDF 导出失败')
+  } finally {
+    exportingBatchId.value = ''
+  }
 }
 
 function startRename(batch) {
@@ -260,7 +305,7 @@ onMounted(() => fetchBatches())
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-6);
   gap: 12px;
 }
 .qb-toolbar-right { display: flex; gap: 8px; }
@@ -269,18 +314,19 @@ onMounted(() => fetchBatches())
   background: var(--surface-card);
   border: 1px solid var(--outline);
   border-radius: var(--radius-lg);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   overflow: hidden;
 }
 .batch-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   cursor: pointer;
   transition: background-color var(--duration-fast);
 }
 .batch-header:hover { background: var(--surface-hover); }
+.batch-header:focus-visible { outline-offset: -3px; }
 .batch-info { display: flex; flex-direction: column; gap: 8px; }
 .batch-name {
   display: flex;
@@ -323,7 +369,7 @@ onMounted(() => fetchBatches())
 .bq-opt-key { font-weight: 600; color: var(--color-primary); min-width: 20px; }
 .bq-answer-collapse { margin-top: 8px; }
 .bq-answer, .bq-explanation { font-size: var(--text-small); color: var(--color-text-secondary); margin-top: 4px; }
-.bq-reanswer { margin-top: 12px; padding: 12px; background: var(--blue-50); border-radius: var(--radius-md); }
+.bq-reanswer { margin-top: 12px; padding: 12px; background: var(--color-primary-light); border-radius: var(--radius-md); }
 .bq-reanswer-options { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .bq-reanswer-opt {
   padding: 8px 12px;
@@ -336,7 +382,7 @@ onMounted(() => fetchBatches())
   transition: all var(--duration-fast);
 }
 .bq-reanswer-opt:hover { border-color: var(--color-primary); }
-.bq-reanswer-opt.selected { border-color: var(--color-primary); background: var(--blue-50); }
+.bq-reanswer-opt.selected { border-color: var(--color-primary); background: var(--color-primary-light); }
 .bq-reanswer-actions { display: flex; gap: 8px; margin-top: 8px; }
 .bq-reanswer-result {
   display: flex;
@@ -348,6 +394,6 @@ onMounted(() => fetchBatches())
   font-size: var(--text-small);
   font-weight: 500;
 }
-.bq-reanswer-result.correct { background: #f0fdf4; color: #16a34a; }
-.bq-reanswer-result:not(.correct) { background: #fef2f2; color: #dc2626; }
+.bq-reanswer-result.correct { background: var(--color-success-bg); color: var(--color-success); }
+.bq-reanswer-result:not(.correct) { background: var(--color-error-bg); color: var(--color-error); }
 </style>

@@ -78,15 +78,15 @@
 
 /* Primary button shadow & hover */
 .el-button--primary {
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 3px rgba(45, 90, 39, 0.18);
 }
 
 .el-button--primary:hover {
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 12px rgba(45, 90, 39, 0.2);
 }
 
 .el-button--primary:active:not(.is-disabled) {
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 2px rgba(45, 90, 39, 0.16);
 }
 
 /* Success button shadow */

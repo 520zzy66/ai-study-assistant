@@ -1,7 +1,8 @@
 <template>
-  <div
+  <component
+    :is="to ? 'router-link' : 'div'"
+    :to="to || undefined"
     :class="['stat-card', { 'stat-clickable': clickable || to }]"
-    @click="handleClick"
   >
     <!-- Icon -->
     <div class="stat-icon" :style="{ background: iconBg, color: iconColor }">
@@ -24,15 +25,13 @@
         <span>{{ trendValue }}</span>
       </div>
     </div>
-  </div>
+  </component>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { CaretTop, CaretBottom, Minus } from '@element-plus/icons-vue'
 
-const props = defineProps({
+defineProps({
   icon: { type: [String, Object], required: true },
   iconBg: { type: String, default: '#eff6ff' },
   iconColor: { type: String, default: '#2563eb' },
@@ -45,25 +44,22 @@ const props = defineProps({
   to: { type: String, default: '' }
 })
 
-const router = useRouter()
-
-function handleClick() {
-  if (props.to) router.push(props.to)
-}
 </script>
 
 <style scoped>
 .stat-card {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 24px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
   background: var(--surface-card);
   border: 1px solid var(--outline);
   border-radius: var(--radius-lg);
   transition: box-shadow var(--duration-normal) var(--ease-default),
               transform var(--duration-normal) var(--ease-default);
   box-shadow: var(--shadow-xs);
+  color: inherit;
+  text-decoration: none;
 }
 
 .stat-clickable {
@@ -76,8 +72,8 @@ function handleClick() {
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -86,7 +82,7 @@ function handleClick() {
 }
 
 .stat-value {
-  font-size: var(--text-display);
+  font-size: var(--text-heading-1);
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;

@@ -84,3 +84,35 @@ export async function loadAvailableMaterials() {
   const res = await api.get('/material/available')
   return res.data
 }
+
+/** 上传仅用于当前会话的临时资料。 */
+export async function uploadTemporaryMaterial(formData) {
+  const res = await api.post('/material/temporary/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return res.data
+}
+
+/** 获取当前用户未过期的临时资料。 */
+export async function getTemporaryMaterials() {
+  const res = await api.get('/material/temporary')
+  return res.data
+}
+
+/** 获取临时资料详情。 */
+export async function getTemporaryMaterial(uploadToken) {
+  const res = await api.get(`/material/temporary/${uploadToken}`)
+  return res.data
+}
+
+/** 删除临时资料。 */
+export async function deleteTemporaryMaterial(uploadToken) {
+  const res = await api.delete(`/material/temporary/${uploadToken}`)
+  return res.data
+}
+
+/** 将临时资料添加到我的资料。 */
+export async function promoteTemporaryMaterial(uploadToken, data) {
+  const res = await api.post(`/material/temporary/${uploadToken}/promote`, data)
+  return res.data
+}

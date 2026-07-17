@@ -47,6 +47,8 @@ public final class Constants {
     public static final String CHAT_TYPE_QUIZ = "quiz";
     /** AI 学习计划 */
     public static final String CHAT_TYPE_PLAN = "plan";
+    /** 个性化资源包 */
+    public static final String CHAT_TYPE_RESOURCE_PACKAGE = "resource_package";
 
     // === 登录 ===
     /** 最大登录失败次数 */
@@ -63,4 +65,6 @@ public final class Constants {
     public static final String TASK_STATUS_SUCCESS = "success";
     /** 失败 */
     public static final String TASK_STATUS_FAILED = "failed";
+    /** 已取消 */
+    public static final String TASK_STATUS_CANCELLED = "cancelled";
 }

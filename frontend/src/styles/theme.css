@@ -57,18 +57,24 @@
   --color-primary-hover: #224a1e;
   --color-primary-active: #173314;
   --color-primary-light: var(--bg-tag-green);
+  --color-primary-light-9: var(--bg-tag-green);
   --color-primary-ring: rgba(45, 90, 39, 0.12);
+  --color-primary-rgb: 45, 90, 39;
+  --color-primary-container: var(--bg-tag-green);
+  --color-on-primary-container: var(--color-primary);
   --color-on-primary: #ffffff;
 
   --color-success: #16a34a;
   --color-success-bg: #f0fdf4;
   --color-success-on: #065f46;
+  --color-success-light-9: var(--color-success-bg);
   --color-warning: #f59e0b;
   --color-warning-bg: #fffbeb;
   --color-warning-on: #92400e;
   --color-error: #dc2626;
   --color-error-bg: #fef2f2;
   --color-error-on: #991b1b;
+  --color-error-light-9: var(--color-error-bg);
   --color-info: #0ea5e9;
   --color-info-bg: #f0f9ff;
   --color-info-on: #075985;
@@ -87,6 +93,7 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
@@ -120,11 +127,62 @@
   --font-serif: 'Georgia', '华文宋体', serif;
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
 
+  /* ---------- Type Scale ---------- */
+  --text-display: 2rem;
+  --text-heading-1: 1.5rem;
+  --text-heading-2: 1.25rem;
+  --text-heading-3: 1.0625rem;
+  --text-heading-4: 0.9375rem;
+  --text-body: 1rem;
+  --text-ui: 0.875rem;
+  --text-small: 0.8125rem;
+  --text-micro: 0.75rem;
+  --text-hero: var(--text-display);
+  --text-h2: var(--text-heading-2);
+  --text-h3: var(--text-heading-3);
+
+  --line-display: 1.15;
+  --line-heading-1: 1.25;
+  --line-heading-2: 1.3;
+  --line-heading-3: 1.35;
+  --line-heading-4: 1.4;
+  --line-body: 1.6;
+  --line-ui: 1.45;
+
+  /* ---------- Icon Scale ---------- */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+  --icon-3xl: 48px;
+
+  /* ---------- Supporting Palette ---------- */
+  --blue-100: #dbeafe;
+  --blue-50: #eff6ff;
+  --blue-200: #bfdbfe;
+  --blue-700: #1d4ed8;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+
+  /* ---------- Layering ---------- */
+  --z-base: 1;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-toast: 1080;
+
   /* ---------- Layout ---------- */
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
   --header-height: 60px;
-  --content-max-width: 100%;
+  --content-max-width: 1440px;
+  --content-reading-width: 820px;
+  --content-work-width: 1200px;
+  --content-data-width: 1440px;
 
   /* ---------- Motion ---------- */
   --duration-instant: 0ms;
@@ -214,8 +272,13 @@ html.dark {
   --text-primary: #e6e5df;
   --text-secondary: #b2b1a9;
   --text-tertiary: #7d7c75;
+  --color-text-disabled: #686761;
   
   --color-primary: #528b4f;
+  --color-primary-rgb: 82, 139, 79;
+  --color-primary-hover: #69a566;
+  --color-primary-active: #77b674;
+  --color-primary-ring: rgba(105, 165, 102, 0.2);
   --bg-tag-green: #223e22;
   --color-tag-green: #8bc388;
   --bg-tag-blue: #1e3a4f;
@@ -227,4 +290,42 @@ html.dark {
 
   --chat-user-bubble: #1e3a5f;
   --chat-assistant-bubble: #222120;
+  --header-bg: rgba(18, 18, 18, 0.86);
+
+  --surface-hover: rgba(255, 255, 255, 0.04);
+  --surface-active: rgba(105, 165, 102, 0.12);
+  --state-hover: rgba(255, 255, 255, 0.05);
+  --state-pressed: rgba(255, 255, 255, 0.08);
+  --state-focus: rgba(64, 156, 255, 0.24);
+
+  --color-success-bg: #14291d;
+  --color-success-on: #86d5a2;
+  --color-warning-bg: #302613;
+  --color-warning-on: #f6c861;
+  --color-error-bg: #321818;
+  --color-error-on: #f5a0a0;
+  --color-info-bg: #142634;
+  --color-info-on: #83c9ee;
+
+  --blue-50: #17283a;
+  --blue-100: #1d3349;
+  --blue-200: #264660;
+  --blue-700: #83baf0;
+  --slate-100: #272725;
+  --slate-200: #333330;
+  --slate-300: #474742;
+  --slate-700: #c5c4bd;
+  --slate-800: #e1e0da;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.34);
+
+  --el-bg-color-overlay: #2a2927;
+  --el-fill-color-blank: var(--surface-card);
+  --el-mask-color: rgba(0, 0, 0, 0.72);
+  --el-mask-color-extra-light: rgba(0, 0, 0, 0.38);
+  --el-box-shadow-light: var(--shadow-md);
+  --el-box-shadow-lighter: var(--shadow-sm);
 }

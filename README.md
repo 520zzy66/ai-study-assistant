@@ -40,10 +40,11 @@
 | 技术 | 版本 | 说明 |
 |------|------|------|
 | Java | 21 | LTS 版本 |
-| Spring Boot | 3.3.0 | 核心框架 |
-| Spring AI | 1.0.0-M6 | AI 能力集成 |
+| Spring Boot | 3.5.2 | 核心框架 |
+| Spring AI | 1.1.2 GA | AI 能力集成 |
+| Spring AI Alibaba | 1.1.2.0 | Agent 与 StateGraph |
 | MyBatis-Plus | 3.5.7 | ORM 框架 |
-| MySQL | 8.0 | 数据库 |
+| PostgreSQL + pgvector | 16 | 业务数据与向量存储 |
 | JWT | 0.12.6 | 身份认证 |
 | Apache Tika | 2.9.1 | 文档解析 |
 
@@ -59,8 +60,8 @@
 
 ### AI 能力
 - **大语言模型**：Xiaomi MiMo API（兼容 OpenAI 接口）
-- **Embedding 模型**：bge-small-zh（本地部署）
-- **向量检索**：Vector Search + BM25 混合检索
+- **Embedding 模型**：bge-m3（本地 Ollama 部署，1024 维）
+- **检索能力**：当前主问答链路使用关键词检索；PgVector + BM25 混合检索组件已实现，待完成资料索引与主链路接入
 - **Reranking**：可选的重排序模块
 
 ---
@@ -72,7 +73,8 @@
 - **JDK**: 21+
 - **Node.js**: 18+
 - **Maven**: 3.8+
-- **MySQL**: 8.0+
+- **PostgreSQL**: 16+（需安装 pgvector 扩展，推荐使用 Docker Compose）
+- **Ollama**: 已拉取 `bge-m3`
 
 ### 1. 克隆项目
 
@@ -83,18 +85,22 @@ cd ai-study-assistant
 
 ### 2. 配置环境变量
 
-项目已包含 `.env` 配置文件，修改其中的配置即可：
+Docker Compose 会自动读取项目根目录的 `.env`；手动启动后端时，请把同名变量导入当前终端：
 
 ```env
 # 数据库配置
-DB_USERNAME=root
-DB_PASSWORD=root
+DB_USERNAME=postgres
+DB_PASSWORD=请设置强密码
 
 # MiMo API 配置（必填）
 AI_API_KEY=your_api_key
 
-# JWT 密钥（已配置默认值，生产环境请修改）
-JWT_SECRET=your_jwt_secret
+# JWT 密钥（Base64 编码，至少 256 位）
+JWT_SECRET=your_base64_jwt_secret
+
+# Embedding 配置
+OLLAMA_BASE_URL=http://localhost:11434
+EMBEDDING_MODEL=bge-m3
 ```
 
 > ⚠️ **重要**：`AI_API_KEY` 必须配置，否则 AI 功能无法使用。
@@ -102,23 +108,13 @@ JWT_SECRET=your_jwt_secret
 ### 3. 初始化数据库
 
 ```bash
-# 登录 MySQL 后执行
-mysql -u root -p < sql/init.sql
+# PostgreSQL 已启动时执行（Docker Compose 会自动初始化，无需手工执行）
+psql -U postgres -d ai_study -f sql/schema-pg.sql
 ```
 
 ### 4. 启动后端
 
-**方式 1：使用启动脚本（推荐）**
-
-```powershell
-# Windows PowerShell（自动读取 .env 并启动）
-cd backend
-.\start.ps1
-```
-
-> 💡 如果遇到执行策略限制，先运行：`Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
-
-**方式 2：手动启动**
+**手动启动**
 
 ```bash
 cd backend
@@ -128,17 +124,20 @@ export AI_API_KEY="your_api_key"
 ./mvnw spring-boot:run
 
 # Windows CMD
-set JWT_SECRET=YWktc3R1ZHktYXNzaXN0YW50LXNlY3JldC1rZXktMjAyNi0wNi0yNQ==
-set AI_API_KEY=tp-cf9jmd3ktx1r4sm5nu2of6lv8qqs0rylsqo2ib1s4uqm7ksa
-set DB_PASSWORD=123456789zzy
+set JWT_SECRET=your_base64_jwt_secret
+set AI_API_KEY=your_api_key
+set DB_PASSWORD=your_database_password
 ./mvnw.cmd spring-boot:run
 ```
 
-#powershell
+```powershell
 $env:JWT_SECRET="YWktc3R1ZHktYXNzaXN0YW50LXNlY3JldC1rZXktMjAyNi0wNi0yNQ=="
 $env:AI_API_KEY="tp-cf9jmd3ktx1r4sm5nu2of6lv8qqs0rylsqo2ib1s4uqm7ksa"
 $env:DB_PASSWORD="123456789zzy"
 ./mvnw.cmd spring-boot:run
+cd backend
+./mvnw.cmd spring-boot:run
+```
 
 
 
@@ -183,7 +182,8 @@ docker compose up -d
 服务将启动在：
 - 前端：`http://localhost:3000`
 - 后端 API：`http://localhost:3001/api`
-- MySQL：`localhost:3306`
+- PostgreSQL + pgvector：`localhost:5433`
+- Redis：`localhost:3002`
 
 ### 停止服务
 
@@ -272,6 +272,9 @@ ai-study-assistant/
 | PUT | `/api/ai/quiz/wrong/{id}/master` | 标记掌握 |
 | POST | `/api/ai/plan` | 生成学习计划 |
 | GET | `/api/ai/plan` | 获取学习计划 |
+| POST | `/api/ai/task/resource-package` | 异步生成个性化资源包 |
+| GET | `/api/ai/task/resource-package` | 获取最近资源包任务 |
+| GET | `/api/ai/task/{taskId}` | 查询资源包/AI 异步任务进度 |
 
 ### 历史记录
 
@@ -294,13 +297,13 @@ spring:
   ai:
     openai:
       api-key: ${AI_API_KEY}
-      base-url: https://token-plan-cn.xiaomimimo.com/v1
+      base-url: https://token-plan-cn.xiaomimimo.com
       chat:
         options:
-          model: mimo-v2.5-pro
+          model: mimo-v2.5
 
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -319,7 +322,7 @@ spring:
     openai:
       chat:
         options:
-          model: mimo-v2.5-pro
+          model: mimo-v2.5
           temperature: 0.7
 ```
 

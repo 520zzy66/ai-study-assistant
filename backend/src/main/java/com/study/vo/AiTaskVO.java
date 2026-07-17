@@ -17,7 +17,7 @@ public class AiTaskVO {
     /** 任务类型 summary/quiz/plan */
     private String type;
 
-    /** 状态 pending/running/success/failed */
+    /** 状态 pending/running/success/failed/cancelled */
     private String status;
 
     /** 进度 0-100 */

@@ -2,8 +2,10 @@ package com.study.ai.agent.tool;
 
 import com.study.ai.rag.ChunkSearchResult;
 import com.study.ai.rag.HybridSearchService;
+import com.study.ai.rag.TemporaryHybridSearchService;
 import com.study.common.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -29,13 +31,21 @@ public class KnowledgeTools {
     private static final int DEFAULT_TOP_K = 5;
     private static final double DEFAULT_SIMILARITY_THRESHOLD = 0.3;
     private static final String EMPTY_JSON_ARRAY = "[]";
+    public static final String CONTEXT_USER_ID = "userId";
+    public static final String CONTEXT_MATERIAL_ID = "materialId";
+    public static final String CONTEXT_USER_PROFILE = "userProfile";
+    public static final String CONTEXT_CONVERSATION_ID = "conversationId";
+    public static final String CONTEXT_TEMPORARY_MATERIAL_TOKEN = "temporaryMaterialToken";
 
     private final HybridSearchService hybridSearchService;
+    private final TemporaryHybridSearchService temporaryHybridSearchService;
     private final VectorStore vectorStore;
 
     public KnowledgeTools(HybridSearchService hybridSearchService,
+                          TemporaryHybridSearchService temporaryHybridSearchService,
                           @Autowired(required = false) VectorStore vectorStore) {
         this.hybridSearchService = hybridSearchService;
+        this.temporaryHybridSearchService = temporaryHybridSearchService;
         this.vectorStore = vectorStore;
     }
 
@@ -51,7 +61,7 @@ public class KnowledgeTools {
     public String searchDomainKnowledge(
             @ToolParam(description = "Exam domain: CIVIL, GRADUATE or GENERAL") String domain,
             @ToolParam(description = "Search keywords or user question") String query,
-            @ToolParam(description = "Optional folder name to narrow down search range, e.g. '素材金句积累', '判断推理', '蒙题秒杀技巧', '党政党史', '政策热点'") String folderName) {
+            @ToolParam(description = "Optional folder name to narrow down search range, e.g. '素材金句积累', '判断推理', '蒙题秒杀技巧', '党政党史', '政策热点'", required = false) String folderName) {
         long start = System.currentTimeMillis();
         String normalizedDomain = normalizeDomain(domain);
         ToolCallEventPublisher.toolCall("searchDomainKnowledge", params(
@@ -83,19 +93,22 @@ public class KnowledgeTools {
     /**
      * Search the current user's uploaded study materials.
      *
-     * @param userId   current user ID
      * @param query    search keywords or the user question
      * @param quizType optional quiz or exam type hint
+     * @param toolContext trusted server-side tool context
      * @return JSON array of matched user material chunks
      */
     @Tool(description = "Search the current user's uploaded study materials")
     public String searchPersonalMaterial(
-            @ToolParam(description = "Current user ID") Long userId,
             @ToolParam(description = "Search keywords or user question") String query,
-            @ToolParam(description = "Optional quiz or exam type hint") String quizType) {
+            @ToolParam(description = "Optional quiz or exam type hint", required = false) String quizType,
+            ToolContext toolContext) {
         long start = System.currentTimeMillis();
+        Long userId = contextLong(toolContext, CONTEXT_USER_ID);
+        Long materialId = contextLong(toolContext, CONTEXT_MATERIAL_ID);
         ToolCallEventPublisher.toolCall("searchPersonalMaterial", params(
                 "userId", userId,
+                "materialId", materialId,
                 "query", truncate(query),
                 "quizType", truncate(quizType)));
         if (userId == null || userId <= 0 || isBlank(query)) {
@@ -105,7 +118,8 @@ public class KnowledgeTools {
 
         String enhancedQuery = isBlank(quizType) ? query : quizType + " " + query;
         try {
-            List<ChunkSearchResult> results = hybridSearchService.search(null, userId, enhancedQuery, DEFAULT_TOP_K);
+            List<ChunkSearchResult> results = hybridSearchService.search(
+                    materialId, userId, enhancedQuery, DEFAULT_TOP_K);
             ToolCallEventPublisher.toolResult("searchPersonalMaterial", results.size(), elapsed(start), false);
             return toJsonArray(results.stream()
                     .map(this::toChunkPayload)
@@ -120,15 +134,16 @@ public class KnowledgeTools {
     /**
      * Search semantic chunks from the current user's conversation history.
      *
-     * @param userId current user ID
      * @param query  search keywords or the user question
+     * @param toolContext trusted server-side tool context
      * @return JSON array of matched conversation history chunks
      */
     @Tool(description = "Search the current user's conversation history")
     public String searchConversationHistory(
-            @ToolParam(description = "Current user ID") Long userId,
-            @ToolParam(description = "Search keywords or user question") String query) {
+            @ToolParam(description = "Search keywords or user question") String query,
+            ToolContext toolContext) {
         long start = System.currentTimeMillis();
+        Long userId = contextLong(toolContext, CONTEXT_USER_ID);
         ToolCallEventPublisher.toolCall("searchConversationHistory", params(
                 "userId", userId,
                 "query", truncate(query)));
@@ -147,6 +162,40 @@ public class KnowledgeTools {
         } catch (Exception e) {
             log.warn("Conversation history search failed: userId={}, error={}", userId, e.getMessage());
             ToolCallEventPublisher.toolResult("searchConversationHistory", 0, elapsed(start), true);
+            return EMPTY_JSON_ARRAY;
+        }
+    }
+
+    /**
+     * Search the temporary material attached to the current conversation.
+     *
+     * @param query search keywords or user question
+     * @param toolContext trusted server-side scope
+     * @return JSON array of matched temporary chunks
+     */
+    @Tool(description = "Search the one temporary material attached to the current conversation")
+    public String searchTemporaryMaterial(
+            @ToolParam(description = "Search keywords or user question") String query,
+            ToolContext toolContext) {
+        long start = System.currentTimeMillis();
+        Long userId = contextLong(toolContext, CONTEXT_USER_ID);
+        String conversationId = contextString(toolContext, CONTEXT_CONVERSATION_ID);
+        String uploadToken = contextString(toolContext, CONTEXT_TEMPORARY_MATERIAL_TOKEN);
+        ToolCallEventPublisher.toolCall("searchTemporaryMaterial", params(
+                "userId", userId, "conversationId", truncate(conversationId),
+                "uploadToken", truncate(uploadToken), "query", truncate(query)));
+        if (userId == null || isBlank(conversationId) || isBlank(uploadToken) || isBlank(query)) {
+            ToolCallEventPublisher.toolResult("searchTemporaryMaterial", 0, elapsed(start), false);
+            return EMPTY_JSON_ARRAY;
+        }
+        try {
+            List<ChunkSearchResult> results = temporaryHybridSearchService.search(
+                    userId, conversationId, uploadToken, query, DEFAULT_TOP_K);
+            ToolCallEventPublisher.toolResult("searchTemporaryMaterial", results.size(), elapsed(start), false);
+            return toJsonArray(results.stream().map(this::toTemporaryChunkPayload).toList());
+        } catch (Exception e) {
+            log.warn("Temporary material search failed: userId={}, error={}", userId, e.getMessage());
+            ToolCallEventPublisher.toolResult("searchTemporaryMaterial", 0, elapsed(start), true);
             return EMPTY_JSON_ARRAY;
         }
     }
@@ -181,6 +230,12 @@ public class KnowledgeTools {
         return payload;
     }
 
+    private Map<String, Object> toTemporaryChunkPayload(ChunkSearchResult result) {
+        Map<String, Object> payload = toChunkPayload(result);
+        payload.put("source", "temporary_material");
+        return payload;
+    }
+
     private String toJsonArray(Object value) {
         return JsonUtils.toJson(value, EMPTY_JSON_ARRAY);
     }
@@ -209,6 +264,32 @@ public class KnowledgeTools {
             return "";
         }
         return value.length() <= 120 ? value : value.substring(0, 120) + "...";
+    }
+
+    private Long contextLong(ToolContext toolContext, String key) {
+        if (toolContext == null || toolContext.getContext() == null) {
+            return null;
+        }
+        Object value = toolContext.getContext().get(key);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Long.valueOf(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private String contextString(ToolContext toolContext, String key) {
+        if (toolContext == null || toolContext.getContext() == null) {
+            return null;
+        }
+        Object value = toolContext.getContext().get(key);
+        return value == null ? null : String.valueOf(value);
     }
 
     private Map<String, Object> params(Object... pairs) {

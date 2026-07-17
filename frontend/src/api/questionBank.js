@@ -15,6 +15,13 @@ export async function getBatchQuestions(batchId) {
   return res.data
 }
 
+/** 导出题库批次 PDF */
+export async function exportBatchQuestionsPdf(batchId) {
+  return await api.get(`/ai/quiz/bank/batches/${batchId}/export`, {
+    responseType: 'blob'
+  })
+}
+
 /** 重命名批次 */
 export async function renameBatch(batchId, name) {
   await api.put(`/ai/quiz/bank/batches/${batchId}/name`, { name })

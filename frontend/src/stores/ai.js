@@ -23,6 +23,9 @@ export const useAiStore = defineStore('ai', () => {
   /** 当前关联的资料 ID */
   const selectedMaterialId = ref(null)
 
+  /** 当前关联的会话临时资料对象。 */
+  const selectedTemporaryMaterial = ref(null)
+
   /** 上一次中断的信息 */
   const interruptedInfo = ref(null)
 
@@ -223,6 +226,13 @@ export const useAiStore = defineStore('ai', () => {
    */
   function setSelectedMaterial(id) {
     selectedMaterialId.value = id
+    if (id) selectedTemporaryMaterial.value = null
+  }
+
+  /** 设置当前会话的临时资料。 */
+  function setSelectedTemporaryMaterial(material) {
+    selectedTemporaryMaterial.value = material
+    if (material) selectedMaterialId.value = null
   }
 
   return {
@@ -232,6 +242,7 @@ export const useAiStore = defineStore('ai', () => {
     isStreaming,
     loading,
     selectedMaterialId,
+    selectedTemporaryMaterial,
     interruptedInfo,
     lastQuestion,
     error,
@@ -252,6 +263,7 @@ export const useAiStore = defineStore('ai', () => {
     clearInterrupted,
     clearMessages,
     deleteMessage,
-    setSelectedMaterial
+    setSelectedMaterial,
+    setSelectedTemporaryMaterial
   }
 })

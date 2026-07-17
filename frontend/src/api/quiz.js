@@ -47,9 +47,20 @@ export async function getWrongQuestionStats(params = {}) {
 export async function exportWrongQuestionsPdf(mastered = null) {
   const params = {}
   if (mastered !== null) params.mastered = mastered
-  const res = await api.get('/ai/quiz/wrong/export', {
+  return await api.get('/ai/quiz/wrong/export', {
     params,
     responseType: 'blob'
   })
-  return res.data
+}
+
+/**
+ * 导出选中的错题为 PDF
+ * @param {number[]} wrongQuestionIds 错题记录 ID 列表
+ */
+export async function exportSelectedWrongQuestionsPdf(wrongQuestionIds) {
+  return await api.post('/ai/quiz/wrong/export-selected', {
+    wrongQuestionIds
+  }, {
+    responseType: 'blob'
+  })
 }

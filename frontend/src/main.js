@@ -9,6 +9,9 @@ import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
+import { applyInitialTheme } from './stores/ui'
+
+applyInitialTheme()
 
 const app = createApp(App)
 

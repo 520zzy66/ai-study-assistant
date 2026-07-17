@@ -43,7 +43,7 @@ export const useTaskStore = defineStore('task', () => {
             try { result = JSON.parse(result) } catch { /* keep as string */ }
           }
           callbacks.onSuccess?.(result)
-        } else if (data.status === 'failed') {
+        } else if (data.status === 'failed' || data.status === 'cancelled') {
           stopWatching(taskId)
           callbacks.onError?.(data.errorMsg || '任务执行失败')
         }
@@ -110,7 +110,7 @@ export const useTaskStore = defineStore('task', () => {
               const data = r.data
               retryCount = 0
               taskMap.value.set(task.taskId, { type: task.type, timer, task: data, retryCount })
-              if (data.status === 'success' || data.status === 'failed') {
+              if (data.status === 'success' || data.status === 'failed' || data.status === 'cancelled') {
                 stopWatching(task.taskId)
               }
             } catch (err) {

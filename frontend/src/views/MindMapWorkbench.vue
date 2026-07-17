@@ -4,7 +4,7 @@
       title="导图工作台"
       description="沉浸式浏览、编辑和导出你的思维导图"
     >
-      <template #action>
+      <template #actions>
         <div class="workbench-actions">
           <el-button @click="downloadPdf" :disabled="!mindMapData">
             <el-icon><Download /></el-icon> 导出 PDF
@@ -286,9 +286,10 @@ watch(() => route.query, (newQuery) => {
 .mindmap-workbench {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* 占满视图高度 */
+  height: calc(100vh - var(--header-height) - var(--space-16));
+  min-height: 640px;
   overflow: hidden;
-  background-color: var(--color-bg-base);
+  background-color: transparent;
 }
 
 .workbench-actions {
@@ -300,7 +301,7 @@ watch(() => route.query, (newQuery) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0 var(--space-4) var(--space-4);
+  padding: 0;
   gap: var(--space-4);
   overflow: hidden;
 }
@@ -308,21 +309,18 @@ watch(() => route.query, (newQuery) => {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 32px;
-  padding: 16px 24px;
+  gap: var(--space-6);
+  padding: var(--space-3) var(--space-4);
   background-color: var(--surface-card);
   border: 1px solid var(--outline);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-xs);
   z-index: 10;
 }
 
 .glass-effect {
-  background: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--surface-card) 78%, transparent);
   backdrop-filter: blur(12px);
-}
-.dark .glass-effect {
-  background: rgba(30, 30, 30, 0.7);
 }
 
 .filter-group {
@@ -341,12 +339,29 @@ watch(() => route.query, (newQuery) => {
   flex: 1;
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-xs);
   border: 1px solid var(--outline);
   background-color: var(--surface-card);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .mindmap-workbench {
+    height: auto;
+    min-height: 720px;
+  }
+
+  .filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .mindmap-canvas-container {
+    min-height: 520px;
+  }
 }
 </style>

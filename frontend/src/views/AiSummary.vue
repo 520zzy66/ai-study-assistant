@@ -509,11 +509,12 @@ watch(() => route.query.materialId, (newId) => {
 <style scoped>
 .summary-page {
   width: 100%;
+  max-width: var(--content-work-width);
 }
 
 .summary-layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
 }
@@ -526,6 +527,10 @@ watch(() => route.query.materialId, (newId) => {
 .sidebar-card,
 .content-card {
   border-radius: var(--radius-lg);
+}
+
+.content-card {
+  min-height: 560px;
 }
 
 .material-selector {
@@ -655,7 +660,9 @@ watch(() => route.query.materialId, (newId) => {
 
 .summary-content {
   min-height: 200px;
-  padding: var(--space-2);
+  max-width: var(--content-reading-width);
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-2) var(--space-8);
 }
 
 .summary-empty :deep(.app-empty) {
@@ -722,7 +729,7 @@ watch(() => route.query.materialId, (newId) => {
 
 /* 流式渲染 */
 .summary-body {
-  padding: var(--space-2);
+  padding: var(--space-2) clamp(0px, 2vw, var(--space-6));
 }
 
 .stream-progress {

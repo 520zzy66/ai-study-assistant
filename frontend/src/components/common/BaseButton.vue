@@ -87,16 +87,16 @@ const iconSize = computed(() => props.size === 'sm' ? 14 : props.size === 'lg' ?
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-color: var(--color-primary);
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 3px rgba(45, 90, 39, 0.18);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 12px rgba(45, 90, 39, 0.2);
 }
 .btn-primary:active:not(:disabled) {
   background: var(--color-primary-active);
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 2px rgba(45, 90, 39, 0.16);
 }
 
 /* Secondary */

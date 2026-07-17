@@ -2,6 +2,7 @@ package com.study.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.AssertTrue;
 import lombok.Data;
 
 import java.util.List;
@@ -19,6 +20,10 @@ public class WorkflowChatRequest {
 
     /** Optional related material ID. */
     private Long materialId;
+
+    /** Optional server-issued token for one temporary conversation material. */
+    @Size(max = 64, message = "临时资料令牌长度不能超过64个字符")
+    private String temporaryMaterialToken;
 
     /** Optional material full text prepared by upstream modules. */
     @Size(max = 200000, message = "资料全文长度不能超过200000个字符")
@@ -40,4 +45,12 @@ public class WorkflowChatRequest {
 
     /** Optional frontend-provided conversation turns. */
     private List<QaRequest.ChatMessage> history;
+
+    /**
+     * 正式资料与临时资料每次只能关联一种。
+     */
+    @AssertTrue(message = "每次问答只能关联一份正式资料或一份临时资料")
+    public boolean isSingleMaterialSelection() {
+        return materialId == null || temporaryMaterialToken == null || temporaryMaterialToken.isBlank();
+    }
 }

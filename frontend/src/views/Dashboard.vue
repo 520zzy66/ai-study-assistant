@@ -63,6 +63,7 @@
               v-for="action in quickActions"
               :key="action.path"
               class="quick-action-btn"
+              type="button"
               @click="navigateTo(action.path)"
             >
               <div class="qa-icon" :style="{ background: action.bg, color: action.color }">
@@ -73,6 +74,34 @@
           </div>
         </BaseCard>
 
+        <!-- Personalized Recommendations -->
+        <BaseCard title="为你推荐" :loading="loading.recommendations">
+          <template v-if="recommendations.length > 0" #header-action>
+            <el-button text type="primary" size="small" @click="$router.push('/ai/resource-package')">资源工坊</el-button>
+          </template>
+          <div v-if="recommendations.length > 0" class="recommendation-grid">
+            <button
+              v-for="item in recommendations"
+              :key="item.key"
+              class="recommendation-item"
+              type="button"
+              @click="navigateTo(item.path)"
+            >
+              <div class="recommendation-icon" :style="{ background: item.bg, color: item.color }">
+                <el-icon :size="20"><component :is="item.icon" /></el-icon>
+              </div>
+              <div class="recommendation-content">
+                <div class="recommendation-title">{{ item.title }}</div>
+                <p>{{ item.description }}</p>
+              </div>
+              <el-icon :size="16" class="recommendation-arrow"><ArrowRight /></el-icon>
+            </button>
+          </div>
+          <div v-else-if="!loading.recommendations" class="recommendation-empty">
+            上传资料并完善学习画像后，首页会自动推送更适合你的资源入口
+          </div>
+        </BaseCard>
+
         <!-- Continue Learning -->
         <BaseCard title="继续学习" :loading="loading.materials" :isEmpty="recentMaterials.length === 0 && !loading.materials"
           empty-icon="Document" empty-text="上传你的第一份资料，开始学习之旅">
@@ -80,10 +109,11 @@
             <el-button text type="primary" size="small" @click="$router.push('/material')">查看全部</el-button>
           </template>
           <div v-if="recentMaterials.length > 0" class="learning-list">
-            <div
+            <button
               v-for="item in recentMaterials"
               :key="item.id"
               class="learning-item"
+              type="button"
               @click="navigateTo(`/ai/summary?materialId=${item.id}`)"
             >
               <div class="learning-icon">
@@ -94,7 +124,7 @@
                 <div class="learning-meta">{{ formatDate(item.createTime) }}</div>
               </div>
               <el-icon :size="16" class="learning-arrow"><ArrowRight /></el-icon>
-            </div>
+            </button>
           </div>
         </BaseCard>
       </div>
@@ -146,6 +176,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getMaterialList } from '@/api/material'
 import { getChatHistory, getQuizHistory } from '@/api/history'
+import { getUserProfile } from '@/api/user'
+import { listResourcePackageTasks } from '@/api/ai'
 import { Document, ArrowRight, Upload, ChatDotRound, EditPen, Calendar } from '@element-plus/icons-vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseStatisticCard from '@/components/common/BaseStatisticCard.vue'
@@ -161,7 +193,8 @@ const loading = reactive({
   materials: false,
   activity: false,
   plan: false,
-  progress: false
+  progress: false,
+  recommendations: false
 })
 
 // Stats
@@ -175,12 +208,14 @@ const stats = ref([
 const quickActions = [
   { label: '上传资料', icon: 'Upload', path: '/material', bg: 'var(--bg-sidebar)', color: 'var(--text-secondary)' },
   { label: 'AI 问答', icon: 'ChatDotRound', path: '/ai/chat', bg: 'var(--bg-tag-green)', color: 'var(--color-primary)' },
+  { label: '资源工坊', icon: 'Box', path: '/ai/resource-package', bg: 'var(--bg-tag-blue)', color: 'var(--color-tag-blue)' },
   { label: 'AI 出题', icon: 'EditPen', path: '/ai/quiz', bg: 'var(--bg-tag-amber)', color: 'var(--color-tag-amber)' },
   { label: '学习计划', icon: 'Calendar', path: '/ai/plan', bg: 'var(--bg-tag-blue)', color: 'var(--color-tag-blue)' }
 ]
 
 const recentMaterials = ref([])
 const recentActivities = ref([])
+const recommendations = ref([])
 const todayTasks = ref([])
 const studyProgress = ref(0)
 const examDate = ref('')
@@ -219,6 +254,92 @@ function formatDate(dateStr) {
 }
 
 function toggleTask(task) { /* TODO: API */ }
+
+function normalizeList(value) {
+  if (Array.isArray(value)) return value
+  if (!value) return []
+  if (typeof value === 'string') {
+    return value.split(/[,，、\n]/).map(item => item.trim()).filter(Boolean)
+  }
+  return []
+}
+
+function extractPackageTitle(task) {
+  let result = task?.result
+  if (typeof result === 'string') {
+    try { result = JSON.parse(result) } catch { result = null }
+  }
+  return result?.materialName || task?.message || '最近资源包'
+}
+
+async function loadRecommendations() {
+  loading.recommendations = true
+  try {
+    const [profileResult, packageTasks] = await Promise.all([
+      getUserProfile().catch(() => ({ data: null })),
+      listResourcePackageTasks(5).catch(() => [])
+    ])
+    const profile = profileResult?.data || {}
+    const weakPoints = normalizeList(profile.weakPoints)
+    const items = []
+
+    if (!profile.studySubject || !profile.learningStyle || weakPoints.length === 0) {
+      items.push({
+        key: 'profile',
+        title: '完善学习画像',
+        description: '补齐科目、风格和薄弱点后，资源生成会更贴合你的目标。',
+        icon: 'User',
+        path: '/profile',
+        bg: 'var(--bg-tag-green)',
+        color: 'var(--color-primary)'
+      })
+    }
+
+    const latestMaterial = recentMaterials.value[0]
+    if (latestMaterial) {
+      items.push({
+        key: `material-${latestMaterial.id}`,
+        title: '生成个性化资源包',
+        description: `基于「${latestMaterial.originalName || latestMaterial.fileName}」生成讲解、导图、题库和学习路径。`,
+        icon: 'Box',
+        path: `/ai/resource-package?materialId=${latestMaterial.id}`,
+        bg: 'var(--bg-tag-blue)',
+        color: 'var(--color-tag-blue)'
+      })
+    }
+
+    if (weakPoints.length > 0) {
+      items.push({
+        key: 'weak-points',
+        title: '优先复习薄弱点',
+        description: `围绕 ${weakPoints.slice(0, 2).join('、')} 安排针对性练习和错题巩固。`,
+        icon: 'EditPen',
+        path: '/quiz/wrong',
+        bg: 'var(--bg-tag-amber)',
+        color: 'var(--color-tag-amber)'
+      })
+    }
+
+    const latestPackage = (packageTasks || []).find(task => task.status === 'success')
+    if (latestPackage) {
+      items.push({
+        key: `package-${latestPackage.taskId}`,
+        title: '继续查看最近资源包',
+        description: `恢复「${extractPackageTitle(latestPackage)}」的多模态学习资源结果。`,
+        icon: 'Collection',
+        path: '/ai/resource-package',
+        bg: 'var(--surface-container-low)',
+        color: 'var(--color-text-secondary)'
+      })
+    }
+
+    recommendations.value = items.slice(0, 4)
+  } catch {
+    recommendations.value = []
+  } finally {
+    loading.recommendations = false
+  }
+}
 
 async function loadMaterials() {
   loading.materials = true
@@ -274,8 +395,9 @@ function loadProgress() {
   loading.progress = false
 }
 
-onMounted(() => {
-  loadMaterials()
+onMounted(async () => {
+  await loadMaterials()
+  loadRecommendations()
   loadActivity()
   loadPlan()
   loadProgress()
@@ -289,7 +411,7 @@ onMounted(() => {
 
 /* Welcome */
 .welcome-section {
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -298,7 +420,7 @@ onMounted(() => {
 }
 
 .welcome-title {
-  font-size: var(--text-hero);
+  font-size: var(--text-display);
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
@@ -320,8 +442,8 @@ onMounted(() => {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
 /* Dashboard Grid */
@@ -367,28 +489,27 @@ onMounted(() => {
 
 .quick-action-btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 10px;
-  padding: 20px 12px;
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  background: var(--surface-card);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-default);
 }
 
 .quick-action-btn:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  border-color: var(--outline);
+  background: var(--surface-card);
 }
 
 .quick-action-btn:active { transform: scale(0.98); }
 
 .qa-icon {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -401,6 +522,74 @@ onMounted(() => {
   color: var(--color-text-primary);
 }
 
+/* Recommendations */
+.recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.recommendation-item {
+  min-height: 92px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.recommendation-item:hover {
+  background: var(--surface-card);
+  border-color: var(--outline-variant);
+}
+
+.recommendation-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.recommendation-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.recommendation-title {
+  color: var(--color-text-primary);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.recommendation-content p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-small);
+  line-height: 1.6;
+}
+
+.recommendation-arrow {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  margin-top: 10px;
+}
+
+.recommendation-empty {
+  padding: var(--space-4);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-ui);
+  text-align: center;
+}
+
 /* Learning List */
 .learning-list {
   display: flex;
@@ -409,10 +598,14 @@ onMounted(() => {
 }
 
 .learning-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-default);
@@ -518,6 +711,7 @@ onMounted(() => {
   .stats-grid { grid-template-columns: 1fr; }
   .progress-row { grid-template-columns: 1fr; }
   .quick-actions { grid-template-columns: repeat(2, 1fr); }
+  .recommendation-grid { grid-template-columns: 1fr; }
   .welcome-section { flex-direction: column; align-items: flex-start; }
 }
 </style>

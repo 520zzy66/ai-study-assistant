@@ -217,19 +217,17 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6);
+  padding: clamp(var(--space-4), 4vw, var(--space-12));
   background: var(--surface-page);
 }
 
-/* Card — 占屏幕 2/3 */
 .login-card {
   display: flex;
-  width: 66.667vw;
-  max-width: 1200px;
-  min-height: 520px;
+  width: min(1100px, 92vw);
+  min-height: 600px;
   background: var(--surface-card);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   border: 1px solid var(--outline);
 }
@@ -237,7 +235,7 @@ async function handleRegister() {
 /* ---- Left Brand ---- */
 .login-brand {
   flex: 1;
-  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
+  background: linear-gradient(145deg, #1f3d1c 0%, var(--color-primary) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -251,8 +249,8 @@ async function handleRegister() {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle at 20% 18%, rgba(255,255,255,0.12), transparent 36%),
+                    radial-gradient(circle at 82% 78%, rgba(255,255,255,0.08), transparent 30%);
 }
 
 .brand-content {
@@ -325,11 +323,6 @@ async function handleRegister() {
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(4px);
-  transition: background var(--duration-fast) var(--ease-default);
-}
-
-.feature-card:hover {
-  background: rgba(255, 255, 255, 0.14);
 }
 
 .feature-icon {
@@ -385,7 +378,7 @@ async function handleRegister() {
 
 .form-subtitle {
   font-size: var(--text-body);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .login-form {
@@ -428,7 +421,7 @@ async function handleRegister() {
 /* ---- Responsive ---- */
 @media (max-width: 1024px) {
   .login-card {
-    width: 80vw;
+    width: min(920px, 94vw);
   }
 }
 

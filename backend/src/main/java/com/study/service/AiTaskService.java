@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.study.ai.service.AiPlanService;
 import com.study.ai.service.AiQuizService;
 import com.study.ai.service.AiSummaryService;
+import com.study.ai.service.ResourcePackageService;
 import com.study.common.BusinessException;
 import com.study.common.Constants;
 import com.study.common.JsonUtils;
 import com.study.common.UserContext;
 import com.study.dto.request.GenerateQuizRequest;
+import com.study.dto.request.GenerateResourcePackageRequest;
 import com.study.entity.AiTask;
 import com.study.mapper.AiTaskMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +26,7 @@ import java.util.UUID;
 
 /**
  * AI 异步任务服务
- * 将耗时的 AI 生成操作（出题/总结/计划）放入后台线程执行，
+ * 将耗时的 AI 生成操作（出题/总结/计划/资源包）放入后台线程执行，
  * 前端通过 taskId 轮询任务状态和结果。
  */
 @Slf4j
@@ -36,6 +38,7 @@ public class AiTaskService {
     private final AiQuizService quizService;
     private final AiSummaryService summaryService;
     private final AiPlanService planService;
+    private final ResourcePackageService resourcePackageService;
 
     /**
      * 创建异步任务
@@ -242,6 +245,38 @@ public class AiTaskService {
         }
     }
 
+    /**
+     * 异步生成个性化资源包。
+     */
+    @Async("taskExecutor")
+    public void executeResourcePackageTask(String taskId, GenerateResourcePackageRequest request, Long userId) {
+        UserContext.setCurrentUser(new UserContext.UserInfo(userId, "system"));
+        try {
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 8, "正在启动资源包多智能体编排...");
+            if (isCancelled(taskId)) {
+                throw new java.util.concurrent.CancellationException("任务取消");
+            }
+            Map<String, Object> result = resourcePackageService.generatePackage(request, event -> {
+                if (isCancelled(taskId)) {
+                    throw new java.util.concurrent.CancellationException("任务取消");
+                }
+                updateTask(taskId, Constants.TASK_STATUS_RUNNING, event.progress(), event.message());
+            });
+            if (isCancelled(taskId)) return;
+            updateTask(taskId, Constants.TASK_STATUS_RUNNING, 98, "正在保存资源包结果...");
+            completeTask(taskId, result);
+            log.info("异步资源包生成完成: taskId={}, materialId={}", taskId, request.getMaterialId());
+        } catch (java.util.concurrent.CancellationException e) {
+            log.info("异步资源包任务已被用户取消: taskId={}", taskId);
+            markCancelled(taskId);
+        } catch (Exception e) {
+            log.error("异步资源包生成失败: taskId={}", taskId, e);
+            failTask(taskId, e);
+        } finally {
+            UserContext.clear();
+        }
+    }
+
     // ==================== 查询接口 ====================
 
     /**
@@ -270,6 +305,25 @@ public class AiTaskService {
     }
 
     /**
+     * 按任务类型查询当前用户的最近任务。
+     *
+     * @param type 任务类型
+     * @param size 返回数量
+     * @return 最近任务列表
+     */
+    public List<AiTask> getRecentTasksByType(String type, int size) {
+        Long userId = UserContext.getCurrentUserId();
+        int limit = Math.max(1, Math.min(size, 50));
+        return taskMapper.selectList(
+                new LambdaQueryWrapper<AiTask>()
+                        .eq(AiTask::getUserId, userId)
+                        .eq(AiTask::getType, type)
+                        .orderByDesc(AiTask::getCreateTime)
+                        .last("LIMIT " + limit)
+        );
+    }
+
+    /**
      * 请求取消任务
      *
      * @param taskId 任务ID
@@ -291,7 +345,7 @@ public class AiTaskService {
         taskMapper.update(null, new LambdaUpdateWrapper<AiTask>()
                 .eq(AiTask::getTaskId, taskId)
                 .set(AiTask::getCancelRequested, 1)
-                .set(AiTask::getStatus, Constants.TASK_STATUS_FAILED)
+                .set(AiTask::getStatus, Constants.TASK_STATUS_CANCELLED)
                 .set(AiTask::getMessage, "用户取消")
                 .set(AiTask::getErrorMsg, "任务已被用户取消")
                 .set(AiTask::getUpdateTime, LocalDateTime.now()));
@@ -311,6 +365,16 @@ public class AiTaskService {
                         .eq(AiTask::getTaskId, taskId)
                         .select(AiTask::getCancelRequested));
         return task != null && Integer.valueOf(1).equals(task.getCancelRequested());
+    }
+
+    private void markCancelled(String taskId) {
+        taskMapper.update(null, new LambdaUpdateWrapper<AiTask>()
+                .eq(AiTask::getTaskId, taskId)
+                .ne(AiTask::getStatus, Constants.TASK_STATUS_SUCCESS)
+                .set(AiTask::getStatus, Constants.TASK_STATUS_CANCELLED)
+                .set(AiTask::getMessage, "用户取消")
+                .set(AiTask::getErrorMsg, "任务已被用户取消")
+                .set(AiTask::getUpdateTime, LocalDateTime.now()));
     }
 
     private AiTask getByTaskId(String taskId) {

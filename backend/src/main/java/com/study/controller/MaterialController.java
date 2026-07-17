@@ -89,10 +89,15 @@ public class MaterialController {
                 contentType = "application/pdf";
             } else if (filename.toLowerCase().endsWith(".txt")) {
                 contentType = "text/plain";
+            } else if (filename.toLowerCase().endsWith(".md")) {
+                contentType = "text/markdown";
             } else if (filename.toLowerCase().endsWith(".doc")) {
                 contentType = "application/msword";
             } else if (filename.toLowerCase().endsWith(".docx")) {
                 contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            } else if (filename.toLowerCase().matches(".*\\.(png|jpg|jpeg|webp)$")) {
+                contentType = filename.toLowerCase().endsWith(".png") ? "image/png"
+                        : filename.toLowerCase().endsWith(".webp") ? "image/webp" : "image/jpeg";
             }
         }
         

@@ -8,8 +8,8 @@
 ### Phase 1 基础环境
 - [x] 初始化 Spring Boot 项目
 - [x] 初始化 Vue3 项目
-- [x] 配置 MySQL 和 MyBatis-Plus
-- [x] 配置 Spring AI 和 DeepSeek API
+- [x] 配置 PostgreSQL 16 + pgvector 和 MyBatis-Plus
+- [x] 配置 Spring AI 和 Xiaomi MiMo API（DeepSeek 作为备选）
 
 ### Phase 2 用户模块
 - [x] 用户表设计
@@ -103,6 +103,90 @@
 
 # v2.0 迭代计划
 
+## Phase UI-1: 核心工作台视觉优化（2026-07-16）✅
+
+- [x] 备份优化前前端源码（`backups/frontend-20260716-194812.zip`）
+- [x] 新增 `docs/ui-design-spec.md`，明确品牌、排版、布局和交互规范
+- [x] 补齐全局字体、行高、图标、层级和辅助色 Design Token
+- [x] AI 问答页优化：对话历史分组、资料关联、文档式回答、专注输入区
+- [x] 学习资料页优化：文件管理工作台、统一文件夹面板、精简表格行操作
+- [x] 保持现有 API、请求参数、流式问答和资料管理业务行为不变
+- [x] 前端生产构建验证通过
+
+---
+
+## Phase UI-2: 全站界面一致性优化（2026-07-16）✅
+
+- [x] 备份第一阶段完成态（`backups/frontend-ui1-20260716-211241.zip`）
+- [x] 全局导航按“学习 / AI 工具 / 复习”重组，保持原路由不变
+- [x] 统一阅读页、工作台页、数据页的内容宽度、间距和页头层级
+- [x] 首页、AI 总结、导图工作台、学习计划视觉优化
+- [x] AI 出题、题库、错题本、历史记录视觉与键盘交互优化
+- [x] 用户中心、设置、登录页视觉优化
+- [x] 修复导图工作台页头操作插槽名不匹配、错题页文案错误
+- [x] 补齐全站缺失 Design Token，扫描结果为 0 个缺失令牌
+- [x] 保持 API、路由、请求参数和业务流程不变
+- [x] 前端生产构建验证通过（Vite，2059 modules）
+- [x] 按 6 维 Checklist 完成本次前端变更代码审查
+
+---
+
+## Phase A3-1: 中国软件杯 A3 资源工坊（2026-07-16）🚧
+
+> 目标：围绕“基于大模型的个性化资源生成与学习多智能体系统开发”，在不推翻现有工作流的前提下，新增资源包生成编排层。
+
+- [x] 明确 MVP 范围：资源工坊、单资料生成、默认 14 天学习路径、多模态脚本包先不调用真实讯飞接口
+- [x] 新增资源包异步任务入口：`POST /ai/task/resource-package`
+- [x] 新增 `ResourcePackageService`，复用总结、思维导图、出题、学习计划能力
+- [x] 新增多模态脚本 Prompt，生成 PPT 大纲、图像提示词、语音讲解稿、微课分镜和实操案例
+- [x] 新增前端资源工坊页面 `/ai/resource-package`
+- [x] 侧边栏与首页快捷入口接入资源工坊
+- [x] 资源工坊支持最近资源包历史查看与结果恢复
+- [x] 首页新增学习画像、最近资料和资源包历史驱动的个性化资源推荐入口
+- [x] 资源工坊结果支持资源类型概览、Markdown 导出和 JSON 完整结果导出
+- [x] 资源包结果补齐真实阶段进度、资源清单、Agent 分工、质量安全说明和演示摘要复制
+- [x] 新增 `docs/agent-upgrade-spec.md`，明确后续全功能 Agent 化渐进式改造方案
+- [x] 复审并升级 Agent Spec：冻结 Phase A 多 Agent、Tool、进度、取消、部分失败、旧数据兼容、Evaluation 口径、讯飞 Provider 与前端状态契约
+- [x] Phase A 验收补强：统一资源开关默认语义、补全全失败判定、取消态 cancelled、Trace ID、Agent/Tool JavaDoc 与 Orchestrator 回归测试
+- [x] 新增 `docs/xfyun-multimodal-spec.md`，规划讯飞 TTS 播客化、文生图知识配图、资源资产管理和后续星火/教育模型迁移方案
+- [ ] 后续接入讯飞智能 PPT、图片生成、超拟人语音合成和文本合规 Provider
+- [ ] 后续扩展文件夹级资源包生成
+
+---
+
+## Phase 1-4: AI 功能升级（2026-07-07）
+
+> 基于 `docs/ai-upgrade-spec.md` 的四阶段升级计划
+
+- [x] Phase 1: 流式总结 + Agent 编排 + 思维导图 ✅
+  - [x] 新增 agent-summary.yml 配置
+  - [x] AiSummaryService 新增 generateSummaryStream + generateMindMap 方法
+  - [x] AiController 新增 /summary/stream + /summary/mindmap 端点
+  - [x] 前端 ai.js 新增流式 API + MindMapTree.vue 组件
+  - [x] AiSummary.vue 流式效果 + 思维导图展示
+
+- [x] Phase 2: 出题新题型 + 数学题判分优化 ✅
+  - [x] 扩展 PromptTemplates 出题模板（新题型 + 难度描述）
+  - [x] 扩展 GenerateQuizRequest DTO（新题型数量字段）
+  - [x] AiQuizService 新增判分逻辑（fill_blank/multi_choice/math_fill）
+  - [x] AiQuiz.vue 新增题型 UI
+
+- [x] Phase 3: 错题本增强（重做错题 + 统计图表）✅
+  - [x] 后端：AiQuizService 新增 getWrongQuestionsForRepractice + getWrongQuestionStats 方法
+  - [x] 后端：AiController 新增 GET /quiz/wrong/repractice + GET /quiz/wrong/stats 端点
+  - [x] 前端：quiz.js 新增 getRepracticeQuestions + getWrongQuestionStats API
+  - [x] 前端：WrongQuestion.vue 统计面板（题型/来源分布 + 趋势图）+ 重做错题模式
+
+- [x] Phase 4: 错题 PDF 导出 ✅
+  - [x] pom.xml 添加 OpenPDF 依赖（librepdf 2.0.2）
+  - [x] WrongQuestionPdfService — PDF 生成（表格布局，题型/题目/答案/来源）
+  - [x] AiController 新增 GET /quiz/wrong/export 端点（返回 PDF 文件）
+  - [x] quiz.js 新增 exportWrongQuestionsPdf API（blob 下载）
+  - [x] WrongQuestion.vue 工具栏添加"导出 PDF"按钮
+  - [x] PDF 导出重设计：题库批次支持逐套导出，错题本支持勾选题目导出，统一试卷风格（题目与答案解析分离）
+
+---
+
 ## Phase 6.5 StateGraph 工作流架构 ✅
 
 > 目标：将 AI 对话功能封装为 StateGraph 状态图工作流，替代命令式编排器
@@ -144,44 +228,54 @@
 
 > 目标：搭建向量知识库，从关键词匹配升级为语义检索 + BM25 混合检索，显著提升文档问答准确率
 >
-> **当前状态**：仅有关键词匹配（RagService），EmbeddingProvider 为空接口，无向量存储，`application.yml` 中的 RAG 配置项均为 dead config。
+> **当前状态**：PgVector、Ollama bge-m3（1024 维）、BM25 和 HybridSearchService 已实现；正式资料上传已写入 VectorStore，StateGraph 专家通过 KnowledgeTools 调用混合检索。
 
 ### 7.1 向量存储基础设施
-- [ ] 选型：PgVector（PostgreSQL 扩展，与现有 MySQL 共存）或 Milvus Lite
-- [ ] Docker 部署向量数据库（docker-compose 新增服务）
-- [ ] 设计向量表 schema（chunk_id, material_id, embedding vector(512)）
-- [ ] 引入依赖（Spring AI VectorStore 或原生 SDK）
-- [ ] 编写 VectorStore 初始化脚本
+- [x] 选型：PgVector（PostgreSQL 16 扩展，与业务数据共存）
+- [x] Docker 部署 PostgreSQL + pgvector
+- [x] 设计 Spring AI `vector_store` 表（embedding vector(1024)）
+- [x] 引入 Spring AI PgVector VectorStore 依赖
+- [x] 编写 VectorStore 初始化 SQL
 
 ### 7.2 Embedding 模型集成
-- [ ] 实现 EmbeddingProvider 接口
-  - 方案 A：本地 bge-small-zh（ONNX Runtime，离线可用）
-  - 方案 B：在线 API（通义 text-embedding-v2 / OpenAI text-embedding-3-small）
-- [ ] Embedding 模型单元测试（输入文本 → 输出 512 维向量）
-- [ ] 批量 Embedding 方法实现（embedBatch，支持切片入库时批量向量化）
-- [ ] 激活 `application.yml` 中的 `ai.embedding.*` 配置项
+- [x] 实现 EmbeddingProvider 接口（OllamaEmbeddingProvider）
+  - 当前方案：本地 Ollama bge-m3（1024 维）
+- [x] Embedding 维度单元测试（1024 维契约）
+- [x] 批量 Embedding 方法实现（embedBatch）
+- [x] 激活 `application.yml` 中的 `ai.embedding.*` 配置项
 
 ### 7.3 知识库构建流程
-- [ ] 切片入库时自动生成 embedding（修改 MaterialAsyncProcessor.doProcess）
-- [ ] 存储向量到向量数据库（chunk ↔ vector 关联）
-- [ ] 存储元数据（material_id, user_id, chunk_index, file_type）
-- [ ] 资料删除时同步清理向量数据（级联删除）
+- [x] 切片入库时自动生成 embedding（修改 MaterialAsyncProcessor.doProcess）
+- [x] 存储向量到向量数据库（chunk ↔ vector 关联，稳定 Document ID 支持幂等重试）
+- [x] 存储元数据（material_id, user_id, folder_id, chunk_id, chunk_index, file_type）
+- [x] 资料删除时同步清理向量数据
 - [ ] 重新索引接口（资料更新后重建向量）
 
 ### 7.4 中文分词与 BM25 检索
-- [ ] 集成 jieba-analysis 到 RagService
-- [ ] 实现中文分词器 JiebaTokenizer
-- [ ] 停用词过滤（的、了、是、在 等）
-- [ ] 实现 BM25 算法（基于 TF-IDF 改进）
-- [ ] 计算文档平均长度、IDF 值
+- [x] 集成 jieba-analysis（Bm25Service）
+- [x] 实现 jieba 中文分词
+- [x] 停用词过滤（的、了、是、在 等）
+- [x] 实现 BM25 算法
+- [x] 计算文档平均长度、IDF 值
 - [ ] BM25 检索器单元测试
 
 ### 7.5 混合检索与重排序
-- [ ] 实现 HybridSearchService（向量语义检索 + BM25 关键词检索）
-- [ ] 混合分数计算（加权融合，默认 vector 0.6 + bm25 0.4）
-- [ ] Top-K 结果截取与上下文拼接
-- [ ] 激活 `application.yml` 中的 `ai.rag.*` 配置项（替换硬编码常量）
+- [x] 实现 HybridSearchService（向量语义检索 + BM25 关键词检索）
+- [x] 使用 RRF 融合向量与 BM25 排名
+- [x] Top-K 结果截取
+- [x] 激活 `application.yml` 中的 `ai.rag.*` 配置项
+- [x] 将 HybridSearchService 接入 StateGraph 专家 Tool 主问答链路（按可信 userId/materialId 限定）
 - [ ] （可选）Reranking 重排序模型集成（交叉编码器精排）
+
+### 7.5.1 临时会话资料 ✅
+- [x] 临时上传接口返回服务端 `uploadToken`，按用户/会话隔离并设置 7 天 TTL
+- [x] 重构 MultimodalNode：仅处理临时资料，不按正式资料 `materialId` 读取
+- [x] 独立预处理服务完成文档/图片提取、切片和临时索引，MultimodalNode 首问生成缓存摘要
+- [x] 临时 RAG Tool 仅检索当前 `userId + conversationId + uploadToken`
+- [x] “添加至我的资料”幂等接口；成功后清理临时文件、切片和向量
+- [x] AI Chat 附件改为临时上传，处理完成前禁止发送
+- [x] 学习资料增加“临时资料”Tab，支持问答、转正式和删除
+- [x] 支持 PDF/DOC/DOCX/TXT/MD 与 PNG/JPG/JPEG/WEBP（Qwen2.5-VL）
 
 ### 7.6 检索质量评估
 - [ ] 构建测试数据集（10+ 问答对，覆盖精确匹配 + 语义等价场景）
@@ -502,8 +596,8 @@
 ## 建议执行顺序
 
 ```
-第一阶段（3-4 周）：Phase 7 知识库搭建与 RAG 检索升级
-  → 7.1 向量存储 → 7.2 Embedding → 7.3 知识库构建 → 7.4 BM25 → 7.5 混合检索 → 7.6 评估
+第一阶段（2-3 周）：完成 Phase 7 剩余主链路接入与质量评估
+  → 7.3 资料向量索引 → 7.5 接入 AiQaService → 7.4/7.5 单元测试 → 7.6 评估
 
 第二阶段（2 周）：Phase 8 + Phase 9
   → 会话持久化 + 安全加固
@@ -522,7 +616,7 @@
 
 | 里程碑 | 目标 | 预计时间 |
 |--------|------|----------|
-| M1 | 知识库搭建 + RAG 混合检索上线 | 第 4 周末 |
+| M1 | 资料索引接通 + RAG 混合检索主链路上线 | 第 3 周末 |
 | M2 | 会话持久化 + 安全加固 | 第 6 周末 |
 | M3 | 测试覆盖 + 错误处理优化 | 第 8 周末 |
 | M4 | 前端重构 + 主题系统 | 第 10 周末 |

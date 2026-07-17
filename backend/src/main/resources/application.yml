@@ -22,6 +22,10 @@ spring:
       client:
         connect-timeout: ${AI_CONNECT_TIMEOUT:10000} # AI 接口连接超时（ms）
         read-timeout: ${AI_READ_TIMEOUT:60000}       # AI 接口读取超时（ms）
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434} # 本地/容器 Ollama 地址
+      embedding:
+        model: ${EMBEDDING_MODEL:bge-m3}             # 与 PgVector 1024 维表结构保持一致
 
 server:
   port: 3001                                         # 服务端口
@@ -36,7 +40,7 @@ jwt:
 # ---- 文件上传 ----
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}           # 文件存储目录
-  allowed-types: pdf,doc,docx,txt                    # 允许的文件类型
+  allowed-types: pdf,doc,docx,txt,md                 # 正式资料允许的文件类型
   max-size: 52428800                                 # 单文件大小上限（50MB）
 
 # ---- AI 模型配置 ----
@@ -48,7 +52,7 @@ ai:
     # timeout 已通过 spring.ai.openai.client.read-timeout 配置，此处不重复定义
   embedding:
     provider: ${EMBEDDING_PROVIDER:local}            # Embedding 服务（local = 本地 bge 模型）
-    model: bge-small-zh                              # Embedding 模型名称
+    model: ${EMBEDDING_MODEL:${spring.ai.ollama.embedding.model:bge-m3}} # 兼容原 Ollama 配置项
     dimension: 1024                                  # 向量维度
   rag:
     enable-bm25: true                                # 是否启用 BM25 关键词检索

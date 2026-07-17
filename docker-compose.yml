@@ -8,25 +8,23 @@
 # ============================================
 
 services:
-  # ---- MySQL 数据库 ----
-  mysql:
-    image: mysql:8.0
-    container_name: ai-study-mysql
+  # ---- PostgreSQL + pgvector ----
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-study-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ai_study
-      MYSQL_CHARACTER_SET_SERVER: utf8mb4
-      MYSQL_COLLATION_SERVER: utf8mb4_general_ci
+      POSTGRES_DB: ai_study
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${DB_PORT:-3307}:3306"
+      - "${DB_PORT:-5433}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+      - pgvector_data:/var/lib/postgresql/data
+      - ./sql/schema-pg.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./sql/data-pg.sql:/docker-entrypoint-initdb.d/02-data.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,20 +52,22 @@ services:
     container_name: ai-study-backend
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: ai_study
-      DB_USERNAME: root
+      DB_USERNAME: postgres
       DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      AI_API_KEY: ${AI_API_KEY}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-bge-m3}
       JWT_SECRET: ${JWT_SECRET}
       FILE_UPLOAD_DIR: /app/uploads
     ports:
@@ -88,7 +88,7 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
 
 volumes:
-  mysql_data:
+  pgvector_data:
     driver: local
   redis_data:
     driver: local

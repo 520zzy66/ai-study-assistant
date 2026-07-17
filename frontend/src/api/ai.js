@@ -153,6 +153,7 @@ export function askQuestionStream(params, callbacks) {
   // 构建请求体，支持历史对话
   const requestBody = {
     materialId: params.materialId,
+    temporaryMaterialToken: params.temporaryMaterialToken || null,
     question: params.question,
     history: params.history || [],
     conversationId: params.conversationId || null
@@ -308,6 +309,23 @@ export async function generateSummaryAsync(materialId, options = {}) {
  */
 export async function generatePlanAsync(params) {
   const res = await api.post('/ai/task/plan', params)
+  return res.data
+}
+
+/**
+ * 异步生成个性化资源包
+ * @param {Object} params { materialId, goal, examDate, dailyHours, difficulty, includeSummary, includeMindMap, includeQuiz, includePlan, includeMultimodalScript }
+ */
+export async function generateResourcePackageAsync(params) {
+  const res = await api.post('/ai/task/resource-package', params)
+  return res.data
+}
+
+/**
+ * 获取最近生成的资源包任务
+ */
+export async function listResourcePackageTasks(size = 10) {
+  const res = await api.get('/ai/task/resource-package', { params: { size } })
   return res.data
 }
 

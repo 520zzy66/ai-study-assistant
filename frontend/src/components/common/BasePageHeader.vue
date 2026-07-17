@@ -1,7 +1,7 @@
 <template>
   <div class="base-page-header">
     <div class="header-content">
-      <h2 class="header-title">{{ title }}</h2>
+      <h1 class="header-title">{{ title }}</h1>
       <p v-if="description" class="header-desc">{{ description }}</p>
     </div>
     <div v-if="$slots.actions" class="header-actions">
@@ -23,7 +23,7 @@ defineProps({
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .header-content {
@@ -41,8 +41,8 @@ defineProps({
 
 .header-desc {
   font-size: var(--text-body);
-  color: var(--color-text-tertiary);
-  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  margin: var(--space-2) 0 0;
   line-height: var(--line-body);
 }
 

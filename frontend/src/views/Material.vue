@@ -3,15 +3,22 @@
     <BasePageHeader
       title="学习资料"
       description="管理你的学习资料，支持文件夹分类、AI 总结、问答和出题"
-    />
+    >
+      <template #actions>
+        <el-button type="primary" @click="showUpload = true">
+          <el-icon><Upload /></el-icon>
+          上传资料
+        </el-button>
+      </template>
+    </BasePageHeader>
 
     <!-- 主体布局：左侧文件夹树 + 右侧内容区 -->
     <div class="material-layout">
       <!-- ========== 左侧文件夹树 ========== -->
-      <div class="folder-sidebar">
+      <aside class="folder-sidebar" aria-label="资料文件夹">
         <div class="folder-header">
           <span class="folder-header-title">文件夹</span>
-          <el-button type="primary" text size="small" @click="showCreateFolderDialog()">
+          <el-button type="primary" text size="small" aria-label="新建文件夹" @click="showCreateFolderDialog()">
             <el-icon><Plus /></el-icon>
           </el-button>
         </div>
@@ -20,7 +27,10 @@
         <div
           class="folder-item folder-root"
           :class="{ active: !currentFolderId }"
-          @click="selectFolder(null)"
+            role="button"
+            tabindex="0"
+            @click="selectFolder(null)"
+            @keydown.enter="selectFolder(null)"
         >
           <el-icon><HomeFilled /></el-icon>
           <span class="folder-name">全部资料</span>
@@ -40,7 +50,7 @@
           @node-click="handleFolderClick"
         >
           <template #default="{ node, data }">
-            <div class="folder-node" @contextmenu.prevent="showFolderContextMenu($event, data)">
+            <div class="folder-node">
               <el-icon class="folder-node-icon"><Folder /></el-icon>
               <span class="folder-node-name">{{ node.label }}</span>
               <span class="folder-node-count">{{ data.materialCount || 0 }}</span>
@@ -67,7 +77,7 @@
             </div>
           </template>
         </el-tree>
-      </div>
+      </aside>
 
       <!-- ========== 右侧内容区 ========== -->
       <div class="content-main">
@@ -75,6 +85,7 @@
         <div class="material-tabs">
           <button
             class="tab-btn"
+            type="button"
             :class="{ active: activeTab === 'mine' }"
             @click="activeTab = 'mine'"
           >
@@ -83,11 +94,21 @@
           </button>
           <button
             class="tab-btn"
+            type="button"
             :class="{ active: activeTab === 'library' }"
             @click="activeTab = 'library'; loadLibrary()"
           >
             <el-icon><Collection /></el-icon>
             资料库
+          </button>
+          <button
+            class="tab-btn"
+            type="button"
+            :class="{ active: activeTab === 'temporary' }"
+            @click="activeTab = 'temporary'; loadTemporaryMaterials()"
+          >
+            <el-icon><Clock /></el-icon>
+            临时资料
           </button>
         </div>
 
@@ -120,14 +141,11 @@
                 <el-option label="可用" value="ready" />
                 <el-option label="失败" value="failed" />
               </el-select>
-              <el-button type="primary" @click="showUpload = true">
-                <el-icon><Upload /></el-icon> 上传资料
-              </el-button>
             </div>
           </div>
 
           <!-- Content Card -->
-          <BaseCard :padding="'none'">
+          <BaseCard class="material-list-panel" :padding="'none'">
             <!-- Skeleton Loading -->
             <div v-if="loading" class="table-loading">
               <el-skeleton :rows="8" animated />
@@ -195,17 +213,31 @@
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="280" fixed="right">
+                <el-table-column label="操作" width="150" fixed="right" align="right">
                   <template #default="{ row }">
                     <div class="action-btns">
-                      <el-button v-if="row.status === 'ready'" size="small" text type="primary" @click.stop="handleMaterialSummary(row)">
-                        {{ row.summary ? '查看总结' : '总结' }}
-                      </el-button>
-                      <el-button v-if="row.status === 'ready'" size="small" text type="warning" @click.stop="goToMindmap(row)">
-                        <el-icon><Connection /></el-icon> 导图
-                      </el-button>
-                      <el-button v-if="row.status === 'ready'" size="small" text type="primary" @click.stop="goToChat(row)">问答</el-button>
-                      <el-button size="small" text @click.stop="handleDetail(row)">查看详情</el-button>
+                      <el-button v-if="row.status === 'ready'" size="small" type="primary" plain @click.stop="goToChat(row)">AI 问答</el-button>
+                      <el-dropdown trigger="click" @command="(command) => handleMaterialCommand(command, row)" @click.stop>
+                        <button class="row-more-button" type="button" :aria-label="`${row.originalName}的更多操作`">
+                          <el-icon><MoreFilled /></el-icon>
+                        </button>
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item command="detail">
+                              <el-icon><Document /></el-icon> 查看详情
+                            </el-dropdown-item>
+                            <el-dropdown-item v-if="row.status === 'ready'" command="summary">
+                              <el-icon><Collection /></el-icon> {{ row.summary ? '查看总结' : '生成总结' }}
+                            </el-dropdown-item>
+                            <el-dropdown-item v-if="row.status === 'ready'" command="mindmap">
+                              <el-icon><Connection /></el-icon> 思维导图
+                            </el-dropdown-item>
+                            <el-dropdown-item command="delete" divided>
+                              <el-icon><Delete /></el-icon> 删除资料
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
                     </div>
                   </template>
                 </el-table-column>
@@ -264,7 +296,7 @@
           </div>
 
           <!-- Content Card -->
-          <BaseCard :padding="'none'">
+          <BaseCard class="material-list-panel" :padding="'none'">
             <div v-if="libraryLoading" class="table-loading">
               <el-skeleton :rows="8" animated />
             </div>
@@ -329,6 +361,65 @@
             </template>
           </BaseCard>
         </template>
+
+        <!-- ========== 临时资料 Tab ========== -->
+        <template v-if="activeTab === 'temporary'">
+          <div class="material-toolbar temporary-toolbar">
+            <div class="toolbar-left">
+              <span class="temporary-hint">问答附件默认保留 7 天，添加到我的资料后转为长期保存。</span>
+            </div>
+            <div class="toolbar-right">
+              <el-button :loading="temporaryLoading" @click="loadTemporaryMaterials">
+                <el-icon><Refresh /></el-icon> 刷新
+              </el-button>
+            </div>
+          </div>
+
+          <BaseCard class="material-list-panel" :padding="'none'">
+            <div v-if="temporaryLoading" class="table-loading">
+              <el-skeleton :rows="6" animated />
+            </div>
+            <div v-else-if="temporaryList.length === 0" class="temporary-empty">
+              <AppEmpty icon="Clock" title="暂无临时资料" description="在 AI 问答中上传附件后，会在这里保留 7 天" />
+            </div>
+            <el-table v-else :data="temporaryList" class="material-table">
+              <el-table-column label="资料名称" min-width="260">
+                <template #default="{ row }">
+                  <div class="file-cell">
+                    <div class="file-icon" :style="{ background: getFileIconBg(row.fileType), color: getFileIconColor(row.fileType) }">
+                      <el-icon :size="18"><Document /></el-icon>
+                    </div>
+                    <div class="file-info">
+                      <div class="file-name truncate">{{ row.originalName }}</div>
+                      <div class="file-desc">来自会话 · {{ row.conversationId?.slice(0, 8) }}</div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="getStatusType(row.status)" size="small" effect="light">
+                    {{ getStatusLabel(row.status) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="到期时间" width="180">
+                <template #default="{ row }"><span class="time-text">{{ formatExpiry(row.expiresAt) }}</span></template>
+              </el-table-column>
+              <el-table-column label="操作" width="250" fixed="right" align="right">
+                <template #default="{ row }">
+                  <div class="action-btns">
+                    <el-button v-if="row.status === 'ready'" size="small" type="primary" plain @click="goToTemporaryChat(row)">AI 问答</el-button>
+                    <el-button v-if="row.status === 'ready'" size="small" text @click="openPromoteDialog(row)">添加至我的资料</el-button>
+                    <button class="row-more-button" type="button" :aria-label="`删除临时资料${row.originalName}`" @click="handleTemporaryDelete(row)">
+                      <el-icon><Delete /></el-icon>
+                    </button>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </BaseCard>
+        </template>
       </div>
     </div>
 
@@ -342,14 +433,14 @@
             ref="uploadRef"
             :auto-upload="false"
             :limit="1"
-            accept=".pdf,.doc,.docx,.txt,.md,.mp3,.wav,.mp4"
+            accept=".pdf,.doc,.docx,.txt,.md"
             :on-change="handleFileChange"
             drag
           >
             <el-icon class="upload-icon" :size="36"><UploadFilled /></el-icon>
             <div class="upload-text">拖拽文件到此处，或<em>点击选择</em></div>
             <template #tip>
-              <div class="upload-tip">支持 PDF、Word、TXT、Markdown、音视频格式</div>
+              <div class="upload-tip">支持 PDF、Word、TXT、Markdown 格式</div>
             </template>
           </el-upload>
         </el-form-item>
@@ -371,6 +462,30 @@
       <template #footer>
         <el-button @click="showUpload = false">取消</el-button>
         <el-button type="primary" :loading="uploading" @click="handleUpload">上传</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="promoteDialogVisible" title="添加至我的资料" width="440px" :close-on-click-modal="false">
+      <el-form :model="promoteForm" label-position="top">
+        <el-form-item label="临时资料">
+          <el-input :model-value="promotingMaterial?.originalName" disabled />
+        </el-form-item>
+        <el-form-item label="存放文件夹">
+          <el-tree-select
+            v-model="promoteForm.folderId"
+            :data="folderTreeForSelect"
+            :props="{ label: 'name', value: 'id', children: 'children' }"
+            placeholder="选择存放位置（可选）"
+            clearable check-strictly style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="分类（可选）">
+          <el-input v-model="promoteForm.category" maxlength="50" placeholder="输入分类便于管理" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="promoteDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="promoteSubmitting" @click="handlePromoteTemporary">添加</el-button>
       </template>
     </el-dialog>
 
@@ -498,17 +613,16 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getMaterialList, uploadMaterial, deleteMaterial, getMaterialDetail,
-  getMaterialLibrary, copyToMyLibrary
+  getMaterialLibrary, copyToMyLibrary, getTemporaryMaterials,
+  deleteTemporaryMaterial, promoteTemporaryMaterial
 } from '@/api/material'
 import { getFolderTree, createFolder, updateFolder, deleteFolder, moveMaterialsToFolder } from '@/api/materialFolder'
 import {
   Upload, UploadFilled, Search, Document, Collection, Plus,
   Folder, FolderAdd, HomeFilled, MoreFilled, Edit, Delete,
-  ArrowRight, Rank, Connection, Download
+  ArrowRight, Rank, Connection, Download, Clock, Refresh
 } from '@element-plus/icons-vue'
 import { formatFileSize, getStatusLabel, getStatusType } from '@/utils/format'
-import { getMindMap, getFolderMindMap } from '@/api/ai'
-import InteractiveMindMap from '@/components/common/InteractiveMindMap.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
@@ -575,6 +689,14 @@ const libraryLoading = ref(false)
 const libraryList = ref([])
 const libraryTotal = ref(0)
 const libraryQuery = reactive({ keyword: '', category: '', page: 1, size: 10 })
+
+// ========== 临时资料 ==========
+const temporaryLoading = ref(false)
+const temporaryList = ref([])
+const promoteDialogVisible = ref(false)
+const promoteSubmitting = ref(false)
+const promotingMaterial = ref(null)
+const promoteForm = reactive({ folderId: null, category: '' })
 
 // ========== 计算属性 ==========
 
@@ -755,6 +877,17 @@ async function handleUpload() {
 
 function handleDetail(row) { selectedMaterial.value = row; detailVisible.value = true }
 
+/** 资料行更多操作，保持原有业务行为不变。 */
+function handleMaterialCommand(command, row) {
+  const actions = {
+    detail: () => handleDetail(row),
+    summary: () => handleMaterialSummary(row),
+    mindmap: () => goToMindmap(row),
+    delete: () => handleDelete(row)
+  }
+  actions[command]?.()
+}
+
 function handleRowDblClick(row) {
   filePreviewId.value = row.id
   filePreviewName.value = row.originalName
@@ -854,8 +987,6 @@ async function handleFolderSummary(folder) {
 }
 
 function goToChat(row) { router.push(`/ai/chat?materialId=${row.id}`) }
-function goToQuiz(row) { router.push(`/ai/quiz?materialId=${row.id}`) }
-
 /** 前往思维导图工作台 */
 function goToMindmap(row) {
   if (!row.summary && !row.mindMap) {
@@ -913,6 +1044,61 @@ async function handleLibraryView(row) {
     selectedMaterial.value = data
     detailVisible.value = true
   } catch { /* handled */ }
+}
+
+async function loadTemporaryMaterials() {
+  temporaryLoading.value = true
+  try {
+    temporaryList.value = await getTemporaryMaterials() || []
+  } catch {
+    temporaryList.value = []
+  } finally {
+    temporaryLoading.value = false
+  }
+}
+
+function goToTemporaryChat(row) {
+  router.push({
+    path: '/ai/chat',
+    query: { temporaryMaterialToken: row.uploadToken, conversationId: row.conversationId }
+  })
+}
+
+function openPromoteDialog(row) {
+  promotingMaterial.value = row
+  promoteForm.folderId = null
+  promoteForm.category = ''
+  promoteDialogVisible.value = true
+}
+
+async function handlePromoteTemporary() {
+  if (!promotingMaterial.value) return
+  promoteSubmitting.value = true
+  try {
+    await promoteTemporaryMaterial(promotingMaterial.value.uploadToken, {
+      folderId: promoteForm.folderId,
+      category: promoteForm.category?.trim() || null
+    })
+    ElMessage.success('已添加到我的资料')
+    promoteDialogVisible.value = false
+    await Promise.all([loadTemporaryMaterials(), handleSearch(), loadFolderTree()])
+  } finally {
+    promoteSubmitting.value = false
+  }
+}
+
+async function handleTemporaryDelete(row) {
+  await ElMessageBox.confirm(`确定删除临时资料“${row.originalName}”吗？`, '删除临时资料', {
+    type: 'warning', confirmButtonText: '删除'
+  })
+  await deleteTemporaryMaterial(row.uploadToken)
+  ElMessage.success('临时资料已删除')
+  loadTemporaryMaterials()
+}
+
+function formatExpiry(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
 // ========== 工具函数 ==========
@@ -1357,6 +1543,315 @@ onMounted(async () => {
   .tab-btn {
     flex: 1;
     justify-content: center;
+  }
+}
+</style>
+
+<style scoped>
+/* 2026 desktop file-workbench refresh — loaded after legacy rules during incremental migration. */
+.material-page {
+  width: 100%;
+  max-width: 1520px;
+  margin: 0 auto;
+}
+
+.material-page :deep(.base-page-header) {
+  margin-bottom: var(--space-5);
+}
+
+.material-layout {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 0;
+  min-height: calc(100vh - 184px);
+  overflow: hidden;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+}
+
+.folder-sidebar {
+  width: auto;
+  min-width: 0;
+  overflow-y: auto;
+  border: 0;
+  border-right: 1px solid var(--outline-variant);
+  border-radius: 0;
+  background: var(--surface-container-low);
+}
+
+.folder-header {
+  min-height: 58px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.folder-header-title {
+  font-size: var(--text-small);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.folder-root {
+  min-height: 44px;
+  margin: var(--space-3) var(--space-3) var(--space-1);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.folder-root:hover {
+  background: color-mix(in srgb, var(--surface-card) 58%, transparent);
+}
+
+.folder-root.active {
+  border-color: var(--outline);
+  background: var(--surface-card);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.folder-root:focus-visible,
+.tab-btn:focus-visible,
+.row-more-button:focus-visible {
+  outline: 2px solid var(--color-primary-ring);
+  outline-offset: 2px;
+}
+
+.folder-count {
+  min-width: 24px;
+  padding: 1px 7px;
+  background: var(--surface-container);
+  text-align: center;
+}
+
+.folder-tree {
+  padding: var(--space-1) var(--space-3) var(--space-4);
+  background: transparent;
+}
+
+.folder-tree :deep(.el-tree-node__content) {
+  height: 40px;
+  padding-right: var(--space-1);
+  border: 1px solid transparent;
+}
+
+.folder-tree :deep(.el-tree-node__content:hover) {
+  background: color-mix(in srgb, var(--surface-card) 58%, transparent);
+}
+
+.folder-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  border-color: var(--outline);
+  background: var(--surface-card);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.folder-node-icon {
+  color: var(--color-text-tertiary);
+}
+
+.folder-tree :deep(.el-tree-node.is-current > .el-tree-node__content) .folder-node-icon {
+  color: var(--color-primary);
+}
+
+.folder-node-actions {
+  display: flex;
+  align-items: center;
+}
+
+.content-main {
+  min-width: 0;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  background: var(--surface-card);
+}
+
+.material-tabs {
+  margin-bottom: var(--space-5);
+  padding: 3px;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  background: var(--surface-container-low);
+}
+
+.tab-btn {
+  min-height: 34px;
+  padding: 0 var(--space-4);
+  border-radius: 8px;
+  font-size: var(--text-small);
+}
+
+.tab-btn.active {
+  background: var(--surface-card);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.tab-btn.active .el-icon {
+  color: var(--color-primary);
+}
+
+.material-toolbar {
+  min-height: 40px;
+  margin-bottom: var(--space-4);
+  gap: var(--space-3);
+}
+
+.toolbar-right {
+  gap: var(--space-2);
+}
+
+.breadcrumb-item {
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-small);
+}
+
+.breadcrumb-item:hover {
+  background: var(--surface-container-low);
+  color: var(--color-primary);
+}
+
+.breadcrumb-item:last-child {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.material-list-panel {
+  overflow: hidden;
+  border-color: var(--outline);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+
+.temporary-toolbar {
+  justify-content: space-between;
+}
+
+.temporary-hint {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-small);
+}
+
+.temporary-empty {
+  padding: var(--space-10) 0;
+}
+
+.material-table :deep(.el-table__header-wrapper) {
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.material-table :deep(th.el-table__cell) {
+  height: 42px;
+  background: var(--surface-container-low);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-micro);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.material-table :deep(td.el-table__cell) {
+  height: 60px;
+  border-bottom-color: var(--outline-variant);
+}
+
+.material-table :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: color-mix(in srgb, var(--surface-container-low) 62%, transparent);
+}
+
+.file-cell {
+  gap: var(--space-3);
+}
+
+.file-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+
+.file-name {
+  font-size: var(--text-ui);
+  font-weight: 560;
+}
+
+.file-size,
+.file-desc {
+  font-size: var(--text-micro);
+}
+
+.action-btns {
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.row-more-button {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.row-more-button:hover {
+  background: var(--surface-hover);
+  color: var(--color-text-primary);
+}
+
+.batch-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-base);
+  background: var(--bg-tag-green);
+}
+
+.table-footer {
+  min-height: 58px;
+  padding: var(--space-3) var(--space-5);
+}
+
+@media (max-width: 1100px) {
+  .material-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .content-main {
+    padding-inline: var(--space-4);
+  }
+}
+
+@media (max-width: 900px) {
+  .material-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .folder-sidebar {
+    width: 100%;
+    max-height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid var(--outline-variant);
+  }
+}
+
+@media (max-width: 767px) {
+  .content-main {
+    padding: var(--space-4);
+  }
+
+  .material-toolbar,
+  .toolbar-right {
+    align-items: stretch;
+  }
+
+  .toolbar-right :deep(.el-input),
+  .toolbar-right :deep(.el-select) {
+    width: 100% !important;
   }
 }
 </style>

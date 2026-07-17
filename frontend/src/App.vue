@@ -5,9 +5,15 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
+import { useUiStore } from '@/stores/ui'
 
 const taskStore = useTaskStore()
-onMounted(() => taskStore.resumePending())
+const uiStore = useUiStore()
+
+onMounted(() => {
+  uiStore.initTheme()
+  taskStore.resumePending()
+})
 </script>
 
 <style>

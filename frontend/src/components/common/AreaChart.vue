@@ -53,7 +53,7 @@
         v-for="(p, i) in points"
         :key="'dot-'+i"
         :cx="p.x" :cy="p.y" r="3.5"
-        :fill="hoverIndex === i ? color : '#fff'"
+        :fill="hoverIndex === i ? color : 'var(--surface-card)'"
         :stroke="color"
         stroke-width="2"
         @mouseenter="hoverIndex = i"
