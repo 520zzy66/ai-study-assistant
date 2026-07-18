@@ -9,6 +9,8 @@ import lombok.Data;
 
 /**
  * 个性化资源包生成请求。
+ *
+ * <p>多模态拓展字段（spec §8.1）：默认不启用，旧请求保持完全兼容。
  */
 @Data
 public class GenerateResourcePackageRequest {
@@ -48,4 +50,30 @@ public class GenerateResourcePackageRequest {
 
     /** 是否生成多模态脚本包。 */
     private Boolean includeMultimodalScript;
+
+    // ============ 多模态拓展字段（spec §8.1） ============
+
+    /** 是否生成播客音频解说。null 视为 false。 */
+    private Boolean includePodcastAudio;
+
+    /** 播客风格：teacher / review / story。null 视为 teacher。 */
+    @Pattern(regexp = "^(teacher|review|story)?$", message = "播客风格必须是 teacher、review 或 story")
+    private String podcastStyle;
+
+    /** 发音人 ID，null 使用后端默认声音。具体可选值由能力接口返回。 */
+    @Size(max = 64, message = "发音人ID最多64字符")
+    private String ttsVoice;
+
+    /** 是否生成知识配图。null 视为 false。 */
+    private Boolean includeKnowledgeImages;
+
+    /** 图片数量（含封面），范围 1 到 4。null 视为 1。 */
+    @Min(value = 1, message = "图片数量最少1张")
+    @Max(value = 4, message = "图片数量最多4张")
+    private Integer imageCount;
+
+    /** 图片风格：clean_edu / diagram / blackboard / isometric。null 视为 clean_edu。 */
+    @Pattern(regexp = "^(clean_edu|diagram|blackboard|isometric)?$",
+            message = "图片风格必须是 clean_edu、diagram、blackboard 或 isometric")
+    private String imageStyle;
 }

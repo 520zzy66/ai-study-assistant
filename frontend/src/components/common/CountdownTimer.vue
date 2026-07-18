@@ -70,11 +70,7 @@ const progressLabel = computed(() => {
 
 <style scoped>
 .countdown-card {
-  background: var(--surface-card);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow-xs);
+  width: 100%;
 }
 
 .countdown-header {

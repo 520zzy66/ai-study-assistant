@@ -11,10 +11,10 @@ order: -1
 
 # 模型绑定（空则使用全局默认模型）
 model:
-  base-url: http://localhost:11434
-  api-key: ollama
-  model: qwen2.5vl:3b
-  temperature: 0.3  # 路由任务需要低温度以保证稳定性
+  base-url: ${DASHSCOPE_VL_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+  api-key: ${DASHSCOPE_VL_API_KEY:${DASHSCOPE_API_KEY:}}
+  model: ${DASHSCOPE_VL_MODEL:qwen-vl-plus}
+  temperature: 0.2  # 路由任务需要低温度以保证稳定性
 
 # System Prompt
 system-prompt-file: prompts/multimodal-system.txt

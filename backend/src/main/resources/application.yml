@@ -19,13 +19,16 @@ spring:
       password: ${REDIS_PASSWORD:}                   # Redis 密码（可选）
   ai:
     openai:
+      api-key: ${AI_API_KEY:}
+      base-url: ${AI_BASE_URL:https://spark-api-open.xf-yun.com/v1}
       client:
         connect-timeout: ${AI_CONNECT_TIMEOUT:10000} # AI 接口连接超时（ms）
         read-timeout: ${AI_READ_TIMEOUT:60000}       # AI 接口读取超时（ms）
-    ollama:
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434} # 本地/容器 Ollama 地址
-      embedding:
-        model: ${EMBEDDING_MODEL:bge-m3}             # 与 PgVector 1024 维表结构保持一致
+      chat:
+        completions-path: ${AI_COMPLETIONS_PATH:/chat/completions}
+        options:
+          model: ${AI_CHAT_MODEL:lite}
+          temperature: ${AI_CHAT_TEMPERATURE:0.7}
 
 server:
   port: 3001                                         # 服务端口
@@ -45,15 +48,15 @@ file:
 
 # ---- AI 模型配置 ----
 ai:
-  provider: xiaomi                                   # AI 服务商
+  provider: ${AI_PROVIDER:xfyun-spark}               # AI 服务商
   chat:
-    model: mimo-v2.5                          # 默认对话模型
-    temperature: 0.7                                 # 温度参数（0.0~2.0）
+    model: ${AI_CHAT_MODEL:lite}                     # 默认对话模型
+    temperature: ${AI_CHAT_TEMPERATURE:0.7}          # 温度参数（0.0~2.0）
     # timeout 已通过 spring.ai.openai.client.read-timeout 配置，此处不重复定义
   embedding:
-    provider: ${EMBEDDING_PROVIDER:local}            # Embedding 服务（local = 本地 bge 模型）
-    model: ${EMBEDDING_MODEL:${spring.ai.ollama.embedding.model:bge-m3}} # 兼容原 Ollama 配置项
-    dimension: 1024                                  # 向量维度
+    provider: dashscope                              # 阿里云百炼 Embedding
+    model: ${DASHSCOPE_EMBEDDING_MODEL:text-embedding-v4}
+    dimension: ${DASHSCOPE_EMBEDDING_DIMENSION:1024}
   rag:
     enable-bm25: true                                # 是否启用 BM25 关键词检索
     enable-reranking: false                          # 是否启用 Reranking 重排序
@@ -61,3 +64,50 @@ ai:
     bm25-top-k: 10                                   # BM25 检索返回候选数
     final-top-k: 5                                   # 最终送入 LLM 的切片数
     similarity-threshold: 0.3                        # 关键词匹配阈值（当前为关键词检索，0.3 即可）
+
+dashscope:
+  embedding:
+    api-key: ${DASHSCOPE_API_KEY:}
+    endpoint: ${DASHSCOPE_EMBEDDING_ENDPOINT:https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings}
+    model: ${DASHSCOPE_EMBEDDING_MODEL:text-embedding-v4}
+    dimension: ${DASHSCOPE_EMBEDDING_DIMENSION:1024}
+    timeout-ms: ${DASHSCOPE_EMBEDDING_TIMEOUT_MS:30000}
+
+# ---- 讯飞多模态能力（TTS + 文生图） ----
+# 密钥只允许通过环境变量注入，禁止写入文件或日志
+xfyun:
+  # Legacy shared credentials. Service-level credentials below take precedence.
+  app-id: ${XFYUN_APP_ID:}
+  api-key: ${XFYUN_API_KEY:}
+  api-secret: ${XFYUN_API_SECRET:}
+  tts:
+    enabled: ${XFYUN_TTS_ENABLED:true}
+    app-id: ${XFYUN_TTS_APP_ID:${XFYUN_APP_ID:}}
+    api-key: ${XFYUN_TTS_API_KEY:${XFYUN_API_KEY:}}
+    api-secret: ${XFYUN_TTS_API_SECRET:${XFYUN_API_SECRET:}}
+    endpoint: ${XFYUN_TTS_ENDPOINT:wss://tts-api.xfyun.cn/v2/tts}
+    voice: ${XFYUN_TTS_VOICE:aisbabyxu}
+    sample-rate: ${XFYUN_TTS_SAMPLE_RATE:16000}
+    format: mp3
+    timeout-ms: ${XFYUN_TTS_TIMEOUT_MS:60000}
+    max-text-bytes: 7600
+  image:
+    enabled: ${XFYUN_IMAGE_ENABLED:true}
+    app-id: ${XFYUN_IMAGE_APP_ID:${XFYUN_APP_ID:}}
+    api-key: ${XFYUN_IMAGE_API_KEY:${XFYUN_API_KEY:}}
+    api-secret: ${XFYUN_IMAGE_API_SECRET:${XFYUN_API_SECRET:}}
+    provider: ${XFYUN_IMAGE_PROVIDER:hidream}
+    endpoint: ${XFYUN_IMAGE_ENDPOINT:https://cn-huadong-1.xf-yun.com/v1/private/s3fd61810/create}
+    hidream-query-endpoint: ${XFYUN_HIDREAM_QUERY_ENDPOINT:}
+    hidream-poll-interval-ms: ${XFYUN_HIDREAM_POLL_INTERVAL_MS:1500}
+    model: ${XFYUN_IMAGE_MODEL:HiDream}
+    timeout-ms: ${XFYUN_IMAGE_TIMEOUT_MS:180000}
+    max-image-count: 4
+    default-size: 1024x1024
+
+# ---- 资源资产存储 ----
+resource-asset:
+  storage-dir: ${RESOURCE_ASSET_STORAGE_DIR:${file.upload-dir}/resource-assets}
+  public-url-prefix: ${RESOURCE_ASSET_PUBLIC_URL_PREFIX:/api/ai/resource-assets}
+  max-audio-bytes: 20971520                          # 单个音频资产上限 20MB
+  max-image-bytes: 10485760                          # 单个图片资产上限 10MB

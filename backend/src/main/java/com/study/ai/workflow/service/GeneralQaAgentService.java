@@ -1,5 +1,6 @@
 package com.study.ai.workflow.service;
 
+import com.study.ai.MaterialContentReader;
 import com.study.ai.agent.config.AgentClientFactory;
 import com.study.ai.agent.tool.KnowledgeTools;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,9 @@ public class GeneralQaAgentService extends AbstractExpertAgentService {
      * @param agentClientFactory Agent ChatClient factory
      * @param knowledgeTools     native Spring AI tools
      */
-    public GeneralQaAgentService(AgentClientFactory agentClientFactory, KnowledgeTools knowledgeTools) {
-        super(agentClientFactory, knowledgeTools, "general-qa", "GENERAL_EXPERT");
+    public GeneralQaAgentService(AgentClientFactory agentClientFactory,
+                                 KnowledgeTools knowledgeTools,
+                                 MaterialContentReader materialContentReader) {
+        super(agentClientFactory, knowledgeTools, materialContentReader, "general-qa", "GENERAL_EXPERT");
     }
 }

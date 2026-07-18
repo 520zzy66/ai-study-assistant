@@ -17,7 +17,7 @@ import com.study.common.UserContext;
  * AI 工具服务
  * 基于本地 qwen 模型，提供知识图谱、思维导图、学习计划生成能力
  *
- * <p>使用独立的 qwen ChatClient（通过 AgentClientFactory 创建），不干扰全局 MiMo 模型。
+ * <p>使用独立的 qwen ChatClient（通过 AgentClientFactory 创建），不干扰全局云端模型。
  * 所有方法返回 JSON 字符串，由调用方解析。
  */
 @Slf4j

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  *
  * <p>职责：
  * <ol>
- *   <li>会话向量化（本地 Ollama Embedding）</li>
+ *   <li>会话向量化（阿里云百炼 Embedding）</li>
  *   <li>上下文注入（用户画像、长期记忆、历史对话向量、资料分析）</li>
  *   <li>三级路由决策：
  *       Level 0 — 关键词/问候直接回答（本地规则，无 LLM）
@@ -109,7 +109,7 @@ public class GeneralNode implements NodeAction {
         log.info("[GeneralNode] 开始路由：query={}, userId={}, hasMaterial={}",
                 truncate(query, 80), userId, !materialSummary.isBlank());
 
-        // ========== Step 1: 会话向量化（本地 Ollama） ==========
+        // ========== Step 1: 会话向量化（阿里云百炼） ==========
         vectorizeLastConversation(userId, conversationId);
 
         // ========== Step 2: 上下文注入（必须） ==========

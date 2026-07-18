@@ -283,6 +283,7 @@ public class WorkflowGraphService {
         state.put(RouteKeys.QUERY, request.getQuestion());
         state.put(RouteKeys.USER_ID, userId);
         state.put(RouteKeys.MATERIAL_ID, request.getMaterialId());
+        state.put(RouteKeys.FOLDER_ID, request.getFolderId());
         state.put(RouteKeys.TEMPORARY_MATERIAL_TOKEN, request.getTemporaryMaterialToken());
         state.put(RouteKeys.MATERIAL_TEXT, request.getMaterialText());
         state.put(RouteKeys.MATERIAL_SUMMARY, request.getMaterialSummary());
@@ -325,6 +326,7 @@ public class WorkflowGraphService {
             history.setUserId(userId);
             history.setChatType("workflow");
             history.setMaterialId(request.getMaterialId());
+            history.setFolderId(request.getFolderId());
             history.setTemporaryMaterialToken(request.getTemporaryMaterialToken());
             history.setUserMessage(request.getQuestion());
             history.setAiResponse(result.getAnswer());

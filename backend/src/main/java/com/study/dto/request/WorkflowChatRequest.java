@@ -21,6 +21,9 @@ public class WorkflowChatRequest {
     /** Optional related material ID. */
     private Long materialId;
 
+    /** Optional related folder ID (mutually exclusive with materialId). */
+    private Long folderId;
+
     /** Optional server-issued token for one temporary conversation material. */
     @Size(max = 64, message = "临时资料令牌长度不能超过64个字符")
     private String temporaryMaterialToken;
@@ -47,10 +50,14 @@ public class WorkflowChatRequest {
     private List<QaRequest.ChatMessage> history;
 
     /**
-     * 正式资料与临时资料每次只能关联一种。
+     * 正式资料、文件夹与临时资料每次只能关联一种。
      */
-    @AssertTrue(message = "每次问答只能关联一份正式资料或一份临时资料")
+    @AssertTrue(message = "每次问答只能关联一份正式资料、一个文件夹或一份临时资料")
     public boolean isSingleMaterialSelection() {
-        return materialId == null || temporaryMaterialToken == null || temporaryMaterialToken.isBlank();
+        int count = 0;
+        if (materialId != null) count++;
+        if (folderId != null) count++;
+        if (temporaryMaterialToken != null && !temporaryMaterialToken.isBlank()) count++;
+        return count <= 1;
     }
 }

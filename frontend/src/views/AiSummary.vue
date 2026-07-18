@@ -215,7 +215,7 @@ const cascaderProps = {
   value: 'value',
   label: 'label',
   children: 'children',
-  checkStrictly: false, // 只能选择叶子节点或文件夹节点
+  checkStrictly: true, // 允许选择文件夹节点（非叶子节点）
   emitPath: true // 返回完整路径
 }
 
@@ -447,6 +447,15 @@ async function loadMaterials() {
       cascaderValue.value = path
     }
   }
+
+  // 支持从文件夹总结按钮跳转自动选择
+  const queryFolderId = route.query.folderId
+  if (queryFolderId) {
+    const folderPath = findFolderPath(folderTree.value, Number(queryFolderId))
+    if (folderPath) {
+      cascaderValue.value = folderPath.map(f => `folder_${f.id}`)
+    }
+  }
 }
 
 // 查找文件夹路径（用于自动选中）
@@ -501,6 +510,15 @@ watch(() => route.query.materialId, (newId) => {
       }
       path.push(`material_${material.id}`)
       cascaderValue.value = path
+    }
+  }
+})
+
+watch(() => route.query.folderId, (newId) => {
+  if (newId) {
+    const folderPath = findFolderPath(folderTree.value, Number(newId))
+    if (folderPath) {
+      cascaderValue.value = folderPath.map(f => `folder_${f.id}`)
     }
   }
 })

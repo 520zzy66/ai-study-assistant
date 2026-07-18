@@ -27,8 +27,5 @@ public class SystemKnowledgeBankLoaderTest {
         assertNotNull(rootDir, "知识库目录应该能被成功探测并返回");
         assertTrue(rootDir.exists(), "探测到的目录必须存在");
         assertTrue(rootDir.isDirectory(), "探测到的路径必须是目录");
-        
-        // 打印探测到的绝对路径
-        System.out.println("成功探测到知识库目录：" + rootDir.getAbsolutePath());
     }
 }

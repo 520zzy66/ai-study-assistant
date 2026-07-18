@@ -12,14 +12,33 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
-  # ---- Xiaomi MiMo API（从环境变量读取 Key） ----
+  # ---- OpenAI-compatible Chat API（从环境变量读取 Key） ----
   ai:
     openai:
       api-key: ${AI_API_KEY}
-      base-url: https://token-plan-cn.xiaomimimo.com
+      base-url: ${AI_BASE_URL:https://spark-api-open.xf-yun.com/v1}
       chat:
+        completions-path: ${AI_COMPLETIONS_PATH:/chat/completions}
         options:
-          model: mimo-v2.5
+          model: ${AI_CHAT_MODEL:lite}
+          temperature: ${AI_CHAT_TEMPERATURE:0.7}
+
+xfyun:
+  tts:
+    enabled: ${XFYUN_TTS_ENABLED:true}
+    app-id: ${XFYUN_TTS_APP_ID:${XFYUN_APP_ID:}}
+    api-key: ${XFYUN_TTS_API_KEY:${XFYUN_API_KEY:}}
+    api-secret: ${XFYUN_TTS_API_SECRET:${XFYUN_API_SECRET:}}
+  image:
+    enabled: ${XFYUN_IMAGE_ENABLED:true}
+    app-id: ${XFYUN_IMAGE_APP_ID:${XFYUN_APP_ID:}}
+    api-key: ${XFYUN_IMAGE_API_KEY:${XFYUN_API_KEY:}}
+    api-secret: ${XFYUN_IMAGE_API_SECRET:${XFYUN_API_SECRET:}}
+    provider: ${XFYUN_IMAGE_PROVIDER:hidream}
+    endpoint: ${XFYUN_IMAGE_ENDPOINT:https://cn-huadong-1.xf-yun.com/v1/private/s3fd61810/create}
+    hidream-query-endpoint: ${XFYUN_HIDREAM_QUERY_ENDPOINT:}
+    model: ${XFYUN_IMAGE_MODEL:HiDream}
+    default-size: ${XFYUN_IMAGE_DEFAULT_SIZE:1024x1024}
 
 # ---- MyBatis-Plus（生产环境关闭 SQL 日志） ----
 mybatis-plus:

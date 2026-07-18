@@ -131,6 +131,21 @@
 
 ---
 
+## Phase UI-4: 首页卡片有效性收尾（2026-07-18）✅
+
+- [x] 首页统计卡片改为基于现有资料、历史、学习计划和进度接口的真实数据口径
+- [x] “学习进度 / 距离目标日期 / 今日任务”接入最新学习计划与计划进度，不再停留在占位逻辑
+- [x] 今日任务支持直接打卡，复用 `PUT /ai/plan/{planId}/day/{dayIndex}`，不改变后端接口契约
+- [x] 继续学习卡片根据资料状态进入问答或总结工作流，最近动态卡片可跳转历史记录
+- [x] 新增学习计划列表前端 API 封装，保持现有 `/ai/plan` 后端契约不变
+- [x] 修复学习计划页生成/恢复后未设置当前计划 ID 导致进度刷新不可用的问题
+- [x] 调整倒计时组件为内容型组件，避免首页出现卡片套卡片
+- [x] 同步更新 `docs/ui-design-spec.md` 的首页卡片有效性规范
+- [x] 前端生产构建验证通过（Vite，2087 modules）
+- [x] 按 6 维 Checklist 完成本次首页卡片变更代码审查
+
+---
+
 ## Phase A3-1: 中国软件杯 A3 资源工坊（2026-07-16）🚧
 
 > 目标：围绕“基于大模型的个性化资源生成与学习多智能体系统开发”，在不推翻现有工作流的前提下，新增资源包生成编排层。
@@ -153,6 +168,79 @@
 - [ ] 后续扩展文件夹级资源包生成
 
 ---
+
+## Phase A3-2: 讯飞多模态 spec 实施（2026-07-17）✅
+
+> 目标：严格按照 `docs/xfyun-multimodal-spec.md` 实现讯飞 TTS 播客音频 + 文生图知识配图 + 资源资产管理 + 前端面板接入。改动严格局限于该 spec 范围。
+
+### 配置层
+- [x] `XfyunProperties`：新增 tts（endpoint/voice/timeoutMs/maxTextBytes/enabled）和 image（endpoint/model/defaultSize/maxImageCount/enabled）子配置；提供 `isTtsConfigured()`/`isImageConfigured()` 契约方法
+- [x] `ResourceAssetProperties`：storageDir / maxAudioBytes / maxImageBytes
+- [x] `application.yml`：补齐讯飞 TTS/TTI 配置块占位
+
+### 数据层
+- [x] `ResourceAsset` 实体 + `ResourceAssetMapper`
+- [x] `sql/migrate-resource-asset-pg.sql`（新建迁移文件）
+- [x] `sql/schema-pg.sql`（追加 resource_asset 表定义）
+
+### Provider 抽象与讯飞实现
+- [x] `SpeechSynthesisProvider` / `ImageGenerationProvider` 接口
+- [x] `XfyunSignatureUtil` + 单元测试（HMAC-SHA256 鉴权 URL 生成）
+- [x] `XfyunTtsProvider`（JDK `java.net.http.WebSocket`，MP3，多帧独立解码后拼接字节）
+- [x] `XfyunImageGenerationProvider`（JDK `HttpClient`，base64 PNG/JPEG 解码，错误码 10043/10040/"审核"关键字映射 CONTENT_REJECTED）
+- [x] `ProviderErrorType` / `AssetGenerationResult` / `AssetGenerationRequest` / `AudioSynthesisRequest` / `ImageGenerationRequest` / `ImagePromptPlan` 模型
+
+### 服务层
+- [x] `ResourceAssetStorageService`：UUID 文件名、路径穿越防护（`..`+startsWith）、文件头校验（ID3/frame sync/PNG/JPEG/WebP）、扩展名白名单（png/jpg/jpeg/webp）
+- [x] `ResourceAssetConverter`：Entity↔VO，previewUrl/downloadUrl 拼接（不暴露 storagePath）
+- [x] `ResourceAssetService`：pending→generating→success/failed 状态流转，metadata 保留 originalText/originalPrompt 支持重试，权限过滤（userId 强校验），capabilities 视图
+
+### Agent 与编排
+- [x] `PromptTemplates`：播客脚本生成模板、图片提示词生成模板（含安全约束）
+- [x] `ResourceGenerationTools`：`@Tool` 暴露给 LLM 的 generateMultimodalScript / generatePodcastScript / generateImagePrompts
+- [x] `MultimodalAgent` 升级为脚本+资产生成 Agent，进度编排 84/87/90/93/94，Provider 失败不拖垮资源包
+- [x] `ResourceOrchestratorAgent`：编排 Profile → Summary → MindMap → Quiz → Plan → Multimodal → Safety
+- [x] `ResourcePackageService` + `AiTaskService`：异步任务、进度轮询（98 保存结果 / 100 完成）
+- [x] `SafetyTools` / `SafetyAgent`：质量安全校验
+
+### Controller 层
+- [x] `ResourceAssetController`：4 个端点
+  - `GET /api/resource-assets/capabilities` — 能力查询
+  - `GET /api/resource-assets/package/{packageId}` — 列表
+  - `GET /api/resource-assets/{assetId}/download` — 下载（权限校验 + 文件不存在自动 markFileMissing）
+  - `POST /api/resource-assets/{assetId}/retry` — 重试失败资产
+
+### 前端
+- [x] `api/ai.js`：新增 capabilities / listPackageAssets / downloadAsset / retryAsset API 封装
+- [x] `AssetStatusBadge.vue`：资产状态徽章（pending/generating/success/failed/cancelled）
+- [x] `PodcastAssetCard.vue`：播客音频卡片（内置 audio 播放器 + 下载 + 重试）
+- [x] `ImageAssetGallery.vue`：图片画廊（封面 + 解析图，下载 + 重试）
+- [x] `ResourceAssetPanel.vue`：资产面板（能力开关 + 音频区 + 图片区 + 空状态）
+- [x] `ResourceWorkshop.vue`：资源工坊页面接入 ResourceAssetPanel
+- [x] 前端生产构建验证通过（Vite，无错误）
+
+### 测试（spec §13.1 要求的 7 个测试类）
+- [x] `XfyunSignatureUtilTest`（8 个用例）
+- [x] `XfyunTtsProviderTest`（12 个用例，含多帧累积、错误码映射、配置缺失）
+- [x] `XfyunImageGenerationProviderTest`（17 个用例，含 PNG/JPEG 头检测、审核失败映射、HTTP 401/429/500）
+- [x] `ResourceAssetStorageServiceTest`（29 个用例，含路径穿越、文件头、扩展名白名单）
+- [x] `ResourceAssetServiceTest`（25 个用例，含状态流转、权限过滤、重试、能力视图）
+- [x] `MultimodalAgentAssetTest`（18 个用例，含开关控制、失败隔离、进度里程碑 84/87/90/93/94）
+- [x] `ResourceAssetControllerTest`（19 个用例，含权限校验、下载、重试）
+- [x] `ResourceOrchestratorAgentTest`（3 个用例，编排回归）
+- [x] **测试结果：131 tests run, 0 failures, 0 errors**
+
+### 实施期间修复的主代码缺陷
+- [x] `MultimodalAgent`：补齐进度 84 上报（spec §4.2 要求"正在整理多模态脚本"）
+- [x] `XfyunTtsProvider`：将"拼接 base64 字符串再整体解码"改为"每帧独立解码后拼接字节"，匹配讯飞真实响应（每帧 audio 是独立带 padding 的 base64）
+- [x] `ResourceAssetStorageService.sanitizeExtension`：扩展名白名单校验（spec §11.3 图片只允许 PNG/JPEG/WebP），非法扩展名回退到 Content-Type
+
+### 未实施项（按 spec 要求或用户决定）
+- [ ] §12 ChatProviderRouter：本阶段不实现（用户决定）
+- [ ] §4.2 SafetyAgent 不再单独上报进度（用户决定：MultimodalAgent 占 84-94）
+
+---
+
 
 ## Phase 1-4: AI 功能升级（2026-07-07）
 
@@ -621,3 +709,112 @@
 | M3 | 测试覆盖 + 错误处理优化 | 第 8 周末 |
 | M4 | 前端重构 + 主题系统 | 第 10 周末 |
 | M5 | 数据分析 + 工程化部署 | 第 12 周末 |
+
+---
+
+## Phase A3-3: Competition model stack migration (2026-07-18)
+
+> Goal: make the Docker demo stack cloud-first and low-cost while preserving optional local Ollama tools for future development.
+
+- [x] Switch global OpenAI-compatible chat defaults from MiMo to iFlytek Spark Lite.
+- [x] Switch router/expert Agent defaults to `AI_BASE_URL` + `AI_CHAT_MODEL=lite`.
+- [x] Switch uploaded image understanding Agent from local `qwen2.5vl` to Alibaba Cloud Bailian `qwen-vl-plus`.
+- [x] Keep `agent-qwen-tools.yml` as optional local Ollama configuration, outside the Docker-required path.
+- [x] Update Docker Compose and `.env.example` for Spark Lite, Bailian Embedding, Bailian VL, and iFlytek TTS/HiDream.
+
+## Phase Cleanup-1: Safe project cleanup (2026-07-18)
+
+> Goal: remove generated, temporary, or stale files without changing application behavior.
+
+- [x] Back up human-authored cleanup candidates before deletion.
+- [x] Remove stale unreferenced dashboard variant and obsolete pgvector trust config.
+- [x] Remove temporary notes, accidental Windows `nul` file, local review reports, Playwright snapshots, logs, and generated build outputs.
+- [x] Update `.gitignore` so root build artifacts and cleanup report/temp files do not reappear.
+- [x] Verify frontend production build after cleanup.
+
+## Phase PPT-1: A3 competition deck generation (2026-07-18)
+
+> Goal: align the competition PPT specification with the current implementation and produce a first deliverable deck.
+
+- [x] Optimize `docs/competition-ppt-generation-spec.md` with current project state, capability boundaries, screenshot strategy, and delivery requirements.
+- [x] Generate a 20-slide A3 competition presentation with editable diagrams, screenshot placeholders, and speaker notes.
+- [x] Export final deck to `outputs/ai-study-assistant-a3-competition.pptx`.
+- [x] Render and QA the deck; confirmed 20 slides and no overflow.
+
+## Phase PPT-2: A3 competition deck visual enhancement (2026-07-18)
+
+> Goal: upgrade the first competition deck into a more polished, visually memorable roadshow presentation while preserving its content boundaries and editability.
+
+- [x] Preserve the original PPT and export a separate visual-enhanced version.
+- [x] Add a cinematic AI-education hero visual for the cover and closing slide.
+- [x] Rebuild the 20-slide visual system with stage-style headers, richer cards, browser-style screenshot frames, and stronger process diagrams.
+- [x] Strengthen the core resource-delivery slide with a seven-category resource package composition.
+- [x] Render and inspect all 20 slides; confirm no overflow or unintended clipping.
+
+## Phase Docker-2: System knowledge bank mount (2026-07-18)
+
+> Goal: make the system knowledge bank visible inside Docker containers for demo and teammate deployment.
+
+- [x] Mount `backend/src/main/resources/knowledge-bank` into the backend container as `/app/resources/knowledge-bank`.
+- [x] Set `AI_KNOWLEDGE_BANK_ROOT=/app/resources/knowledge-bank` for the backend service.
+
+## Phase A3-4: Multimodal asset hotfix (2026-07-18)
+
+> Goal: improve demo stability for podcast narration and HiDream image generation.
+
+- [x] Harden podcast script generation with system-prompt isolation, prompt-leak cleanup, and summary-based fallback narration.
+- [x] Fix HiDream result parsing so task ids and other non-image strings are not decoded as image base64.
+- [x] Add focused regression tests for podcast prompt-leak fallback and HiDream image payload extraction.
+
+## Phase Docker-3: Docker demo validation and HiDream stability (2026-07-18)
+
+> Goal: ensure the teammate/demo Docker stack starts successfully and core AI/multimodal flows work with cloud providers.
+
+- [x] Verify `docker-compose up -d --build` starts PostgreSQL, Redis, backend, and frontend.
+- [x] Verify frontend `/` and backend `/api/actuator/health` are reachable.
+- [x] Verify Docker knowledge-bank mount scans `/app/resources/knowledge-bank` successfully.
+- [x] Verify upload, material processing, summary task, RAG QA, resource package, podcast audio, and HiDream image asset flows.
+- [x] Persist image original prompt before provider calls so failed image assets can be retried.
+- [x] Add HiDream HTTP retry handling for transient empty-header connection failures.
+- [x] Increase default HiDream timeout to 180 seconds for demo reliability.
+- [x] Clear stale error fields after successful asset retry.
+
+## Phase Cleanup-2: Delivery readiness cleanup (2026-07-18)
+
+> Goal: make the project cleaner for teammate handoff while preserving local-only files that may still be useful on this machine.
+
+- [x] Ignore local Claude permission settings and local backup archives instead of deleting them.
+- [x] Remove unused `AgentConfigLoader` Phase 4 stub; real YAML loading is handled by `AgentClientFactory`.
+- [x] Remove noisy `System.out.println` from the knowledge-bank loader test.
+- [x] Fix stale `agent-qwen-tools.yml` type from `GENERAL` to `ROUTER` so startup logs stay clean.
+- [x] Rebuild backend/frontend Docker images and verify Compose startup, frontend `/`, backend `/api/actuator/health`, and knowledge-bank scan.
+
+## Phase UX-5: Resource export, chat cleanup, and prompt sharpening (2026-07-18)
+
+> Goal: polish competition-facing workflows before handoff and make expert Agents more distinct.
+
+- [x] Replace resource workshop JSON export with one-click browser PDF export built from generated documents, mind map, quiz, learning path, review notes, and successful image assets; audio is excluded.
+- [x] Remove unused AI chat model selector and web search toggle from the chat header.
+- [x] Move dark/light mode switching from AI chat's local sidebar into the global application sidebar.
+- [x] Widen the resource workshop configuration column and make dense controls wrap or scroll inside the card.
+- [x] Strengthen router, civil, graduate, and general QA prompts with clearer role boundaries, answer methods, source discipline, and no internal file-structure leakage.
+- [x] Verify frontend build, backend Docker build, frontend Docker build, Compose startup, frontend `/`, backend `/api/actuator/health`, and knowledge-bank scan.
+
+## Phase Docs-4: Public demo README (2026-07-18)
+
+> Goal: make the README suitable for judges, viewers, and demo users while keeping startup commands clear.
+
+- [x] Rewrite `README.md` into a public-facing project overview and quick-start guide.
+- [x] Highlight competition value, feature scope, technical stack, and multimodal/multi-agent capabilities.
+- [x] Keep Docker startup, status, logs, stop, and access URL commands concise.
+- [x] Include required `.env` variables for iFlytek Spark, iFlytek TTS/HiDream, and Alibaba Cloud Bailian.
+
+## Phase UX-6: Resource workshop learner-facing copy (2026-07-18)
+
+> Goal: remove competition-facing copy from the in-app resource package panel and keep the interface natural for learners.
+
+- [x] Replace visible "演示亮点" and "质量与安全说明" labels with learner-facing copy while keeping "多智能体分工" as the Agent section title.
+- [x] Rename generated "多模态资源脚本包" titles to "多模态资源".
+- [x] Replace "复制演示摘要" and fallback export names with "资源摘要" wording.
+- [x] Rewrite generated resource notes and safety checks so new packages describe learning value instead of judging/demo intent.
+- [x] Verify frontend production build after the copy update.

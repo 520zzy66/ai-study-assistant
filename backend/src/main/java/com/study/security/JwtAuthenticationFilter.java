@@ -91,11 +91,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * 从请求头提取 token
+     * <p>优先从 Authorization: Bearer xxx 头提取；
+     * 对于 GET 下载/预览接口（浏览器 {@code <img>}/{@code <audio>} 标签无法携带 Authorization 头），
+     * 允许通过 {@code access_token} query 参数传递，仅限 GET 方法以防写操作被 CSRF。
      */
     private String extractToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith(TOKEN_PREFIX)) {
             return header.substring(TOKEN_PREFIX.length());
+        }
+        // 兼容 GET 下载/预览接口（spec §11.4 权限校验保持不变）
+        if ("GET".equalsIgnoreCase(request.getMethod())) {
+            String queryToken = request.getParameter("access_token");
+            if (queryToken != null && !queryToken.isBlank()) {
+                return queryToken;
+            }
         }
         return null;
     }

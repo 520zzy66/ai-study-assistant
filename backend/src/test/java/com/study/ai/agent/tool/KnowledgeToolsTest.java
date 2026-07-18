@@ -11,6 +11,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,7 +21,7 @@ class KnowledgeToolsTest {
     @Test
     void personalSearchUsesTrustedUserAndMaterialContext() {
         HybridSearchService hybridSearchService = mock(HybridSearchService.class);
-        when(hybridSearchService.search(88L, 12L, "线代 特征值", 5)).thenReturn(java.util.List.of());
+        when(hybridSearchService.search(88L, 12L, null, "线代 特征值", 5)).thenReturn(java.util.List.of());
         KnowledgeTools tools = new KnowledgeTools(
                 hybridSearchService, mock(TemporaryHybridSearchService.class), null);
         ToolContext context = new ToolContext(Map.of(
@@ -29,7 +30,22 @@ class KnowledgeToolsTest {
 
         tools.searchPersonalMaterial("特征值", "线代", context);
 
-        verify(hybridSearchService).search(eq(88L), eq(12L), eq("线代 特征值"), eq(5));
+        verify(hybridSearchService).search(eq(88L), eq(12L), isNull(), eq("线代 特征值"), eq(5));
+    }
+
+    @Test
+    void personalSearchScopesToFolderWhenFolderContextProvided() {
+        HybridSearchService hybridSearchService = mock(HybridSearchService.class);
+        when(hybridSearchService.search(null, 12L, 55L, "考公", 5)).thenReturn(java.util.List.of());
+        KnowledgeTools tools = new KnowledgeTools(
+                hybridSearchService, mock(TemporaryHybridSearchService.class), null);
+        ToolContext context = new ToolContext(Map.of(
+                KnowledgeTools.CONTEXT_USER_ID, 12L,
+                KnowledgeTools.CONTEXT_FOLDER_ID, 55L));
+
+        tools.searchPersonalMaterial("考公", null, context);
+
+        verify(hybridSearchService).search(isNull(), eq(12L), eq(55L), eq("考公"), eq(5));
     }
 
     @Test

@@ -112,6 +112,15 @@ public class AiController {
         return Result.success(Map.of("materialId", materialId, "mindMap", mindMapJson != null ? mindMapJson : ""));
     }
 
+    @Operation(summary = "保存思维导图", description = "保存用户在工作台编辑后的思维导图 JSON")
+    @PutMapping("/summary/mindmap/{materialId}")
+    public Result<Void> updateMindMap(@PathVariable Long materialId,
+                                      @RequestBody Map<String, String> body) {
+        String mindMapJson = body == null ? null : body.get("mindMap");
+        summaryService.updateMindMap(materialId, mindMapJson);
+        return Result.success(null);
+    }
+
     @Operation(summary = "生成文件夹思维导图", description = "根据文件夹资料生成思维导图 JSON 结构")
     @PostMapping("/summary/folder/mindmap/{folderId}")
     public Result<Map<String, Object>> generateFolderMindMap(@PathVariable Long folderId) {
@@ -124,6 +133,15 @@ public class AiController {
     public Result<Map<String, Object>> getFolderMindMap(@PathVariable Long folderId) {
         String mindMapJson = summaryService.getFolderMindMap(folderId);
         return Result.success(Map.of("folderId", folderId, "mindMap", mindMapJson != null ? mindMapJson : ""));
+    }
+
+    @Operation(summary = "保存文件夹思维导图", description = "保存用户在工作台编辑后的文件夹思维导图 JSON")
+    @PutMapping("/summary/folder/mindmap/{folderId}")
+    public Result<Void> updateFolderMindMap(@PathVariable Long folderId,
+                                            @RequestBody Map<String, String> body) {
+        String mindMapJson = body == null ? null : body.get("mindMap");
+        summaryService.updateFolderMindMap(folderId, mindMapJson);
+        return Result.success(null);
     }
 
     // ==================== Spec-05: RAG 文档问答 ====================

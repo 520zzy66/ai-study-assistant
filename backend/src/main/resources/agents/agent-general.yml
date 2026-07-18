@@ -12,9 +12,9 @@ order: 0
 
 # 模型绑定（使用本地 Ollama qwen2.5，走 OpenAI 兼容端点）
 model:
-  base-url: http://localhost:11434
-  api-key: ollama
-  model: qwen2.5:7b
+  base-url: ${AI_BASE_URL:${spring.ai.openai.base-url:https://spark-api-open.xf-yun.com/v1}}
+  api-key: ${AI_API_KEY:${spring.ai.openai.api-key:}}
+  model: ${AI_CHAT_MODEL:${spring.ai.openai.chat.options.model:lite}}
   temperature: 0.3  # 路由任务需要低温度以保证稳定性
 
 # System Prompt

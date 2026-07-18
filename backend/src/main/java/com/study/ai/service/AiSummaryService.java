@@ -164,6 +164,24 @@ public class AiSummaryService {
     }
 
     /**
+     * 保存用户在工作台编辑后的思维导图
+     *
+     * @param materialId  资料ID
+     * @param mindMapJson 编辑后的思维导图 JSON
+     */
+    public void updateMindMap(Long materialId, String mindMapJson) {
+        Long userId = UserContext.getCurrentUserId();
+        materialValidator.validateOwnership(materialId, userId);
+
+        LearningMaterial update = new LearningMaterial();
+        update.setId(materialId);
+        update.setMindMap(mindMapJson);
+        materialMapper.updateById(update);
+
+        log.info("思维导图已更新: materialId={}, jsonLen={}", materialId, mindMapJson.length());
+    }
+
+    /**
      * 生成文件夹总结
      * 从向量数据库读取该文件夹下所有资料的切片内容，由AI做综合总结
      *
@@ -240,6 +258,27 @@ public class AiSummaryService {
             throw new BusinessException(404, "文件夹不存在或无权限");
         }
         return folder.getMindMap();
+    }
+
+    /**
+     * 保存用户在工作台编辑后的文件夹思维导图
+     *
+     * @param folderId    文件夹ID
+     * @param mindMapJson 编辑后的思维导图 JSON
+     */
+    public void updateFolderMindMap(Long folderId, String mindMapJson) {
+        Long userId = UserContext.getCurrentUserId();
+        MaterialFolder folder = folderMapper.selectById(folderId);
+        if (folder == null || !folder.getUserId().equals(userId)) {
+            throw new BusinessException(404, "文件夹不存在或无权限");
+        }
+
+        MaterialFolder update = new MaterialFolder();
+        update.setId(folderId);
+        update.setMindMap(mindMapJson);
+        folderMapper.updateById(update);
+
+        log.info("文件夹思维导图已更新: folderId={}, jsonLen={}", folderId, mindMapJson.length());
     }
 
     // ==================== 私有辅助方法 ====================

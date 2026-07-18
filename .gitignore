@@ -2,6 +2,9 @@
 backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar
 backend/*.log
+target/
+build/
+studyAI/
 
 # === 前端 ===
 frontend/node_modules/
@@ -35,12 +38,18 @@ logs/
 
 # === Claude ===
 .claude/memory/
+.claude/settings.local.json
 
 # === Playwright MCP ===
 .playwright-mcp/
 
 # === 审查报告 ===
 code-review-report/
+code-review-2026-07/
+
+# === 临时测试/误生成文件 ===
+nul
+test-ai.txt
 
 # === 截图文件 ===
 *.png
@@ -49,3 +58,9 @@ code-review-report/
 
 # === 日志目录 ===
 log/
+
+# === 本机备份 ===
+backups/
+
+# === 本地打包产物 ===
+ai_study.zip

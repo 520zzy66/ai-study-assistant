@@ -12,9 +12,9 @@ import org.springframework.context.annotation.Configuration;
  *
  * <h3>ChatModel 架构</h3>
  * <ul>
- *   <li><b>openAiChatModel</b> — Spring AI 自动配置，小米 MiMo API，专家 Agent 使用</li>
- *   <li><b>GeneralNode</b> — AgentClientFactory 根据 agent-general.yml 独立 base-url 自动创建 Ollama 模型</li>
- *   <li><b>Embedding</b> — OllamaEmbeddingProvider 手动创建，不走 Spring AI bean</li>
+ *   <li><b>openAiChatModel</b> — Spring AI 自动配置，参赛 Docker 默认讯飞星火 Lite，专家 Agent 使用</li>
+ *   <li><b>GeneralNode</b> — AgentClientFactory 根据 agent-general.yml 创建云端路由模型</li>
+ *   <li><b>Embedding</b> — DashScopeEmbeddingProvider 手动调用百炼接口，并由适配器接入 Spring AI</li>
  * </ul>
  *
  * <p>不需要手动创建 ollamaChatModel bean，避免与 openAiChatModel 冲突。</p>
@@ -32,7 +32,7 @@ public class AiConfig {
         return new BoundedChatMemory(MessageWindowChatMemory.builder().build());
     }
 
-    // ==================== ChatClient（MiMo，专家 Agent） ====================
+    // ==================== ChatClient（OpenAI-compatible，专家 Agent） ====================
 
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder) {

@@ -172,7 +172,15 @@ const showQuizDetail = ref(false)
 const currentQuiz = ref(null)
 
 function getChatTypeLabel(type) {
-  const map = { summary: '总结', qa: '问答', quiz: '出题', plan: '计划', chat: '问答' }
+  const map = {
+    summary: '总结',
+    qa: '问答',
+    quiz: '出题',
+    plan: '计划',
+    chat: '问答',
+    workflow: '工作流',
+    resource_package: '资源包'
+  }
   return map[type] || type
 }
 
@@ -247,12 +255,14 @@ onMounted(() => {
 }
 
 .type-tag {
+  display: inline-block;
   font-size: var(--text-small);
   font-weight: 500;
   color: var(--color-text-secondary);
   background: var(--surface-container);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 
 .material-name {

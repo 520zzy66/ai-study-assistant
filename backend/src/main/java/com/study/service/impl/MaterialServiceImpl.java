@@ -14,6 +14,7 @@ import com.study.entity.MaterialChunk;
 import com.study.entity.MaterialFolder;
 import com.study.mapper.LearningMaterialMapper;
 import com.study.mapper.MaterialChunkMapper;
+import com.study.mapper.MaterialFolderMapper;
 import com.study.service.MaterialService;
 import com.study.vo.MaterialUploadVO;
 import com.study.vo.MaterialVO;
@@ -49,6 +50,7 @@ public class MaterialServiceImpl implements MaterialService {
 
     private final LearningMaterialMapper materialMapper;
     private final MaterialChunkMapper chunkMapper;
+    private final MaterialFolderMapper materialFolderMapper;
     private final MaterialAsyncProcessor asyncProcessor;
     private final MaterialVectorIndexService vectorIndexService;
 
@@ -170,11 +172,11 @@ public class MaterialServiceImpl implements MaterialService {
 
     private void clearFolderSummary(Long folderId) {
         if (folderId == null) return;
-        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<MaterialFolder> wrapper = new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
+        LambdaUpdateWrapper<MaterialFolder> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(MaterialFolder::getId, folderId)
                .set(MaterialFolder::getSummary, null)
                .set(MaterialFolder::getMindMap, null);
-        Db.update(wrapper);
+        materialFolderMapper.update(null, wrapper);
     }
 
     @Override
@@ -186,10 +188,10 @@ public class MaterialServiceImpl implements MaterialService {
                 .eq(LearningMaterial::getUserId, userId)
                 .and(w -> w.isNull(LearningMaterial::getSource)
                         .or().ne(LearningMaterial::getSource, Constants.SOURCE_SYSTEM))
+                // folderId == null：不按文件夹过滤，返回全部资料（含各文件夹内的资料）
+                // folderId != null：仅返回该文件夹下的资料
                 .eq(request.getFolderId() != null,
                         LearningMaterial::getFolderId, request.getFolderId())
-                .isNull(request.getFolderId() == null,
-                        LearningMaterial::getFolderId)
                 .eq(StringUtils.hasText(request.getStatus()),
                         LearningMaterial::getStatus, request.getStatus())
                 .eq(StringUtils.hasText(request.getCategory()),

@@ -27,6 +27,18 @@
     </nav>
 
     <div class="sidebar-footer">
+      <button
+        class="theme-toggle"
+        type="button"
+        :aria-label="themeToggleLabel"
+        :title="themeToggleLabel"
+        @click="toggleTheme"
+      >
+        <el-icon :size="18">
+          <component :is="uiStore.resolvedTheme === 'dark' ? 'Sunny' : 'Moon'" />
+        </el-icon>
+        <span class="theme-label">{{ uiStore.resolvedTheme === 'dark' ? '浅色模式' : '深色模式' }}</span>
+      </button>
       <button class="mini-profile" type="button" aria-label="打开用户中心" @click="goToProfile">
         <el-avatar :size="28" class="mini-avatar">
           {{ (userStore.userInfo?.nickname || '用')[0] }}
@@ -38,6 +50,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useUiStore } from '@/stores/ui'
@@ -46,6 +59,10 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const uiStore = useUiStore()
+
+const themeToggleLabel = computed(() =>
+  uiStore.resolvedTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'
+)
 
 const navGroups = [
   {
@@ -87,6 +104,10 @@ function goToProfile() {
   uiStore.closeMobileSidebar()
   router.push('/profile')
 }
+
+function toggleTheme() {
+  uiStore.setThemeMode(uiStore.resolvedTheme === 'dark' ? 'light' : 'dark')
+}
 </script>
 
 <style scoped>
@@ -111,6 +132,7 @@ function goToProfile() {
 .app-sidebar.collapsed .logo-text,
 .app-sidebar.collapsed .nav-group-label,
 .app-sidebar.collapsed .nav-label,
+.app-sidebar.collapsed .theme-label,
 .app-sidebar.collapsed .mini-name {
   display: none;
 }
@@ -129,7 +151,8 @@ function goToProfile() {
   left: 0;
 }
 
-.app-sidebar.collapsed .mini-profile {
+.app-sidebar.collapsed .mini-profile,
+.app-sidebar.collapsed .theme-toggle {
   justify-content: center;
   padding: var(--space-2) 0;
 }
@@ -252,6 +275,38 @@ function goToProfile() {
   padding: var(--space-3);
   border-top: 1px solid var(--outline-variant);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.theme-toggle {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--color-text-primary);
+}
+
+.theme-toggle .el-icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
 }
 
 .mini-profile {

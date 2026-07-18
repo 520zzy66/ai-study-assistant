@@ -75,7 +75,7 @@ class ResourceOrchestratorAgentTest {
         when(summaryAgent.executeMindMap(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
         when(quizAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
         when(planAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
-        when(multimodalAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
+        when(multimodalAgent.execute(any(), any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
         when(safetyAgent.execute(any(), any())).thenReturn(step(AgentStatus.SUCCESS));
 
         AtomicInteger eventCount = new AtomicInteger(0);
@@ -109,7 +109,7 @@ class ResourceOrchestratorAgentTest {
         when(summaryAgent.executeMindMap(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
         when(quizAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
         when(planAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
-        when(multimodalAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
+        when(multimodalAgent.execute(any(), any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SUCCESS));
         when(safetyAgent.execute(any(), any())).thenReturn(step(AgentStatus.SUCCESS));
 
         ResourceAgentResult result = orchestratorAgent.orchestrate(request, event -> {});
@@ -120,7 +120,7 @@ class ResourceOrchestratorAgentTest {
         verify(summaryAgent, times(1)).executeMindMap(any(), any());
         verify(quizAgent, times(1)).execute(any(), any());
         verify(planAgent, times(1)).execute(any(), any());
-        verify(multimodalAgent, times(1)).execute(any(), any());
+        verify(multimodalAgent, times(1)).execute(any(), any(), any());
     }
 
     @Test
@@ -143,7 +143,7 @@ class ResourceOrchestratorAgentTest {
         when(summaryAgent.executeMindMap(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SKIPPED));
         when(quizAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SKIPPED));
         when(planAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SKIPPED));
-        when(multimodalAgent.execute(any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SKIPPED));
+        when(multimodalAgent.execute(any(), any(), any())).thenAnswer(invocation -> generatedStep(invocation.getArgument(1), AgentStatus.SKIPPED));
         when(safetyAgent.execute(any(), any())).thenReturn(step(AgentStatus.SUCCESS));
 
         assertThrows(BusinessException.class, () -> orchestratorAgent.orchestrate(request, event -> {}));

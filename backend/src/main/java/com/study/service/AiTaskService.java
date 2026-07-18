@@ -256,7 +256,7 @@ public class AiTaskService {
             if (isCancelled(taskId)) {
                 throw new java.util.concurrent.CancellationException("任务取消");
             }
-            Map<String, Object> result = resourcePackageService.generatePackage(request, event -> {
+            Map<String, Object> result = resourcePackageService.generatePackage(request, taskId, event -> {
                 if (isCancelled(taskId)) {
                     throw new java.util.concurrent.CancellationException("任务取消");
                 }

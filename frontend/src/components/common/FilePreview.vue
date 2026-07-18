@@ -152,7 +152,7 @@ async function renderDocx() {
   }
 }
 
-watch(() => visible.value, async (newVal) => {
+watch(() => props.modelValue, async (newVal) => {
   if (newVal) {
     if (supportText.value) {
       await loadText()

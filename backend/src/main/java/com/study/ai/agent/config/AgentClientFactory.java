@@ -7,6 +7,7 @@ import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
@@ -17,8 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Agent ChatClient 工厂
@@ -51,11 +50,12 @@ public class AgentClientFactory {
     /** SnakeYAML 解析器（Spring Boot 内置，无需额外依赖） */
     private static final Yaml YAML = new Yaml();
 
-    /** 占位符正则：匹配 ${VAR_NAME} 或 ${VAR_NAME:defaultValue} */
-    private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([^}:]+)(?::([^}]*))?\\}");
+    /** Spring Environment resolves placeholders including nested defaults. */
+    private final Environment environment;
 
-    public AgentClientFactory(ChatClient.Builder globalBuilder) {
+    public AgentClientFactory(ChatClient.Builder globalBuilder, Environment environment) {
         this.globalBuilder = globalBuilder;
+        this.environment = environment;
     }
 
     /**
@@ -285,10 +285,13 @@ public class AgentClientFactory {
         if (baseUrl != null && !baseUrl.isBlank() && apiKey != null && !apiKey.isBlank()) {
             log.info("Agent '{}' 使用独立 ChatModel: model={}, temperature={}",
                     config.getId(), modelName, temperature);
-            var api = OpenAiApi.builder()
+            var apiBuilder = OpenAiApi.builder()
                     .baseUrl(baseUrl)
-                    .apiKey(new SimpleApiKey(apiKey))
-                    .build();
+                    .apiKey(new SimpleApiKey(apiKey));
+            if (baseUrl.endsWith("/v1")) {
+                apiBuilder.completionsPath("/chat/completions");
+            }
+            var api = apiBuilder.build();
             var chatModel = OpenAiChatModel.builder()
                     .openAiApi(api)
                     .defaultOptions(OpenAiChatOptions.builder()
@@ -318,18 +321,8 @@ public class AgentClientFactory {
      */
     private String resolve(String value) {
         if (value == null) return null;
-        Matcher m = PLACEHOLDER.matcher(value);
-        StringBuilder sb = new StringBuilder();
-        while (m.find()) {
-            String varName = m.group(1);
-            String defaultValue = m.group(2);
-            String resolved = System.getenv(varName);
-            if (resolved == null) resolved = System.getProperty(varName);
-            if (resolved == null) resolved = defaultValue;
-            m.appendReplacement(sb, resolved != null ? Matcher.quoteReplacement(resolved) : "");
-        }
-        m.appendTail(sb);
-        return sb.toString();
+        String resolved = environment.resolvePlaceholders(value);
+        return resolved.contains("${") ? "" : resolved;
     }
 
     /**

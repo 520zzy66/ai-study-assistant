@@ -31,7 +31,7 @@ public class ResourcePackageService {
      * @return resource package result map
      */
     public Map<String, Object> generatePackage(GenerateResourcePackageRequest request) {
-        return generatePackage(request, event -> {});
+        return generatePackage(request, null, event -> {});
     }
 
     /**
@@ -43,7 +43,20 @@ public class ResourcePackageService {
      */
     public Map<String, Object> generatePackage(GenerateResourcePackageRequest request,
                                                Consumer<AgentProgressEvent> progressReporter) {
-        ResourceAgentResult agentResult = orchestratorAgent.orchestrate(request, progressReporter);
+        return generatePackage(request, null, progressReporter);
+    }
+
+    /**
+     * Generates a resource package through the resource orchestrator agent.
+     *
+     * @param request resource package request
+     * @param taskId async task id (used by MultimodalAgent to persist resource_asset.task_id)
+     * @param progressReporter progress event callback
+     * @return resource package result map
+     */
+    public Map<String, Object> generatePackage(GenerateResourcePackageRequest request, String taskId,
+                                               Consumer<AgentProgressEvent> progressReporter) {
+        ResourceAgentResult agentResult = orchestratorAgent.orchestrate(request, taskId, progressReporter);
         // 将 POJO 序列化再反序列化为 Map，以兼容原有的 Map<String, Object> 返回签名
         String json = JsonUtils.toJson(agentResult);
         try {

@@ -11,6 +11,11 @@ public final class JsonUtils {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    static {
+        OBJECT_MAPPER.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        OBJECT_MAPPER.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
     private JsonUtils() {
         // 工具类不允许实例化
     }
@@ -45,6 +50,7 @@ public final class JsonUtils {
         try {
             return OBJECT_MAPPER.writeValueAsString(obj);
         } catch (JsonProcessingException e) {
+            org.slf4j.LoggerFactory.getLogger(JsonUtils.class).error("JSON 序列化失败", e);
             return defaultVal;
         }
     }

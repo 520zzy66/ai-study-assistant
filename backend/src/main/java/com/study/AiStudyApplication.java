@@ -10,9 +10,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 /**
  * AI 智能学习助手应用入口
  *
- * 排除 OllamaChatAutoConfiguration：Ollama 仅用于 Embedding（bge-m3），
- * ChatModel 只需 openAiChatModel（小米 MiMo），避免 bean 冲突。
- * GeneralNode 的 Ollama 模型由 AgentClientFactory 根据 agent-general.yml 独立创建。
+ * 排除 OllamaChatAutoConfiguration：Ollama 仅作为可选本地工具模型，
+ * 默认 ChatModel 走 OpenAI-compatible provider（参赛 Docker 默认讯飞星火 Lite），避免 bean 冲突。
+ * GeneralNode 默认复用云端模型；agent-qwen-tools.yml 保留给本地开发可选使用。
  */
 @SpringBootApplication(exclude = {
     RedisAutoConfiguration.class,

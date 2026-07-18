@@ -23,6 +23,9 @@ export const useAiStore = defineStore('ai', () => {
   /** 当前关联的资料 ID */
   const selectedMaterialId = ref(null)
 
+  /** 当前关联的文件夹 ID（与 materialId 互斥） */
+  const selectedFolderId = ref(null)
+
   /** 当前关联的会话临时资料对象。 */
   const selectedTemporaryMaterial = ref(null)
 
@@ -226,13 +229,30 @@ export const useAiStore = defineStore('ai', () => {
    */
   function setSelectedMaterial(id) {
     selectedMaterialId.value = id
-    if (id) selectedTemporaryMaterial.value = null
+    if (id) {
+      selectedFolderId.value = null
+      selectedTemporaryMaterial.value = null
+    }
+  }
+
+  /**
+   * 设置选中的文件夹
+   */
+  function setSelectedFolder(id) {
+    selectedFolderId.value = id
+    if (id) {
+      selectedMaterialId.value = null
+      selectedTemporaryMaterial.value = null
+    }
   }
 
   /** 设置当前会话的临时资料。 */
   function setSelectedTemporaryMaterial(material) {
     selectedTemporaryMaterial.value = material
-    if (material) selectedMaterialId.value = null
+    if (material) {
+      selectedMaterialId.value = null
+      selectedFolderId.value = null
+    }
   }
 
   return {
@@ -242,6 +262,7 @@ export const useAiStore = defineStore('ai', () => {
     isStreaming,
     loading,
     selectedMaterialId,
+    selectedFolderId,
     selectedTemporaryMaterial,
     interruptedInfo,
     lastQuestion,
@@ -264,6 +285,7 @@ export const useAiStore = defineStore('ai', () => {
     clearMessages,
     deleteMessage,
     setSelectedMaterial,
+    setSelectedFolder,
     setSelectedTemporaryMaterial
   }
 })

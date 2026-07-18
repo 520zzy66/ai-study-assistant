@@ -35,7 +35,7 @@ public class SafetyAgent {
         step.setStartTimeMs(start);
 
         try {
-            result.setQualityChecks(safetyTools.buildQualityChecks(context.getMaterial(), context.getResources()));
+            result.setQualityChecks(safetyTools.buildQualityChecks(context.getMaterial(), context.getResources(), context.getAssets()));
             result.setPresentationNotes(safetyTools.buildPresentationNotes(context.getResources()));
 
             step.setStatus(AgentStatus.SUCCESS);

@@ -36,17 +36,32 @@
           <!-- Study Progress Ring -->
           <BaseCard title="学习进度" class="progress-card" :loading="loading.progress">
             <div class="ring-center">
-              <ProgressRing :percentage="studyProgress" :size="140" :stroke-width="10" />
-              <p class="ring-hint">总体完成度</p>
+              <ProgressRing
+                :percentage="studyProgress"
+                :size="140"
+                :stroke-width="10"
+                color="var(--color-primary)"
+                bg-color="var(--surface-container)"
+              />
+              <p class="ring-hint">{{ progressHint }}</p>
+              <el-button
+                v-if="!latestPlan"
+                text
+                type="primary"
+                size="small"
+                @click="navigateTo('/ai/plan')"
+              >
+                去制定计划
+              </el-button>
             </div>
           </BaseCard>
 
           <!-- Exam Countdown -->
           <BaseCard class="countdown-card" :loading="loading.progress">
             <CountdownTimer
-              title="距离考试"
+              :title="countdownTitle"
               :target-date="examDate"
-              :total-days="90"
+              :total-days="planTotalDays"
             />
           </BaseCard>
 
@@ -114,14 +129,14 @@
               :key="item.id"
               class="learning-item"
               type="button"
-              @click="navigateTo(`/ai/summary?materialId=${item.id}`)"
+              @click="navigateTo(materialEntryPath(item))"
             >
               <div class="learning-icon">
                 <el-icon :size="20"><Document /></el-icon>
               </div>
               <div class="learning-info">
-                <div class="learning-name truncate">{{ item.fileName }}</div>
-                <div class="learning-meta">{{ formatDate(item.createTime) }}</div>
+                <div class="learning-name truncate">{{ materialDisplayName(item) }}</div>
+                <div class="learning-meta">{{ materialStatusText(item) }} · {{ formatDate(item.createTime) }}</div>
               </div>
               <el-icon :size="16" class="learning-arrow"><ArrowRight /></el-icon>
             </button>
@@ -134,8 +149,10 @@
         <!-- Today's Tasks -->
         <BaseCard title="今日任务" :loading="loading.plan" :isEmpty="todayTasks.length === 0 && !loading.plan"
           empty-icon="Calendar" empty-text="制定学习计划，让学习更有节奏">
-          <template v-if="todayTasks.length > 0" #header-action>
-            <el-button text type="primary" size="small" @click="$router.push('/ai/plan')">查看计划</el-button>
+          <template #header-action>
+            <el-button text type="primary" size="small" @click="$router.push('/ai/plan')">
+              {{ todayTasks.length > 0 ? '查看计划' : '创建计划' }}
+            </el-button>
           </template>
           <div v-if="todayTasks.length > 0" class="task-list">
             <label
@@ -144,7 +161,11 @@
               class="task-item"
               :class="{ completed: task.completed }"
             >
-              <el-checkbox v-model="task.completed" @change="toggleTask(task)">
+              <el-checkbox
+                :model-value="task.completed"
+                :disabled="task.updating"
+                @change="(value) => toggleTask(task, value)"
+              >
                 <span class="task-title">{{ task.title }}</span>
               </el-checkbox>
               <span class="task-time">{{ task.estimatedMinutes }} 分钟</span>
@@ -156,13 +177,20 @@
         <BaseCard title="最近动态" :loading="loading.activity" :isEmpty="recentActivities.length === 0 && !loading.activity"
           empty-icon="Clock" empty-text="开始使用 AI 功能，记录学习轨迹">
           <div v-if="recentActivities.length > 0" class="activity-list">
-            <div v-for="item in recentActivities" :key="item.id" class="activity-item">
+            <button
+              v-for="item in recentActivities"
+              :key="item.id"
+              class="activity-item"
+              type="button"
+              @click="navigateTo(item.path)"
+            >
               <div class="activity-dot" :class="`dot-${item.type}`" />
               <div class="activity-content">
                 <div class="activity-text">{{ item.text }}</div>
                 <div class="activity-time">{{ item.time }}</div>
               </div>
-            </div>
+              <el-icon :size="14" class="activity-arrow"><ArrowRight /></el-icon>
+            </button>
           </div>
         </BaseCard>
       </div>
@@ -177,7 +205,13 @@ import { useUserStore } from '@/stores/user'
 import { getMaterialList } from '@/api/material'
 import { getChatHistory, getQuizHistory } from '@/api/history'
 import { getUserProfile } from '@/api/user'
-import { listResourcePackageTasks } from '@/api/ai'
+import {
+  getPlanProgressList,
+  getPlanProgressStats,
+  listPlans,
+  listResourcePackageTasks,
+  updatePlanProgress
+} from '@/api/ai'
 import { Document, ArrowRight, Upload, ChatDotRound, EditPen, Calendar } from '@element-plus/icons-vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseStatisticCard from '@/components/common/BaseStatisticCard.vue'
@@ -199,9 +233,9 @@ const loading = reactive({
 
 // Stats
 const stats = ref([
-  { key: 'hours', label: '学习时长', value: '0h', icon: 'Clock', iconBg: 'var(--bg-sidebar)', iconColor: 'var(--text-secondary)', trend: null, trendValue: '', path: '/history' },
+  { key: 'hours', label: '实际学习', value: '0h', icon: 'Clock', iconBg: 'var(--bg-sidebar)', iconColor: 'var(--color-text-secondary)', trend: null, trendValue: '来自学习计划', path: '/ai/plan' },
   { key: 'material', label: '学习资料', value: 0, icon: 'Document', iconBg: 'var(--bg-tag-green)', iconColor: 'var(--color-primary)', trend: null, trendValue: '', path: '/material' },
-  { key: 'summary', label: 'AI 总结', value: 0, icon: 'DocumentCopy', iconBg: 'var(--bg-tag-blue)', iconColor: 'var(--color-tag-blue)', trend: null, trendValue: '', path: '/ai/summary' },
+  { key: 'summary', label: '已总结资料', value: 0, icon: 'DocumentCopy', iconBg: 'var(--bg-tag-blue)', iconColor: 'var(--color-tag-blue)', trend: null, trendValue: '', path: '/ai/summary' },
   { key: 'quiz', label: '练习次数', value: 0, icon: 'EditPen', iconBg: 'var(--bg-tag-amber)', iconColor: 'var(--color-tag-amber)', trend: null, trendValue: '', path: '/ai/quiz' }
 ])
 
@@ -219,6 +253,10 @@ const recommendations = ref([])
 const todayTasks = ref([])
 const studyProgress = ref(0)
 const examDate = ref('')
+const latestPlan = ref(null)
+const latestPlanItems = ref([])
+const planProgressMap = ref({})
+const planTotalDays = ref(90)
 
 const weeklyActivity = ref([
   { label: '周一', value: 0 },
@@ -245,6 +283,14 @@ const todayDate = computed(() => {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${weekdays[d.getDay()]}`
 })
 
+const progressHint = computed(() => {
+  if (!latestPlan.value) return '暂无计划进度'
+  const completed = Object.values(planProgressMap.value).filter(Boolean).length
+  return `已完成 ${completed} / ${planTotalDays.value} 天`
+})
+
+const countdownTitle = computed(() => latestPlan.value?.goal ? '距离目标日期' : '距离考试')
+
 function navigateTo(path) { router.push(path) }
 
 function formatDate(dateStr) {
@@ -253,7 +299,98 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
-function toggleTask(task) { /* TODO: API */ }
+function toNumber(value, fallback = 0) {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : fallback
+}
+
+function parseJson(value, fallback) {
+  if (!value) return fallback
+  if (Array.isArray(value) || typeof value === 'object') return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return fallback
+  }
+}
+
+function materialDisplayName(item) {
+  return item?.originalName || item?.fileName || '未命名资料'
+}
+
+function materialEntryPath(item) {
+  if (item?.summary) return `/ai/summary?materialId=${item.id}`
+  return `/ai/chat?materialId=${item.id}`
+}
+
+function materialStatusText(item) {
+  if (item?.status && item.status !== 'ready') return '处理中'
+  if (item?.summary) return '已有总结'
+  return '可问答'
+}
+
+function getPlanDayIndex(plan) {
+  if (!plan?.examDate || !plan?.totalDays) return 1
+  const exam = new Date(`${plan.examDate}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const daysRemaining = Math.max(0, Math.ceil((exam - today) / 86400000))
+  const elapsed = toNumber(plan.totalDays) - daysRemaining
+  return Math.min(Math.max(elapsed + 1, 1), toNumber(plan.totalDays, 1))
+}
+
+function normalizePlanItems(plan) {
+  const list = parseJson(plan?.planContent, [])
+  return Array.isArray(list) ? list : []
+}
+
+function normalizeDurationMinutes(value, fallbackHours) {
+  if (typeof value === 'number') return value <= 24 ? value * 60 : value
+  const text = String(value || '')
+  const hourMatch = text.match(/([\d.]+)\s*小?时/)
+  if (hourMatch) return Math.round(toNumber(hourMatch[1], fallbackHours) * 60)
+  const minuteMatch = text.match(/(\d+)\s*分/)
+  if (minuteMatch) return toNumber(minuteMatch[1], fallbackHours * 60)
+  return fallbackHours * 60
+}
+
+function buildTodayTasks(plan, items) {
+  if (!plan || items.length === 0) return []
+  const preferredDay = getPlanDayIndex(plan)
+  const firstUnfinished = items.find(item => !planProgressMap.value[toNumber(item.day)])
+  const item = items.find(day => toNumber(day.day) === preferredDay) || firstUnfinished || items[0]
+  if (!item) return []
+
+  const dayIndex = toNumber(item.day, preferredDay)
+  const tasks = Array.isArray(item.tasks) ? item.tasks.join('、') : item.tasks
+  const topics = Array.isArray(item.topics) ? item.topics.join('、') : item.topics
+  const title = topics ? `第 ${dayIndex} 天：${topics}` : (tasks || `第 ${dayIndex} 天学习任务`)
+
+  return [{
+    id: `${plan.id}-${dayIndex}`,
+    dayIndex,
+    title,
+    completed: Boolean(planProgressMap.value[dayIndex]),
+    estimatedMinutes: normalizeDurationMinutes(item.duration, toNumber(plan.dailyHours, 2)),
+    updating: false
+  }]
+}
+
+async function toggleTask(task, completed) {
+  if (!latestPlan.value?.id) return
+  task.updating = true
+  try {
+    await updatePlanProgress(latestPlan.value.id, task.dayIndex, { completed })
+    planProgressMap.value = {
+      ...planProgressMap.value,
+      [task.dayIndex]: completed
+    }
+    task.completed = completed
+    await loadProgressStats(latestPlan.value.id)
+  } finally {
+    task.updating = false
+  }
+}
 
 function normalizeList(value) {
   if (Array.isArray(value)) return value
@@ -300,7 +437,7 @@ async function loadRecommendations() {
       items.push({
         key: `material-${latestMaterial.id}`,
         title: '生成个性化资源包',
-        description: `基于「${latestMaterial.originalName || latestMaterial.fileName}」生成讲解、导图、题库和学习路径。`,
+        description: `基于「${materialDisplayName(latestMaterial)}」生成讲解、导图、题库和学习路径。`,
         icon: 'Box',
         path: `/ai/resource-package?materialId=${latestMaterial.id}`,
         bg: 'var(--bg-tag-blue)',
@@ -344,10 +481,18 @@ async function loadRecommendations() {
 async function loadMaterials() {
   loading.materials = true
   try {
-    const res = await getMaterialList({ page: 1, size: 5 })
-    recentMaterials.value = res.records || []
+    const res = await getMaterialList({ page: 1, size: 100 })
+    const materials = res.records || []
+    recentMaterials.value = materials.slice(0, 5)
     const materialStat = stats.value.find(s => s.key === 'material')
     if (materialStat) materialStat.value = res.total || 0
+    const summaryStat = stats.value.find(s => s.key === 'summary')
+    if (summaryStat) {
+      const summaryCount = materials.filter(item => Boolean(item.summary)).length
+      summaryStat.value = summaryCount
+      summaryStat.trend = summaryCount > 0 ? 'flat' : null
+      summaryStat.trendValue = summaryCount > 0 ? '可继续沉淀' : ''
+    }
   } catch { recentMaterials.value = [] }
   finally { loading.materials = false }
 }
@@ -363,43 +508,92 @@ async function loadActivity() {
       id: `chat-${item.id}`, type: 'chat',
       text: `提问了 "${(item.userMessage || item.question || '问题').slice(0, 20)}..."`,
       time: formatDate(item.createTime),
-      sortTime: item.createTime
+      sortTime: item.createTime,
+      path: '/history'
     }))
     const quizItems = (quizRes.records || []).map(item => ({
       id: `quiz-${item.id}`, type: 'quiz',
       text: '完成了一次练习',
       time: formatDate(item.createTime),
-      sortTime: item.createTime
+      sortTime: item.createTime,
+      path: '/history'
     }))
     recentActivities.value = [...chatItems, ...quizItems]
       .sort((a, b) => new Date(b.sortTime) - new Date(a.sortTime)).slice(0, 5)
 
-    const summaryStat = stats.value.find(s => s.key === 'summary')
-    if (summaryStat) summaryStat.value = chatRes.total || 0
     const quizStat = stats.value.find(s => s.key === 'quiz')
     if (quizStat) quizStat.value = quizRes.total || 0
+
+    const hoursStat = stats.value.find(s => s.key === 'hours')
+    const chatCount = toNumber(chatRes.total)
+    if (hoursStat && !latestPlan.value && chatCount > 0) {
+      hoursStat.trend = 'flat'
+      hoursStat.trendValue = `${chatCount} 次问答记录`
+    }
   } catch { recentActivities.value = [] }
   finally { loading.activity = false }
 }
 
-function loadPlan() {
+async function loadProgressStats(planId) {
+  const hoursStat = stats.value.find(s => s.key === 'hours')
+  try {
+    const data = await getPlanProgressStats(planId)
+    studyProgress.value = toNumber(data.progressPercent)
+    if (hoursStat) {
+      const hours = toNumber(data.totalActualHours)
+      hoursStat.value = hours > 0 ? `${hours}h` : '0h'
+      hoursStat.trend = studyProgress.value > 0 ? 'up' : 'flat'
+      hoursStat.trendValue = studyProgress.value > 0 ? `计划 ${studyProgress.value}%` : '等待打卡'
+    }
+  } catch {
+    studyProgress.value = 0
+  }
+}
+
+async function loadPlan() {
   loading.plan = true
-  // TODO: real plan API
-  todayTasks.value = []
-  loading.plan = false
+  loading.progress = true
+  try {
+    const plans = await listPlans().catch(() => [])
+    latestPlan.value = Array.isArray(plans) ? plans[0] : null
+    if (!latestPlan.value) {
+      todayTasks.value = []
+      studyProgress.value = 0
+      examDate.value = ''
+      planTotalDays.value = 90
+      return
+    }
+
+    examDate.value = latestPlan.value.examDate || ''
+    planTotalDays.value = toNumber(latestPlan.value.totalDays, 90)
+    latestPlanItems.value = normalizePlanItems(latestPlan.value)
+
+    const progressList = await getPlanProgressList(latestPlan.value.id).catch(() => [])
+    const nextProgressMap = {}
+    progressList.forEach(item => {
+      nextProgressMap[item.dayIndex] = Boolean(item.completed)
+    })
+    planProgressMap.value = nextProgressMap
+
+    todayTasks.value = buildTodayTasks(latestPlan.value, latestPlanItems.value)
+    await loadProgressStats(latestPlan.value.id)
+  } finally {
+    loading.plan = false
+    loading.progress = false
+  }
 }
 
 function loadProgress() {
-  loading.progress = true
-  // TODO: real progress API
-  loading.progress = false
+  if (!latestPlan.value) studyProgress.value = 0
 }
 
 onMounted(async () => {
   await loadMaterials()
-  loadRecommendations()
-  loadActivity()
-  loadPlan()
+  await Promise.all([
+    loadRecommendations(),
+    loadActivity(),
+    loadPlan()
+  ])
   loadProgress()
 })
 </script>
@@ -483,7 +677,7 @@ onMounted(async () => {
 /* Quick Actions */
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -503,6 +697,14 @@ onMounted(async () => {
 .quick-action-btn:hover {
   border-color: var(--outline);
   background: var(--surface-card);
+}
+
+.quick-action-btn:focus-visible,
+.recommendation-item:focus-visible,
+.learning-item:focus-visible,
+.activity-item:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
 .quick-action-btn:active { transform: scale(0.98); }
@@ -678,10 +880,20 @@ onMounted(async () => {
 }
 
 .activity-item {
+  width: 100%;
   display: flex;
   align-items: flex-start;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
   gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-default);
 }
+
+.activity-item:hover { background: var(--surface-hover); }
 
 .activity-dot {
   width: 8px;
@@ -698,6 +910,12 @@ onMounted(async () => {
 
 .activity-text { font-size: var(--text-ui); color: var(--color-text-primary); line-height: 1.5; }
 .activity-time { font-size: var(--text-small); color: var(--color-text-tertiary); margin-top: 2px; }
+.activity-arrow {
+  color: var(--color-text-tertiary);
+  margin-left: auto;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
 
 /* Responsive */
 @media (max-width: 1279px) {

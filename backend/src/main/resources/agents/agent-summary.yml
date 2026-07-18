@@ -10,7 +10,7 @@ description: 生成知识总结，可调用思维导图工具
 icon: "📝"
 order: 5
 
-# 模型绑定（使用 MiMo API，复用全局配置）
+# 模型绑定（复用全局 spring.ai.openai.* 配置）
 # 不配置独立 base-url，走全局 spring.ai.openai.* 配置
 
 # System Prompt

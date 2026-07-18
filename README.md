@@ -1,378 +1,322 @@
-# 🎓 AI 智能学习助手
+# AI Study Assistant
 
-一个基于 Spring Boot 3 + Spring AI + Vue3 的全栈 AI 智能学习助手系统。
+面向中国软件杯 A3 赛题的智能学习助手系统。项目以“个性化资源生成 + 多智能体协作 + 多模态学习体验”为核心，围绕高校课程学习场景，提供资料管理、AI 问答、知识总结、自动出题、学习计划和资源工坊等能力。
 
-[![Java](https://img.shields.io/badge/Java-21-blue.svg)](https://www.java.com)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-green.svg)](https://spring.io/projects/spring-boot)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3.4-brightgreen.svg)](https://vuejs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+## 项目亮点
 
----
+- **多智能体资源工坊**：围绕单份学习资料，协同生成讲解文档、思维导图、个性化题库、学习路径、多模态脚本、知识配图和播客音频。
+- **个性化学习闭环**：结合学习目标、难度、截止日期、每日学习时长和资料内容，生成适合当前学习阶段的资源组合。
+- **多模态资源生成**：接入科大讯飞 TTS 与 HiDream，支持知识点播客化、资源包封面和知识图解生成。
+- **资料关联 AI 问答**：支持关联学习资料或资料文件夹进行对话，辅助学生快速理解资料内容。
+- **资源包 PDF 导出**：资源工坊结果可导出图文并茂的 PDF，便于提交、分享和课堂展示。
+- **云端模型部署友好**：Docker 部署默认使用云端模型能力，不依赖本地 Ollama，适合团队快速演示。
+- **内容安全与防幻觉约束**：Prompt 和安全 Agent 对资料依据、来源说明、内部结构泄露等问题做了约束。
 
-## ✨ 功能特性
+## 技术栈
 
-### 📚 文档管理
-- 支持 PDF、Word、TXT 等多种格式文档上传
-- 智能文档解析与文本切片
-- 文档列表管理（查看、删除）
+后端：
 
-### 🤖 AI 核心功能
-- **知识总结**：AI 自动生成文档核心知识点总结
-- **智能问答**：基于 RAG 的文档问答，支持多轮对话
-- **自动出题**：根据文档内容自动生成练习题（单选、判断、简答）
-- **学习计划**：根据学习目标和时间生成个性化学习计划
+- Java 21
+- Spring Boot 3.5.2
+- Spring AI 1.1.2
+- Spring AI Alibaba 1.1.2.0
+- MyBatis-Plus 3.5.7
+- PostgreSQL 16 + pgvector
+- Redis
+- JWT
 
-### 📝 学习辅助
-- **错题本**：自动收集错题，支持标记掌握状态
-- **学习历史**：记录所有 AI 交互历史
-- **个人中心**：用户信息管理与偏好设置
+前端：
 
-### 🎨 现代化 UI
-- 响应式设计，支持多端适配
-- Emerald 绿主题配色
-- 流畅的交互体验
+- Vue 3
+- Vite
+- Element Plus
+- Pinia
+- Axios
+- Markdown-it
 
----
+AI 与多模态：
 
-## 🛠️ 技术栈
+- 科大讯飞星火 Lite：主对话模型
+- 科大讯飞 TTS：学习资源播客音频生成
+- 科大讯飞 HiDream：知识配图与资源包封面生成
+- 阿里云百炼 `text-embedding-v4`：Embedding
+- 阿里云百炼 `qwen-vl-plus`：上传图片理解
 
-### 后端
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Java | 21 | LTS 版本 |
-| Spring Boot | 3.5.2 | 核心框架 |
-| Spring AI | 1.1.2 GA | AI 能力集成 |
-| Spring AI Alibaba | 1.1.2.0 | Agent 与 StateGraph |
-| MyBatis-Plus | 3.5.7 | ORM 框架 |
-| PostgreSQL + pgvector | 16 | 业务数据与向量存储 |
-| JWT | 0.12.6 | 身份认证 |
-| Apache Tika | 2.9.1 | 文档解析 |
+## 核心功能
 
-### 前端
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Vue.js | 3.4+ | 前端框架 |
-| Vite | 5.4+ | 构建工具 |
-| Element Plus | 2.7+ | UI 组件库 |
-| Pinia | 2.1+ | 状态管理 |
-| Axios | 1.7+ | HTTP 客户端 |
-| Markdown-it | 14.1+ | Markdown 渲染 |
+### 资料管理
 
-### AI 能力
-- **大语言模型**：Xiaomi MiMo API（兼容 OpenAI 接口）
-- **Embedding 模型**：bge-m3（本地 Ollama 部署，1024 维）
-- **检索能力**：当前主问答链路使用关键词检索；PgVector + BM25 混合检索组件已实现，待完成资料索引与主链路接入
-- **Reranking**：可选的重排序模块
+- 支持 PDF、Word、TXT、Markdown、图片等学习资料上传。
+- 支持资料文件夹管理。
+- 支持资料解析、预览和后续 AI 任务关联。
 
----
+### AI 问答
 
-## 🚀 快速开始
+- 支持流式回答。
+- 支持关联单份资料、资料文件夹或临时上传资料。
+- 支持历史对话记录。
+- Prompt 约束不会直接暴露底层知识库目录和文件结构。
 
-### 环境要求
+### AI 总结
 
-- **JDK**: 21+
-- **Node.js**: 18+
-- **Maven**: 3.8+
-- **PostgreSQL**: 16+（需安装 pgvector 扩展，推荐使用 Docker Compose）
-- **Ollama**: 已拉取 `bge-m3`
+- 根据资料内容生成 Markdown 总结。
+- 提取核心知识点、重点概念和复习建议。
 
-### 1. 克隆项目
+### 自动出题
 
-```bash
-git clone https://github.com/your-username/ai-study-assistant.git
-cd ai-study-assistant
+- 根据学习资料生成练习题。
+- 支持答案解析和错题记录。
+
+### 学习计划
+
+- 根据学习目标、考试日期和每日学习时间生成计划。
+- 支持学习任务拆解和阶段安排。
+
+### 资源工坊
+
+- 多 Agent 流水线生成个性化资源包。
+- 支持生成讲解文档、思维导图、题库、学习路径、多模态脚本。
+- 支持生成播客音频和知识配图。
+- 支持导出 Markdown 和 PDF。
+- 支持 Agent 执行链路和生成进度展示。
+
+## 快速启动
+
+推荐使用 Docker Compose 启动项目。
+
+### 1. 安装 Docker Desktop
+
+请先安装并启动 Docker Desktop。
+
+Docker 官网：
+
+```text
+https://www.docker.com/products/docker-desktop/
 ```
 
-### 2. 配置环境变量
+### 2. 进入项目根目录
 
-Docker Compose 会自动读取项目根目录的 `.env`；手动启动后端时，请把同名变量导入当前终端：
-
-```env
-# 数据库配置
-DB_USERNAME=postgres
-DB_PASSWORD=请设置强密码
-
-# MiMo API 配置（必填）
-AI_API_KEY=your_api_key
-
-# JWT 密钥（Base64 编码，至少 256 位）
-JWT_SECRET=your_base64_jwt_secret
-
-# Embedding 配置
-OLLAMA_BASE_URL=http://localhost:11434
-EMBEDDING_MODEL=bge-m3
-```
-
-> ⚠️ **重要**：`AI_API_KEY` 必须配置，否则 AI 功能无法使用。
-
-### 3. 初始化数据库
-
-```bash
-# PostgreSQL 已启动时执行（Docker Compose 会自动初始化，无需手工执行）
-psql -U postgres -d ai_study -f sql/schema-pg.sql
-```
-
-### 4. 启动后端
-
-**手动启动**
-
-```bash
-cd backend
-
-# Linux/Mac
-export AI_API_KEY="your_api_key"
-./mvnw spring-boot:run
-
-# Windows CMD
-set JWT_SECRET=your_base64_jwt_secret
-set AI_API_KEY=your_api_key
-set DB_PASSWORD=your_database_password
-./mvnw.cmd spring-boot:run
-```
+Windows PowerShell 示例：
 
 ```powershell
-$env:JWT_SECRET="YWktc3R1ZHktYXNzaXN0YW50LXNlY3JldC1rZXktMjAyNi0wNi0yNQ=="
-$env:AI_API_KEY="tp-cf9jmd3ktx1r4sm5nu2of6lv8qqs0rylsqo2ib1s4uqm7ksa"
-$env:DB_PASSWORD="123456789zzy"
-./mvnw.cmd spring-boot:run
-cd backend
-./mvnw.cmd spring-boot:run
+cd C:\path\to\ai-study-assistant
 ```
 
+### 3. 创建 `.env`
 
+复制环境变量模板：
 
-后端服务将在 `http://localhost:3001/api` 启动。
+```powershell
+Copy-Item .env.example .env
+```
 
-### 5. 启动前端
+打开 `.env`：
 
-```bash
+```powershell
+notepad .env
+```
+
+填写模型、数据库和 JWT 配置。
+
+### 4. 必要环境变量
+
+`.env` 至少需要包含以下配置：
+
+```env
+DB_PASSWORD=your_database_password
+JWT_SECRET=your_base64_jwt_secret
+
+AI_PROVIDER=xfyun-spark
+AI_BASE_URL=https://spark-api-open.xf-yun.com/v1
+AI_COMPLETIONS_PATH=/chat/completions
+AI_API_KEY=your_xfyun_spark_api_password
+AI_CHAT_MODEL=lite
+
+XFYUN_APP_ID=your_xfyun_app_id
+XFYUN_API_KEY=your_xfyun_api_key
+XFYUN_API_SECRET=your_xfyun_api_secret
+XFYUN_IMAGE_PROVIDER=hidream
+
+DASHSCOPE_API_KEY=your_dashscope_api_key
+DASHSCOPE_EMBEDDING_MODEL=text-embedding-v4
+DASHSCOPE_EMBEDDING_DIMENSION=1024
+DASHSCOPE_VL_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DASHSCOPE_VL_MODEL=qwen-vl-plus
+
+FRONTEND_PORT=3000
+BACKEND_PORT=3001
+DB_PORT=5433
+REDIS_PORT=3002
+```
+
+生成 `JWT_SECRET` 的 PowerShell 命令：
+
+```powershell
+$bytes = New-Object byte[] 64
+[Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToBase64String($bytes)
+```
+
+### 5. 一键启动
+
+```powershell
+docker-compose up -d --build
+```
+
+新版 Docker 也可以使用：
+
+```powershell
+docker compose up -d --build
+```
+
+### 6. 查看服务状态
+
+```powershell
+docker-compose ps
+```
+
+正常情况下会启动 4 个服务：
+
+- `ai-study-postgres`
+- `ai-study-redis`
+- `ai-study-backend`
+- `ai-study-frontend`
+
+### 7. 访问系统
+
+前端页面：
+
+```text
+http://localhost:3000
+```
+
+后端健康检查：
+
+```text
+http://localhost:3001/api/actuator/health
+```
+
+返回以下内容表示后端启动成功：
+
+```json
+{"status":"UP"}
+```
+
+### 8. 查看日志
+
+查看后端日志：
+
+```powershell
+docker-compose logs -f backend
+```
+
+查看前端日志：
+
+```powershell
+docker-compose logs -f frontend
+```
+
+### 9. 停止服务
+
+```powershell
+docker-compose down
+```
+
+## 页面入口
+
+启动后访问 `http://localhost:3000`。
+
+主要功能入口：
+
+- 首页：学习概览与资源推荐
+- 学习资料：资料上传、管理与预览
+- AI 问答：资料关联问答
+- AI 总结：资料知识总结
+- 自动出题：题目生成与练习
+- 学习计划：个性化计划生成
+- 资源工坊：多 Agent 个性化资源包生成
+- 历史记录：AI 任务和对话历史
+- 用户中心：个人信息与学习画像
+
+## Docker 服务说明
+
+| 服务 | 说明 | 默认端口 |
+|------|------|----------|
+| frontend | Vue 前端应用 | 3000 |
+| backend | Spring Boot 后端服务 | 3001 |
+| postgres | PostgreSQL + pgvector | 5433 |
+| redis | Redis 缓存 | 3002 |
+
+Docker 启动时会自动执行数据库初始化脚本：
+
+```text
+sql/schema-pg.sql
+sql/data-pg.sql
+```
+
+系统知识库默认挂载目录：
+
+```text
+backend/src/main/resources/knowledge-bank
+```
+
+后端容器内路径：
+
+```text
+/app/resources/knowledge-bank
+```
+
+## 本地开发
+
+如需本地开发而不是 Docker 演示，需要安装：
+
+- JDK 21
+- Node.js 18+
+- PostgreSQL 16 + pgvector
+- Redis
+
+启动后端：
+
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
+```
+
+启动前端：
+
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-前端服务将在 `http://localhost:3000` 启动。
+## 项目结构
 
-### 6. 访问应用
-
-打开浏览器访问 `http://localhost:3000`，注册账号后即可使用。
-
-- **Swagger API 文档**: `http://localhost:3001/api/swagger-ui.html`
-
----
-
-## 🐳 Docker 部署
-
-### 使用 Docker Compose（推荐）
-
-> ⚠️ **前置要求**：需要先安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-
-```bash
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 填写配置
-
-# 一键启动（Docker Desktop 新版本使用 docker compose）
-docker compose up -d
-
-# 如果是旧版本 Docker，使用：
-# docker-compose up -d
-```
-
-服务将启动在：
-- 前端：`http://localhost:3000`
-- 后端 API：`http://localhost:3001/api`
-- PostgreSQL + pgvector：`localhost:5433`
-- Redis：`localhost:3002`
-
-### 停止服务
-
-```bash
-docker compose down
-
-# 旧版本：
-# docker-compose down
-```
-
----
-
-## 📁 项目结构
-
-```
+```text
 ai-study-assistant/
-├── .claude/                    # Claude 开发配置
-│   ├── CLAUDE.md              # 项目规范
-│   ├── task-list.md           # 任务清单
-│   └── prompts/               # Prompt 模板
-├── backend/                    # 后端项目
-│   ├── src/main/java/
-│   │   └── com.study/
-│   │       ├── controller/    # 控制器层
-│   │       ├── service/       # 业务逻辑层
-│   │       ├── mapper/        # 数据访问层
-│   │       ├── entity/        # 实体类
-│   │       ├── dto/           # 数据传输对象
-│   │       ├── vo/            # 视图对象
-│   │       ├── ai/            # AI 相关模块
-│   │       ├── config/        # 配置类
-│   │       ├── security/      # 安全认证
-│   │       └── common/        # 公共组件
-│   └── src/main/resources/
-│       └── application.yml    # 配置文件
-├── frontend/                   # 前端项目
-│   ├── src/
-│   │   ├── api/               # API 请求
-│   │   ├── views/             # 页面组件
-│   │   ├── components/        # 通用组件
-│   │   ├── stores/            # 状态管理
-│   │   ├── router/            # 路由配置
-│   │   └── styles/            # 样式文件
-│   └── public/                # 静态资源
-├── sql/                        # 数据库脚本
-│   └── init.sql               # 初始化脚本
-├── docs/                       # 项目文档
-│   ├── spec.md                # 开发规格文档
-│   └── ui-design-spec.md      # UI 设计规范
-├── docker-compose.yml          # Docker 编排
-└── README.md                   # 项目说明
+├─ backend/                         Spring Boot 后端
+│  ├─ src/main/java/com/study/
+│  └─ src/main/resources/
+│     ├─ application.yml
+│     ├─ application-dev.yml
+│     ├─ application-prod.yml
+│     ├─ agents/
+│     ├─ prompts/
+│     └─ knowledge-bank/
+├─ frontend/                        Vue 前端
+│  ├─ src/api/
+│  ├─ src/components/
+│  ├─ src/stores/
+│  └─ src/views/
+├─ sql/                             数据库脚本
+├─ docs/                            项目文档
+├─ docker-compose.yml               Docker Compose 配置
+├─ .env.example                     环境变量模板
+└─ README.md
 ```
 
----
+## 参赛价值
 
-## 📡 API 接口
+本项目围绕高等教育中“资源繁杂、个体差异大、学习路径不清晰、反馈不及时”的问题，构建了一个以多智能体协作为核心的个性化学习资源生成系统。
 
-### 认证接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/user/register` | 用户注册 |
-| POST | `/api/user/login` | 用户登录 |
-| GET | `/api/user/info` | 获取用户信息 |
-| PUT | `/api/user/password` | 修改密码 |
-
-### 文档管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/material/upload` | 上传文档 |
-| GET | `/api/material/list` | 文档列表 |
-| GET | `/api/material/{id}` | 文档详情 |
-| DELETE | `/api/material/{id}` | 删除文档 |
-
-### AI 功能
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/ai/summary/{id}` | 文档总结 |
-| POST | `/api/ai/qa` | 文档问答 |
-| POST | `/api/ai/qa/stream` | 流式问答 |
-| POST | `/api/ai/quiz/{id}` | 生成练习题 |
-| POST | `/api/ai/quiz/answer` | 提交答案 |
-| GET | `/api/ai/quiz/wrong` | 错题本列表 |
-| PUT | `/api/ai/quiz/wrong/{id}/master` | 标记掌握 |
-| POST | `/api/ai/plan` | 生成学习计划 |
-| GET | `/api/ai/plan` | 获取学习计划 |
-| POST | `/api/ai/task/resource-package` | 异步生成个性化资源包 |
-| GET | `/api/ai/task/resource-package` | 获取最近资源包任务 |
-| GET | `/api/ai/task/{taskId}` | 查询资源包/AI 异步任务进度 |
-
-### 历史记录
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/history/qa` | 问答历史 |
-| GET | `/api/history/quiz` | 练习历史 |
-| GET | `/api/history/summary` | 总结历史 |
-
-> 📖 完整 API 文档请访问：`http://localhost:3001/api/swagger-ui.html`
-
----
-
-## 🔧 配置说明
-
-### 应用配置 (application.yml)
-
-```yaml
-spring:
-  ai:
-    openai:
-      api-key: ${AI_API_KEY}
-      base-url: https://token-plan-cn.xiaomimimo.com
-      chat:
-        options:
-          model: mimo-v2.5
-
-  datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-
-jwt:
-  secret: ${JWT_SECRET}
-  expiration: 86400000  # 24 小时
-```
-
-### AI 模型配置
-
-系统默认使用 Xiaomi MiMo 模型，可在配置文件中修改：
-
-```yaml
-spring:
-  ai:
-    openai:
-      chat:
-        options:
-          model: mimo-v2.5
-          temperature: 0.7
-```
-
----
-
-## 🤝 贡献指南
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
----
-
-## 📝 开发规范
-
-请参阅 [.claude/CLAUDE.md](.claude/CLAUDE.md) 了解完整的开发规范。
-
-主要原则：
-- 遵循 Spec 驱动开发模式
-- 代码审查必须通过 6 维检查
-- 保持向后兼容
-- 一次只完成一个任务
-
----
-
-## 📄 License
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
----
-
-## 🙏 致谢
-
-- [Spring Boot](https://spring.io/projects/spring-boot)
-- [Spring AI](https://spring.io/projects/spring-ai)
-- [Vue.js](https://vuejs.org/)
-- [Element Plus](https://element-plus.org/)
-- [Xiaomi MiMo](https://mimo.xiaomi.com/)
-
----
-
-## 📞 联系方式
-
-如有问题或建议，请通过以下方式联系：
-
-- 提交 Issue
-- 发送邮件至：your-email@example.com
-
----
-
-**⭐ 如果这个项目对你有帮助，请给个 Star 支持一下！**
+系统不仅能完成传统 AI 总结和问答，还能将资料转化为可复习、可练习、可展示的资源包，并通过音频和配图提升学习材料的可理解性与传播性，符合 A3 赛题对个性化、多模态、多智能体系统的要求。

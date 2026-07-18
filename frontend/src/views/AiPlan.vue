@@ -251,6 +251,7 @@ async function handleGenerate() {
         planTitle.value = result.title || '学习计划'
         planGoal.value = result.goal || planForm.goal
         totalDays.value = result.totalDays || plan.value.length
+        currentPlanId.value = result.id || null
         generating.value = false
         ElMessage.success('学习计划生成成功')
       },
@@ -356,6 +357,7 @@ onMounted(async () => {
         planTitle.value = result.title || '学习计划'
         planGoal.value = result.goal || ''
         totalDays.value = result.totalDays || plan.value.length
+        currentPlanId.value = result.id || null
         generating.value = false
         ElMessage.success('学习计划生成成功')
       },

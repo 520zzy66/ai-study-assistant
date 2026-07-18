@@ -21,8 +21,11 @@ public class AiChatHistory {
     /** 对话类型 summary/qa/quiz/plan */
     private String chatType;
 
-    /** 关联资料ID */
+    /** 关联资料ID（与 folderId 互斥） */
     private Long materialId;
+
+    /** 关联文件夹ID（文件夹级问答时使用，与 materialId 互斥） */
+    private Long folderId;
 
     /** 会话临时资料令牌（最多保留7天） */
     private String temporaryMaterialToken;

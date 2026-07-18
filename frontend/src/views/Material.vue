@@ -62,10 +62,19 @@
                   <el-icon class="more-icon"><MoreFilled /></el-icon>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item command="rename">
+                      <el-dropdown-item command="detail">
+                        <el-icon><Document /></el-icon> 查看详情
+                      </el-dropdown-item>
+                      <el-dropdown-item command="summary">
+                        <el-icon><Collection /></el-icon> {{ data.summary ? '查看总结' : '生成总结' }}
+                      </el-dropdown-item>
+                      <el-dropdown-item command="mindmap">
+                        <el-icon><Connection /></el-icon> 思维导图
+                      </el-dropdown-item>
+                      <el-dropdown-item command="rename" divided>
                         <el-icon><Edit /></el-icon> 重命名
                       </el-dropdown-item>
-                      <el-dropdown-item command="delete" divided>
+                      <el-dropdown-item command="delete">
                         <span style="color: var(--el-color-danger)">
                           <el-icon><Delete /></el-icon> 删除
                         </span>
@@ -583,6 +592,41 @@
       </div>
     </el-drawer>
 
+    <!-- 文件夹详情抽屉 -->
+    <el-drawer v-model="folderDetailVisible" size="420px">
+      <template #header>
+        <span class="drawer-title">文件夹详情</span>
+      </template>
+      <div v-if="selectedFolder" class="detail-content">
+        <div class="detail-row">
+          <span class="detail-label">文件夹名称</span>
+          <span class="detail-value">{{ selectedFolder.name }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">直属资料数</span>
+          <span class="detail-value">{{ selectedFolder.materialCount || 0 }} 份</span>
+        </div>
+        <div v-if="selectedFolder.children?.length" class="detail-row">
+          <span class="detail-label">子文件夹数</span>
+          <span class="detail-value">{{ selectedFolder.children.length }} 个</span>
+        </div>
+        <div v-if="selectedFolder.createTime" class="detail-row">
+          <span class="detail-label">创建时间</span>
+          <span class="detail-value">{{ selectedFolder.createTime }}</span>
+        </div>
+        <div v-if="selectedFolder.summary" class="detail-row">
+          <span class="detail-label">AI 总结</span>
+          <span class="detail-value detail-summary">{{ selectedFolder.summary }}</span>
+        </div>
+        <div class="detail-actions">
+          <el-button type="primary" @click="handleFolderSummary(selectedFolder)">
+            {{ selectedFolder.summary ? '查看 AI 总结' : '生成 AI 总结' }}
+          </el-button>
+          <el-button @click="goToFolderMindmap(selectedFolder)">思维导图</el-button>
+        </div>
+      </div>
+    </el-drawer>
+
     <!-- 查看总结弹窗 -->
     <el-dialog v-model="summaryDialogVisible" :title="summaryDialogTitle" width="800px" center>
       <div class="summary-dialog-content">
@@ -650,6 +694,10 @@ const currentFolderId = ref(null)
 const folderTreeRef = ref(null)
 const totalMaterialCount = ref(0)
 
+// 文件夹详情抽屉
+const folderDetailVisible = ref(false)
+const selectedFolder = ref(null)
+
 // 文件夹弹窗
 const folderDialogVisible = ref(false)
 const folderDialogTitle = ref('新建文件夹')
@@ -715,8 +763,6 @@ async function loadFolderTree() {
   try {
     const data = await getFolderTree()
     folderTree.value = data || []
-    // 计算总数
-    totalMaterialCount.value = folderTree.value.reduce((sum, f) => sum + (f.materialCount || 0), 0)
   } catch (error) {
     console.error('加载文件夹树失败:', error)
   }
@@ -808,6 +854,15 @@ async function handleFolderSubmit() {
 /** 处理文件夹下拉命令 */
 function handleFolderCommand(cmd, data) {
   switch (cmd) {
+    case 'detail':
+      handleFolderDetail(data)
+      break
+    case 'summary':
+      handleFolderSummary(data)
+      break
+    case 'mindmap':
+      goToFolderMindmap(data)
+      break
     case 'rename':
       showRenameFolderDialog(data)
       break
@@ -818,6 +873,17 @@ function handleFolderCommand(cmd, data) {
       handleDeleteFolder(data)
       break
   }
+}
+
+/** 查看文件夹详情 */
+function handleFolderDetail(data) {
+  selectedFolder.value = data
+  folderDetailVisible.value = true
+}
+
+/** 跳转到文件夹思维导图工作台 */
+function goToFolderMindmap(folder) {
+  router.push(`/ai/mindmap?folderId=${folder.id}`)
 }
 
 /** 删除文件夹 */
@@ -1120,6 +1186,8 @@ onMounted(async () => {
     loadFolderTree(),
     handleSearch()
   ])
+  // 初始 handleSearch 无 folderId/keyword/status 筛选，返回的 total 即所有资料总数（含未分类）
+  totalMaterialCount.value = total.value
 })
 </script>
 

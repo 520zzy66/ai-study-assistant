@@ -111,6 +111,16 @@ export async function getMindMap(materialId) {
 }
 
 /**
+ * 保存用户编辑后的思维导图
+ * @param {number} materialId 资料ID
+ * @param {string} mindMapJson 思维导图 JSON 字符串
+ */
+export async function updateMindMap(materialId, mindMapJson) {
+  const res = await api.put(`/ai/summary/mindmap/${materialId}`, { mindMap: mindMapJson })
+  return res.data
+}
+
+/**
  * 生成文件夹思维导图
  * @param {number} folderId 文件夹ID
  */
@@ -125,6 +135,16 @@ export async function generateFolderMindMap(folderId) {
  */
 export async function getFolderMindMap(folderId) {
   const res = await api.get(`/ai/summary/folder/mindmap/${folderId}`)
+  return res.data
+}
+
+/**
+ * 保存用户编辑后的文件夹思维导图
+ * @param {number} folderId 文件夹ID
+ * @param {string} mindMapJson 思维导图 JSON 字符串
+ */
+export async function updateFolderMindMap(folderId, mindMapJson) {
+  const res = await api.put(`/ai/summary/folder/mindmap/${folderId}`, { mindMap: mindMapJson })
   return res.data
 }
 
@@ -153,6 +173,7 @@ export function askQuestionStream(params, callbacks) {
   // 构建请求体，支持历史对话
   const requestBody = {
     materialId: params.materialId,
+    folderId: params.folderId || null,
     temporaryMaterialToken: params.temporaryMaterialToken || null,
     question: params.question,
     history: params.history || [],
@@ -271,6 +292,15 @@ export async function generatePlan(params) {
   return res.data
 }
 
+/**
+ * 获取学习计划列表
+ * @returns {Promise<Array>} 当前用户的学习计划，按创建时间倒序
+ */
+export async function listPlans() {
+  const res = await api.get('/ai/plan')
+  return res.data
+}
+
 // ==================== 异步任务 API ====================
 
 /**
@@ -382,5 +412,38 @@ export async function getPlanProgressList(planId) {
  */
 export async function getPlanProgressStats(planId) {
   const res = await api.get(`/ai/plan/${planId}/stats`)
+  return res.data
+}
+
+// ==================== 多模态资源资产 API（spec §10.1） ====================
+
+/**
+ * 查询多模态资产能力（发音人列表、图片风格、开关状态等）。
+ * 前端据此控制表单拓展开关的可用性和默认值。
+ * @returns {Promise<Object>} { ttsEnabled, imageEnabled, voices, imageStyles, maxImageCount, defaultVoice, defaultImageStyle }
+ */
+export async function getResourceAssetCapabilities() {
+  const res = await api.get('/ai/resource-assets/capabilities')
+  return res.data
+}
+
+/**
+ * 查询资源包下的多模态资产列表（音频 + 图片）。
+ * 仅返回当前用户拥有的资产。
+ * @param {string} packageId 资源包 ID
+ * @returns {Promise<Array>} 资产 VO 列表
+ */
+export async function listResourcePackageAssets(packageId) {
+  const res = await api.get(`/ai/resource-packages/${packageId}/assets`)
+  return res.data
+}
+
+/**
+ * 重试 failed 状态的资产，复用原始脚本/提示词重新生成。
+ * @param {string} assetId 资产 UUID
+ * @returns {Promise<Object>} 更新后的资产 VO
+ */
+export async function retryResourceAsset(assetId) {
+  const res = await api.post(`/ai/resource-assets/${assetId}/retry`)
   return res.data
 }

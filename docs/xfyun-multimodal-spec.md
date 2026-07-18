@@ -301,11 +301,15 @@ backend/src/main/java/com/study/config/ResourceAssetProperties.java
 
 ```yaml
 xfyun:
+  # Legacy shared credentials. Service-level credentials below take precedence.
   app-id: ${XFYUN_APP_ID:}
   api-key: ${XFYUN_API_KEY:}
   api-secret: ${XFYUN_API_SECRET:}
   tts:
     enabled: ${XFYUN_TTS_ENABLED:false}
+    app-id: ${XFYUN_TTS_APP_ID:${XFYUN_APP_ID:}}
+    api-key: ${XFYUN_TTS_API_KEY:${XFYUN_API_KEY:}}
+    api-secret: ${XFYUN_TTS_API_SECRET:${XFYUN_API_SECRET:}}
     endpoint: ${XFYUN_TTS_ENDPOINT:wss://tts-api.xfyun.cn/v2/tts}
     voice: ${XFYUN_TTS_VOICE:xiaoyan}
     sample-rate: ${XFYUN_TTS_SAMPLE_RATE:16000}
@@ -314,6 +318,9 @@ xfyun:
     max-text-bytes: 7600
   image:
     enabled: ${XFYUN_IMAGE_ENABLED:false}
+    app-id: ${XFYUN_IMAGE_APP_ID:${XFYUN_APP_ID:}}
+    api-key: ${XFYUN_IMAGE_API_KEY:${XFYUN_API_KEY:}}
+    api-secret: ${XFYUN_IMAGE_API_SECRET:${XFYUN_API_SECRET:}}
     provider: ${XFYUN_IMAGE_PROVIDER:tti}
     endpoint: ${XFYUN_IMAGE_ENDPOINT:https://spark-api.cn-huabei-1.xf-yun.com/v2.1/tti}
     model: ${XFYUN_IMAGE_MODEL:spark-tti}
@@ -331,6 +338,7 @@ resource-asset:
 配置规则：
 
 - 任何密钥只允许通过环境变量注入。
+- TTS 和文生图优先使用各自的 `XFYUN_TTS_*` / `XFYUN_IMAGE_*` 凭证；公共 `XFYUN_APP_ID` / `XFYUN_API_KEY` / `XFYUN_API_SECRET` 仅作为兼容旧配置的兜底。
 - `enabled=true` 但密钥不完整时，应用启动不失败，但能力接口返回 disabled，并给出内部日志。
 - 前端只读取 `/ai/resource-assets/capabilities`，不可读取配置文件。
 

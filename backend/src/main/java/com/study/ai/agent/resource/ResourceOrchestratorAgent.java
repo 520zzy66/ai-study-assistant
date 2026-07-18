@@ -51,6 +51,19 @@ public class ResourceOrchestratorAgent {
      * @return generated resource package result
      */
     public ResourceAgentResult orchestrate(GenerateResourcePackageRequest request, Consumer<AgentProgressEvent> progressReporter) {
+        return orchestrate(request, null, progressReporter);
+    }
+
+    /**
+     * Orchestrates the resource package pipeline with deterministic specialist agents.
+     *
+     * @param request resource package request
+     * @param taskId async task id, used by MultimodalAgent to persist resource_asset.task_id
+     * @param progressReporter progress callback for the async task facade
+     * @return generated resource package result
+     */
+    public ResourceAgentResult orchestrate(GenerateResourcePackageRequest request, String taskId,
+                                           Consumer<AgentProgressEvent> progressReporter) {
         Long userId = UserContext.getCurrentUserId();
         safetyTools.validateSelectedResources(request);
         LearningMaterial material = materialValidator.validateAndGet(request.getMaterialId(), userId);
@@ -64,16 +77,27 @@ public class ResourceOrchestratorAgent {
         context.setIncludeQuiz(enabled(request.getIncludeQuiz()));
         context.setIncludePlan(enabled(request.getIncludePlan()));
         context.setIncludeMultimodalScript(enabled(request.getIncludeMultimodalScript()));
+        // 多模态拓展字段（spec §8.2）
+        context.setIncludePodcastAudio(Boolean.TRUE.equals(request.getIncludePodcastAudio()));
+        context.setPodcastStyle(request.getPodcastStyle() != null ? request.getPodcastStyle() : "teacher");
+        context.setTtsVoice(request.getTtsVoice());
+        context.setIncludeKnowledgeImages(Boolean.TRUE.equals(request.getIncludeKnowledgeImages()));
+        context.setImageCount(request.getImageCount() != null ? request.getImageCount() : 1);
+        context.setImageStyle(request.getImageStyle() != null ? request.getImageStyle() : "clean_edu");
+        context.setTaskId(taskId);
 
         ResourceAgentResult result = new ResourceAgentResult();
         result.setPackageId(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         result.setMaterialId(material.getId());
         result.setMaterialName(material.getOriginalName());
         result.setGeneratedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        
+
+        // 让 MultimodalAgent 写资产时能拿到 packageId
+        context.setPackageId(result.getPackageId());
+
         List<ResourceManifestItem> manifest = new ArrayList<>();
         result.setResourceManifest(manifest);
-        
+
         AgentTrace trace = new AgentTrace();
         trace.setTraceId(UUID.randomUUID().toString());
         trace.setStatus("running");
@@ -81,7 +105,7 @@ public class ResourceOrchestratorAgent {
         result.setAgentTrace(trace);
 
         report(progressReporter, 12, AgentNames.PROFILE_AGENT, AgentNames.ACTION_ANALYZE_PROFILE, "画像分析 Agent 正在读取学习画像...");
-        
+
         // 1. Profile Agent
         try {
             AgentStep profileStep = profileAgent.execute(context, request);
@@ -139,19 +163,21 @@ public class ResourceOrchestratorAgent {
         manifest.add(planManifest);
         trace.addStep(planAgent.execute(context, planManifest));
 
-        // 6. Multimodal Agent
-        report(progressReporter, 84, AgentNames.MULTIMODAL_AGENT, AgentNames.ACTION_GENERATE_MULTIMODAL_SCRIPT, "多模态脚本 Agent 正在编排 PPT、图像、语音和微课脚本...");
+        // 6. Multimodal Agent（进度 84/87/90/93/94 全部由 MultimodalAgent 上报，spec §4.2）
+        report(progressReporter, 84, AgentNames.MULTIMODAL_AGENT, AgentNames.ACTION_GENERATE_MULTIMODAL_SCRIPT, "正在整理多模态脚本...");
         ResourceManifestItem multimodalManifest = new ResourceManifestItem();
         multimodalManifest.setKey("multimodalScript");
-        multimodalManifest.setTitle("多模态资源脚本包");
+        multimodalManifest.setTitle("多模态资源");
         multimodalManifest.setType("multimodal_script");
         multimodalManifest.setRequested(enabled(context.getIncludeMultimodalScript()));
         manifest.add(multimodalManifest);
-        trace.addStep(multimodalAgent.execute(context, multimodalManifest));
+        trace.addStep(multimodalAgent.execute(context, multimodalManifest, progressReporter));
 
-        // 7. Safety Agent
-        report(progressReporter, 94, AgentNames.SAFETY_AGENT, AgentNames.ACTION_VALIDATE_PACKAGE, "资源设计 Agent 正在整理资源包清单和评审说明...");
+        // 7. Safety Agent（spec §4.2：SafetyAgent 不再单独上报进度，由 MultimodalAgent 占用 84-94）
         trace.addStep(safetyAgent.execute(context, result));
+
+        // 写入多模态资产列表
+        result.setAssets(context.getAssets());
 
         result.setAgents(List.of(
                 AgentNames.PROFILE_AGENT_DISPLAY,
@@ -161,7 +187,7 @@ public class ResourceOrchestratorAgent {
                 AgentNames.PLAN_AGENT_DISPLAY,
                 AgentNames.MULTIMODAL_AGENT_DISPLAY
         ));
-        
+
         result.setAgentDetails(buildAgentDetails(context));
         result.setResources(context.getResources());
 

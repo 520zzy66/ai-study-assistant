@@ -12,9 +12,9 @@ order: 1
 
 # 模型绑定（可选，空则使用全局默认模型）
 model:
-  base-url: ${AI_BASE_URL}
-  api-key: ${AI_API_KEY}
-  model: ${AI_CHAT_MODEL:mimo-v2.5}
+  base-url: ${AI_BASE_URL:${spring.ai.openai.base-url:https://spark-api-open.xf-yun.com/v1}}
+  api-key: ${AI_API_KEY:${spring.ai.openai.api-key:}}
+  model: ${AI_CHAT_MODEL:${spring.ai.openai.chat.options.model:lite}}
   temperature: 0.5  # 专业解答需要适中的创造性
 
 # System Prompt

@@ -33,6 +33,7 @@ public class KnowledgeTools {
     private static final String EMPTY_JSON_ARRAY = "[]";
     public static final String CONTEXT_USER_ID = "userId";
     public static final String CONTEXT_MATERIAL_ID = "materialId";
+    public static final String CONTEXT_FOLDER_ID = "folderId";
     public static final String CONTEXT_USER_PROFILE = "userProfile";
     public static final String CONTEXT_CONVERSATION_ID = "conversationId";
     public static final String CONTEXT_TEMPORARY_MATERIAL_TOKEN = "temporaryMaterialToken";
@@ -61,7 +62,8 @@ public class KnowledgeTools {
     public String searchDomainKnowledge(
             @ToolParam(description = "Exam domain: CIVIL, GRADUATE or GENERAL") String domain,
             @ToolParam(description = "Search keywords or user question") String query,
-            @ToolParam(description = "Optional folder name to narrow down search range, e.g. '素材金句积累', '判断推理', '蒙题秒杀技巧', '党政党史', '政策热点'", required = false) String folderName) {
+            @ToolParam(description = "Optional folder name to narrow down search range, e.g. '素材金句积累', '判断推理', '蒙题秒杀技巧', '党政党史', '政策热点'", required = false) String folderName,
+            ToolContext toolContext) {
         long start = System.currentTimeMillis();
         String normalizedDomain = normalizeDomain(domain);
         ToolCallEventPublisher.toolCall("searchDomainKnowledge", params(
@@ -69,6 +71,15 @@ public class KnowledgeTools {
                 "query", truncate(query),
                 "folderName", truncate(folderName)));
         if (isBlank(query) || vectorStore == null) {
+            ToolCallEventPublisher.toolResult("searchDomainKnowledge", 0, elapsed(start), false);
+            return EMPTY_JSON_ARRAY;
+        }
+
+        // 文件夹关联问答必须以用户自己的资料为唯一事实来源，不能让系统知识库目录
+        // 被模型误当成当前文件夹的文件结构或内容。
+        if (contextLong(toolContext, CONTEXT_FOLDER_ID) != null) {
+            log.debug("Skip system knowledge search for folder-scoped conversation: folderId={}",
+                    contextLong(toolContext, CONTEXT_FOLDER_ID));
             ToolCallEventPublisher.toolResult("searchDomainKnowledge", 0, elapsed(start), false);
             return EMPTY_JSON_ARRAY;
         }
@@ -93,12 +104,16 @@ public class KnowledgeTools {
     /**
      * Search the current user's uploaded study materials.
      *
+     * <p>When {@code folderId} is present in the tool context, search is scoped to
+     * all materials under that folder (multi-document RAG). Otherwise, the search
+     * is scoped to the single {@code materialId} if present.</p>
+     *
      * @param query    search keywords or the user question
      * @param quizType optional quiz or exam type hint
      * @param toolContext trusted server-side tool context
      * @return JSON array of matched user material chunks
      */
-    @Tool(description = "Search the current user's uploaded study materials")
+    @Tool(description = "Search the current user's uploaded study materials. When a folder is selected, searches across all materials in that folder.")
     public String searchPersonalMaterial(
             @ToolParam(description = "Search keywords or user question") String query,
             @ToolParam(description = "Optional quiz or exam type hint", required = false) String quizType,
@@ -106,12 +121,18 @@ public class KnowledgeTools {
         long start = System.currentTimeMillis();
         Long userId = contextLong(toolContext, CONTEXT_USER_ID);
         Long materialId = contextLong(toolContext, CONTEXT_MATERIAL_ID);
+        Long folderId = contextLong(toolContext, CONTEXT_FOLDER_ID);
         ToolCallEventPublisher.toolCall("searchPersonalMaterial", params(
                 "userId", userId,
                 "materialId", materialId,
+                "folderId", folderId,
                 "query", truncate(query),
                 "quizType", truncate(quizType)));
         if (userId == null || userId <= 0 || isBlank(query)) {
+            ToolCallEventPublisher.toolResult("searchPersonalMaterial", 0, elapsed(start), false);
+            return EMPTY_JSON_ARRAY;
+        }
+        if (materialId == null && folderId == null) {
             ToolCallEventPublisher.toolResult("searchPersonalMaterial", 0, elapsed(start), false);
             return EMPTY_JSON_ARRAY;
         }
@@ -119,13 +140,14 @@ public class KnowledgeTools {
         String enhancedQuery = isBlank(quizType) ? query : quizType + " " + query;
         try {
             List<ChunkSearchResult> results = hybridSearchService.search(
-                    materialId, userId, enhancedQuery, DEFAULT_TOP_K);
+                    materialId, userId, folderId, enhancedQuery, DEFAULT_TOP_K);
             ToolCallEventPublisher.toolResult("searchPersonalMaterial", results.size(), elapsed(start), false);
             return toJsonArray(results.stream()
                     .map(this::toChunkPayload)
                     .toList());
         } catch (Exception e) {
-            log.warn("Personal material search failed: userId={}, error={}", userId, e.getMessage());
+            log.warn("Personal material search failed: userId={}, materialId={}, folderId={}, error={}",
+                    userId, materialId, folderId, e.getMessage());
             ToolCallEventPublisher.toolResult("searchPersonalMaterial", 0, elapsed(start), true);
             return EMPTY_JSON_ARRAY;
         }

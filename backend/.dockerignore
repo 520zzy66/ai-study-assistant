@@ -1,6 +1,5 @@
 # Backend .dockerignore
-target/*
-!target/ai-study-assistant-0.0.1-SNAPSHOT.jar
+target/
 *.log
 uploads/
 .idea/

@@ -6,11 +6,7 @@ import java.util.List;
  * Embedding 向量化接口
  * 负责将文本转换为向量，用于 RAG 语义检索
  *
- * 【Phase 4 MVP】暂不实现实际模型，使用关键词匹配作为替代方案。
- * 后续可集成：
- * - 本地 bge-small-zh（ONNX Runtime）
- * - 阿里通义 text-embedding-v2
- * - OpenAI text-embedding-3-small
+ * 当前默认实现为阿里云百炼 text-embedding-v4，输出 1024 维向量。
  */
 public interface EmbeddingProvider {
 

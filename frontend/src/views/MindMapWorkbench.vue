@@ -6,9 +6,6 @@
     >
       <template #actions>
         <div class="workbench-actions">
-          <el-button @click="downloadPdf" :disabled="!mindMapData">
-            <el-icon><Download /></el-icon> 导出 PDF
-          </el-button>
           <el-button @click="downloadImage" :disabled="!mindMapData">
             <el-icon><Picture /></el-icon> 导出图片
           </el-button>
@@ -88,14 +85,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Download, Picture, Check, Connection } from '@element-plus/icons-vue'
+import { Picture, Check, Connection } from '@element-plus/icons-vue'
 import BasePageHeader from '@/components/common/BasePageHeader.vue'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 import InteractiveMindMap from '@/components/common/InteractiveMindMap.vue'
 import { getMaterialList } from '@/api/material'
 import { getFolderTree } from '@/api/materialFolder'
-import { getMindMap, generateMindMap, getFolderMindMap, generateFolderMindMap } from '@/api/ai'
-import api from '@/api'
+import { getMindMap, generateMindMap, getFolderMindMap, generateFolderMindMap, updateMindMap, updateFolderMindMap } from '@/api/ai'
 
 const route = useRoute()
 const router = useRouter()
@@ -232,14 +228,6 @@ function handleMindMapUpdate(newData) {
   latestMindMapJson.value = JSON.stringify(newData)
 }
 
-function downloadPdf() {
-  if (mindMapRef.value && mindMapRef.value.exportPdf) {
-    mindMapRef.value.exportPdf()
-  } else {
-    ElMessage.warning('导出功能正在初始化，请稍后重试')
-  }
-}
-
 function downloadImage() {
   if (mindMapRef.value && mindMapRef.value.exportImage) {
     mindMapRef.value.exportImage()
@@ -250,22 +238,21 @@ function downloadImage() {
 
 async function saveMindMap() {
   if (!latestMindMapJson.value) return
-  
+
   saving.value = true
   try {
-    // 根据类型保存到不同的后端接口
-    // 我们在这里使用一种优雅降级的方式，如果后端还没有相关API，这里会提示但是不崩溃。
-    // 如果之后后端增加 PUT /material/{id}/mindmap 即可对接成功。
     if (filterType.value === 'material' && selectedMaterialId.value) {
-      await api.put(`/material/${selectedMaterialId.value}/mindmap`, { mindMap: latestMindMapJson.value })
+      await updateMindMap(selectedMaterialId.value, latestMindMapJson.value)
       ElMessage.success('资料导图保存成功')
     } else if (filterType.value === 'folder' && selectedFolderId.value) {
-      await api.put(`/folder/${selectedFolderId.value}/mindmap`, { mindMap: latestMindMapJson.value })
+      await updateFolderMindMap(selectedFolderId.value, latestMindMapJson.value)
       ElMessage.success('文件夹导图保存成功')
+    } else {
+      ElMessage.warning('请先选择资料或文件夹')
     }
   } catch (error) {
-    ElMessage.warning('保存API尚未支持，请联系管理员升级后端。导图临时修改在前端生效。')
     console.warn('保存接口调用异常:', error)
+    ElMessage.error('导图保存失败，请稍后重试')
   } finally {
     saving.value = false
   }

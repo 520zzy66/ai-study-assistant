@@ -16,7 +16,7 @@ services:
     environment:
       POSTGRES_DB: ai_study
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?请在.env中设置DB_PASSWORD}
     ports:
       - "${DB_PORT:-5433}:5432"
     volumes:
@@ -62,18 +62,31 @@ services:
       DB_PORT: 5432
       DB_NAME: ai_study
       DB_USERNAME: postgres
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?请在.env中设置DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      AI_API_KEY: ${AI_API_KEY}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-bge-m3}
-      JWT_SECRET: ${JWT_SECRET}
+      AI_PROVIDER: ${AI_PROVIDER:-xfyun-spark}
+      AI_BASE_URL: ${AI_BASE_URL:-https://spark-api-open.xf-yun.com/v1}
+      AI_COMPLETIONS_PATH: ${AI_COMPLETIONS_PATH:-/chat/completions}
+      AI_API_KEY: ${AI_API_KEY:?请在.env中设置AI_API_KEY}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-lite}
+      AI_CHAT_TEMPERATURE: ${AI_CHAT_TEMPERATURE:-0.7}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:?请在.env中设置DASHSCOPE_API_KEY}
+      DASHSCOPE_VL_BASE_URL: ${DASHSCOPE_VL_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      DASHSCOPE_VL_MODEL: ${DASHSCOPE_VL_MODEL:-qwen-vl-plus}
+      JWT_SECRET: ${JWT_SECRET:?请在.env中设置JWT_SECRET}
+      XFYUN_APP_ID: ${XFYUN_APP_ID:?请在.env中设置XFYUN_APP_ID}
+      XFYUN_API_KEY: ${XFYUN_API_KEY:?请在.env中设置XFYUN_API_KEY}
+      XFYUN_API_SECRET: ${XFYUN_API_SECRET:?请在.env中设置XFYUN_API_SECRET}
+      XFYUN_IMAGE_PROVIDER: hidream
+      XFYUN_IMAGE_TIMEOUT_MS: ${XFYUN_IMAGE_TIMEOUT_MS:-180000}
       FILE_UPLOAD_DIR: /app/uploads
+      AI_KNOWLEDGE_BANK_ROOT: /app/resources/knowledge-bank
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     volumes:
       - uploads_data:/app/uploads
+      - ./backend/src/main/resources/knowledge-bank:/app/resources/knowledge-bank:ro
 
   # ---- Vue3 前端 ----
   frontend:

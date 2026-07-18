@@ -91,13 +91,6 @@
       <!-- 底部用户/设置区 -->
       <div class="sidebar-footer">
         <span v-if="!sidebarCollapsed" class="autosave-hint">对话自动保存</span>
-        <div class="footer-actions">
-          <button class="icon-btn" type="button" :aria-label="isDarkMode ? '切换到浅色模式' : '切换到深色模式'" @click="toggleTheme" :title="isDarkMode ? '切换到浅色模式' : '切换到深色模式'">
-            <el-icon :size="18">
-              <component :is="isDarkMode ? 'Sunny' : 'Moon'" />
-            </el-icon>
-          </button>
-        </div>
       </div>
     </aside>
 
@@ -121,41 +114,27 @@
         </div>
         <div class="header-right">
           <div class="material-selector">
-            <el-select
-              v-model="aiStore.selectedMaterialId"
+            <el-cascader
+              v-model="cascaderValue"
+              :options="cascaderOptions"
+              :props="cascaderProps"
               clearable
               filterable
               size="small"
               placeholder="关联学习资料"
-              class="material-select"
-              @change="onMaterialChange"
+              class="material-cascader"
+              @change="onCascaderChange"
             >
-              <el-option
-                v-for="material in materialList"
-                :key="material.id"
-                :label="material.originalName"
-                :value="material.id"
-                :disabled="material.status !== 'ready'"
-              />
-            </el-select>
+              <template #default="{ data }">
+                <span class="cascader-node">
+                  <el-icon v-if="data.isFolder" :size="14"><Folder /></el-icon>
+                  <el-icon v-else :size="14"><Document /></el-icon>
+                  <span>{{ data.label }}</span>
+                  <span v-if="data.isFolder" class="node-count">{{ data.materialCount || 0 }}</span>
+                </span>
+              </template>
+            </el-cascader>
           </div>
-          <div class="model-selector">
-            <el-select v-model="selectedModel" size="small" class="model-select" aria-label="选择对话模型">
-              <el-option label="DeepSeek-V3" value="deepseek-chat" />
-              <el-option label="DeepSeek-R1" value="deepseek-reasoner" />
-            </el-select>
-          </div>
-          <button
-            :class="['search-toggle', { active: webSearchEnabled }]"
-            type="button"
-            :aria-pressed="webSearchEnabled"
-            aria-label="切换联网搜索"
-            @click="webSearchEnabled = !webSearchEnabled"
-            title="联网搜索"
-          >
-            <el-icon :size="16"><Search /></el-icon>
-            <span>搜索</span>
-          </button>
         </div>
       </header>
 
@@ -196,14 +175,20 @@
                 <!-- 文件卡片 -->
                 <div v-if="msg.material" class="message-file-card">
                   <div class="file-card-icon">
-                    <el-icon :size="20"><Document /></el-icon>
+                    <el-icon :size="20">
+                      <Folder v-if="msg.material.isFolder" />
+                      <Document v-else />
+                    </el-icon>
                   </div>
                   <div class="file-card-info">
                     <div class="file-card-name">{{ msg.material.name }}</div>
                     <div class="file-card-meta">
-                      <span v-if="msg.material.isTemporary" class="file-card-type">临时资料</span>
-                      <span class="file-card-type">{{ (msg.material.fileType || '').toUpperCase() }}</span>
-                      <span v-if="msg.material.fileSize" class="file-card-size">{{ formatFileSize(msg.material.fileSize) }}</span>
+                      <span v-if="msg.material.isFolder" class="file-card-type">文件夹</span>
+                      <span v-else-if="msg.material.isTemporary" class="file-card-type">临时资料</span>
+                      <template v-else>
+                        <span class="file-card-type">{{ (msg.material.fileType || '').toUpperCase() }}</span>
+                        <span v-if="msg.material.fileSize" class="file-card-size">{{ formatFileSize(msg.material.fileSize) }}</span>
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -284,17 +269,21 @@
       <!-- 底部输入区域 -->
       <div class="input-area">
         <div class="input-wrapper">
-          <!-- 关联资料标签 -->
-          <div v-if="selectedMaterial" class="material-tag-bar">
-            <div :class="['material-tag', { processing: isMaterialProcessing }]">
-              <el-icon :size="14"><Document /></el-icon>
-              <span class="tag-name">{{ selectedMaterial.originalName }}</span>
-              <span v-if="selectedMaterial.isTemporary" class="temporary-label">临时 · 7天</span>
+          <!-- 关联资源标签（资料/文件夹/临时资料） -->
+          <div v-if="selectedMaterial || isFolderSelected" class="material-tag-bar">
+            <div :class="['material-tag', { processing: isMaterialProcessing, folder: isFolderSelected }]">
+              <el-icon :size="14">
+                <Folder v-if="isFolderSelected" />
+                <Document v-else />
+              </el-icon>
+              <span class="tag-name">{{ selectedResourceLabel }}</span>
+              <span v-if="isFolderSelected" class="folder-label">文件夹</span>
+              <span v-else-if="selectedMaterial && selectedMaterial.isTemporary" class="temporary-label">临时 · 7天</span>
               <span v-if="isMaterialProcessing" class="tag-status">
                 <span class="dot-pulse"></span>
                 处理中
               </span>
-              <button class="tag-close" type="button" aria-label="移除关联资料" @click="clearMaterial">
+              <button class="tag-close" type="button" aria-label="移除关联资源" @click="clearMaterial">
                 <el-icon :size="12"><Close /></el-icon>
               </button>
             </div>
@@ -369,8 +358,8 @@ import {
   ChatDotRound, ChatLineRound, Refresh, CopyDocument,
   User, MagicStick, Delete, WarningFilled,
   CircleCloseFilled, Plus, MoreFilled,
-  Edit, Star, Moon, Sunny, Search, Paperclip, Pointer,
-  Expand, Fold, Close, Document
+  Edit, Star, Paperclip, Pointer,
+  Expand, Fold, Close, Document, Folder
 } from '@element-plus/icons-vue'
 import { useMarkdown } from '@/composables/useMarkdown'
 import { useAiStore } from '@/stores/ai'
@@ -378,7 +367,11 @@ import { askQuestionStream } from '@/api/ai'
 import {
   loadAvailableMaterials, getTemporaryMaterial, uploadTemporaryMaterial
 } from '@/api/material'
+import { getFolderTree } from '@/api/materialFolder'
 import { getChatHistory } from '@/api/history'
+import {
+  buildCascaderOptions, parseCascaderValue, getCascaderLabel
+} from '@/utils/folderTreeHelper'
 
 const route = useRoute()
 const { renderMarkdown } = useMarkdown()
@@ -432,21 +425,16 @@ const conversationGroups = computed(() => [
   { label: '更早', items: olderConversations.value }
 ])
 
-// 保留现有模型和联网搜索交互状态；后端接入不属于本次 UI 优化范围。
-const selectedModel = ref('deepseek-chat')
-const webSearchEnabled = ref(false)
-
 // 标题编辑
 const isEditingTitle = ref(false)
 const editedTitle = ref('')
 const titleInput = ref(null)
 
-// 主题
-const isDarkMode = ref(false)
-
 // 消息相关
 const messagesContainer = ref(null)
 const materialList = ref([])
+const folderTree = ref([])
+const cascaderValue = ref([])
 const inputText = ref('')
 const fileInput = ref(null)
 const textareaRef = ref(null)
@@ -454,12 +442,57 @@ const temporaryUploading = ref(false)
 let pollTimer = null
 let pollGeneration = 0
 
+// 级联选择器配置
+const cascaderProps = {
+  value: 'value',
+  label: 'label',
+  children: 'children',
+  checkStrictly: true, // 允许选择文件夹节点（非叶子节点）
+  emitPath: true
+}
+
+// 构建级联选择器选项
+const cascaderOptions = computed(() => {
+  return buildCascaderOptions(folderTree.value, materialList.value)
+})
+
+// 解析当前选中项
+const selectedInfo = computed(() => {
+  if (!cascaderValue.value || cascaderValue.value.length === 0) return null
+  return parseCascaderValue(cascaderValue.value, cascaderOptions.value)
+})
+
 const selectedMaterial = computed(() => {
   if (aiStore.selectedTemporaryMaterial) {
     return { ...aiStore.selectedTemporaryMaterial, isTemporary: true }
   }
-  return materialList.value.find(m => m.id === aiStore.selectedMaterialId) || null
+  if (selectedInfo.value && selectedInfo.value.type === 'material') {
+    return materialList.value.find(m => m.id === selectedInfo.value.id) || null
+  }
+  return null
 })
+
+// 选中的文件夹对象（用于关联资料标签展示）
+const selectedFolder = computed(() => {
+  if (!selectedInfo.value || selectedInfo.value.type !== 'folder') return null
+  const folderPath = findFolderPath(folderTree.value, selectedInfo.value.id)
+  return folderPath ? folderPath[folderPath.length - 1] : null
+})
+
+// 关联资源标签的显示名（资料或文件夹）
+const selectedResourceLabel = computed(() => {
+  if (aiStore.selectedTemporaryMaterial) {
+    return aiStore.selectedTemporaryMaterial.originalName
+  }
+  if (selectedInfo.value) {
+    return selectedInfo.value.path.join(' / ')
+  }
+  return ''
+})
+
+const isFolderSelected = computed(() =>
+  selectedInfo.value?.type === 'folder'
+)
 
 const isMaterialProcessing = computed(() =>
   selectedMaterial.value && selectedMaterial.value.status === 'processing'
@@ -534,16 +567,20 @@ function toggleSidebar() {
 function createNewChat() {
   activeConversationId.value = crypto.randomUUID()
   aiStore.clearMessages()
+  cascaderValue.value = []
   aiStore.setSelectedTemporaryMaterial(null)
   aiStore.setSelectedMaterial(null)
+  aiStore.setSelectedFolder(null)
 }
 
 async function switchConversation(conversationId) {
   stopPolling()
   activeConversationId.value = conversationId
   aiStore.clearMessages()
+  cascaderValue.value = []
   aiStore.setSelectedTemporaryMaterial(null)
   aiStore.setSelectedMaterial(null)
+  aiStore.setSelectedFolder(null)
 
   try {
     const result = await getChatHistory({ type: 'workflow', page: 1, size: 100 })
@@ -652,12 +689,6 @@ function cancelEditTitle() {
   isEditingTitle.value = false
 }
 
-// 主题切换
-function toggleTheme() {
-  isDarkMode.value = !isDarkMode.value
-  document.documentElement.classList.toggle('dark', isDarkMode.value)
-}
-
 // 文件上传
 function triggerFileUpload() {
   if (temporaryUploading.value) return
@@ -721,15 +752,49 @@ function isFailedMessage(content) {
   return content.includes('[回答被中断]') || content.includes('[回答异常终止]')
 }
 
-function onMaterialChange() {
+function onCascaderChange() {
   stopPolling()
-  if (aiStore.selectedMaterialId) aiStore.setSelectedTemporaryMaterial(null)
+  // 根据选中类型同步到 store（保持向后兼容）
+  if (selectedInfo.value?.type === 'material') {
+    aiStore.setSelectedMaterial(selectedInfo.value.id)
+  } else if (selectedInfo.value?.type === 'folder') {
+    aiStore.setSelectedFolder(selectedInfo.value.id)
+  } else {
+    aiStore.setSelectedMaterial(null)
+    aiStore.setSelectedFolder(null)
+  }
+  // 选择正式资料/文件夹时清除临时资料
+  if (selectedInfo.value) {
+    aiStore.setSelectedTemporaryMaterial(null)
+  }
 }
 
 function clearMaterial() {
+  cascaderValue.value = []
   aiStore.setSelectedMaterial(null)
+  aiStore.setSelectedFolder(null)
   aiStore.setSelectedTemporaryMaterial(null)
   stopPolling()
+}
+
+/**
+ * 在文件夹树中递归查找目标文件夹的路径
+ * @param {Array} tree 文件夹树
+ * @param {number} targetId 目标文件夹ID
+ * @param {Array} path 已遍历路径
+ * @returns {Array|null} 从根到目标的路径数组
+ */
+function findFolderPath(tree, targetId, path = []) {
+  for (const node of tree) {
+    if (node.id === targetId) {
+      return [...path, { id: node.id, name: node.name }]
+    }
+    if (node.children?.length) {
+      const found = findFolderPath(node.children, targetId, [...path, { id: node.id, name: node.name }])
+      if (found) return found
+    }
+  }
+  return null
 }
 
 /**
@@ -808,7 +873,16 @@ async function sendMessage(text) {
 
   inputText.value = ''
 
-  // 捕获当前关联的文件信息，嵌入到消息中
+  // 捕获当前关联的资源信息（资料/文件夹/临时资料），嵌入到消息中
+  const currentMaterialId = selectedMaterial.value && !selectedMaterial.value.isTemporary
+    ? (selectedMaterial.value.id || null)
+    : null
+  const currentFolderId = selectedInfo.value?.type === 'folder' ? selectedInfo.value.id : null
+  const currentTemporaryMaterialToken = selectedMaterial.value?.isTemporary
+    ? (selectedMaterial.value.uploadToken || null)
+    : null
+
+  // 用于在消息气泡中展示的资源信息
   const materialInfo = selectedMaterial.value
     ? {
         id: selectedMaterial.value.id || null,
@@ -818,17 +892,15 @@ async function sendMessage(text) {
         fileType: selectedMaterial.value.fileType,
         fileSize: selectedMaterial.value.fileSize
       }
-    : null
+    : (currentFolderId ? { isFolder: true, name: selectedResourceLabel.value } : null)
 
   aiStore.addUserMessage(question, materialInfo)
 
-  // 保存 materialId，因为清除状态后 store 中的值会丢失
-  const currentMaterialId = materialInfo?.id || null
-  const currentTemporaryMaterialToken = materialInfo?.uploadToken || null
-
-  // 文件已随消息发出，清除输入框上方的文件标签
+  // 资源已随消息发出，清除输入框上方的标签
   if (materialInfo) {
+    cascaderValue.value = []
     aiStore.setSelectedMaterial(null)
+    aiStore.setSelectedFolder(null)
     aiStore.setSelectedTemporaryMaterial(null)
   }
 
@@ -846,6 +918,7 @@ async function sendMessage(text) {
     const abortFn = askQuestionStream(
       {
         materialId: currentMaterialId,
+        folderId: currentFolderId,
         temporaryMaterialToken: currentTemporaryMaterialToken,
         question,
         history,
@@ -935,10 +1008,39 @@ function scrollToBottom() {
 
 async function loadMaterials() {
   try {
-    materialList.value = await loadAvailableMaterials()
-    const queryId = route.query.materialId
-    if (queryId) {
-      aiStore.setSelectedMaterial(Number(queryId))
+    const [materials, folders] = await Promise.all([
+      loadAvailableMaterials(),
+      getFolderTree()
+    ])
+    materialList.value = materials || []
+    folderTree.value = folders || []
+
+    // 支持从外部跳转自动选择资料
+    const queryMaterialId = route.query.materialId
+    if (queryMaterialId) {
+      const material = materialList.value.find(m => m.id === Number(queryMaterialId))
+      if (material) {
+        const path = []
+        if (material.folderId) {
+          const folderPath = findFolderPath(folderTree.value, material.folderId)
+          if (folderPath) {
+            path.push(...folderPath.map(f => `folder_${f.id}`))
+          }
+        }
+        path.push(`material_${material.id}`)
+        cascaderValue.value = path
+        aiStore.setSelectedMaterial(material.id)
+      }
+    }
+
+    // 支持从外部跳转自动选择文件夹
+    const queryFolderId = route.query.folderId
+    if (queryFolderId) {
+      const folderPath = findFolderPath(folderTree.value, Number(queryFolderId))
+      if (folderPath) {
+        cascaderValue.value = folderPath.map(f => `folder_${f.id}`)
+        aiStore.setSelectedFolder(Number(queryFolderId))
+      }
     }
   } catch (e) {
     console.error('加载资料列表失败:', e)
@@ -975,7 +1077,29 @@ onBeforeUnmount(() => {
 
 watch(() => route.query.materialId, newId => {
   if (newId) {
-    aiStore.setSelectedMaterial(Number(newId))
+    const material = materialList.value.find(m => m.id === Number(newId))
+    if (material) {
+      const path = []
+      if (material.folderId) {
+        const folderPath = findFolderPath(folderTree.value, material.folderId)
+        if (folderPath) {
+          path.push(...folderPath.map(f => `folder_${f.id}`))
+        }
+      }
+      path.push(`material_${material.id}`)
+      cascaderValue.value = path
+      aiStore.setSelectedMaterial(material.id)
+    }
+  }
+})
+
+watch(() => route.query.folderId, newId => {
+  if (newId) {
+    const folderPath = findFolderPath(folderTree.value, Number(newId))
+    if (folderPath) {
+      cascaderValue.value = folderPath.map(f => `folder_${f.id}`)
+      aiStore.setSelectedFolder(Number(newId))
+    }
   }
 })
 
@@ -1276,11 +1400,6 @@ watch(() => route.query.temporaryMaterialToken, () => {
   color: var(--color-text-primary);
 }
 
-.footer-actions {
-  display: flex;
-  gap: 8px;
-}
-
 .icon-btn {
   width: 36px;
   height: 36px;
@@ -1356,41 +1475,6 @@ watch(() => route.query.temporaryMaterialToken, () => {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.model-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.model-select {
-  width: 140px;
-}
-
-.search-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--outline);
-  background: var(--surface-card);
-  color: var(--color-text-secondary);
-  font-size: var(--text-small);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
-}
-
-.search-toggle:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.search-toggle.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
 }
 
 /* 中央消息流区域 */
@@ -2022,21 +2106,6 @@ watch(() => route.query.temporaryMaterialToken, () => {
     padding: 12px 16px 20px;
   }
 }
-
-@media (max-width: 768px) {
-  .suggested-questions {
-    grid-template-columns: 1fr;
-  }
-
-  .message-user .user-bubble {
-    max-width: 85%;
-  }
-
-  .model-selector {
-    display: none;
-  }
-}
-
 .temporary-label {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
@@ -2241,28 +2310,54 @@ watch(() => route.query.temporaryMaterialToken, () => {
   box-shadow: 0 0 0 1px var(--outline) inset;
 }
 
-.model-select {
-  width: 126px;
+.material-cascader {
+  width: 260px;
 }
 
-.model-select :deep(.el-select__wrapper) {
+.material-cascader :deep(.el-input__wrapper) {
   min-height: 34px;
-  background: transparent;
-  box-shadow: none;
+  background: var(--surface-card);
+  box-shadow: 0 0 0 1px var(--outline) inset;
 }
 
-.search-toggle {
-  height: 34px;
-  padding: 0 var(--space-3);
-  border-color: transparent;
-  border-radius: var(--radius-md);
-  background: transparent;
+.material-cascader :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--border-color-hover) inset;
 }
 
-.search-toggle:hover,
-.search-toggle.active {
-  border-color: var(--outline);
-  background: var(--surface-container-low);
+.cascader-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.cascader-node .el-icon {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.cascader-node .node-count {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-micro);
+}
+
+.material-tag.folder {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.folder-label {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--on-primary);
+  font-size: var(--text-micro);
+  white-space: nowrap;
 }
 
 .messages-area {
@@ -2515,12 +2610,8 @@ html.dark .conversation-item:hover {
     max-width: 150px;
   }
 
-  .model-selector,
-  .search-toggle {
-    display: none;
-  }
-
-  .material-select {
+  .material-select,
+  .material-cascader {
     width: 170px;
   }
 

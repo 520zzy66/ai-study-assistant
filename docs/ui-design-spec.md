@@ -115,7 +115,17 @@ Secondary panes:
 - Components must consume semantic tokens instead of hard-coded light colors so dark mode
   remains functional.
 
-## 11. Change Policy
+## 11. Dashboard Cards
+
+Homepage cards must be actionable or evidence-based:
+
+- Statistic cards link to the page where the underlying data can be inspected or continued.
+- Progress, countdown, and task cards use existing plan/progress APIs when a plan exists.
+- Empty cards must expose a direct next action instead of only describing the missing state.
+- Recent material and activity cards route to the most relevant workflow, such as chat,
+  summary, plan, or history.
+
+## 12. Change Policy
 
 New pages and UI changes must reuse tokens and existing shared components. Introducing a
 new color, radius, shadow, or spacing value requires updating this document and `theme.css`.

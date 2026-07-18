@@ -27,6 +27,9 @@ public final class RouteKeys {
     /** Optional material ID. */
     public static final String MATERIAL_ID = "materialId";
 
+    /** Optional folder ID (mutually exclusive with MATERIAL_ID). */
+    public static final String FOLDER_ID = "folderId";
+
     /** Optional temporary material upload token. */
     public static final String TEMPORARY_MATERIAL_TOKEN = "temporaryMaterialToken";
 

@@ -1,6 +1,7 @@
 package com.study.ai.workflow.service;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.study.ai.MaterialContentReader;
 import com.study.ai.agent.config.AgentClientFactory;
 import com.study.ai.agent.tool.KnowledgeTools;
 import com.study.ai.workflow.graph.RouteKeys;
@@ -35,15 +36,18 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
 
     private final AgentClientFactory agentClientFactory;
     private final KnowledgeTools knowledgeTools;
+    private final MaterialContentReader materialContentReader;
     private final String agentId;
     private final String expertId;
 
     protected AbstractExpertAgentService(AgentClientFactory agentClientFactory,
                                          KnowledgeTools knowledgeTools,
+                                         MaterialContentReader materialContentReader,
                                          String agentId,
                                          String expertId) {
         this.agentClientFactory = agentClientFactory;
         this.knowledgeTools = knowledgeTools;
+        this.materialContentReader = materialContentReader;
         this.agentId = agentId;
         this.expertId = expertId;
     }
@@ -98,6 +102,13 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
      *   <li>领域知识库检索结果 — 通过 KnowledgeTools 按需检索</li>
      *   <li>用户画像与记忆</li>
      * </ol>
+     *
+     * <p>folderId 存在时的增强引导（避免 LLM 误用系统知识库结构回答用户文件夹相关问题）：
+     * <ul>
+     *   <li>显式告知 AI 当前会话关联了整个文件夹，但尚未预检索内容</li>
+     *   <li>当用户请求"总结/概括/梳理"整个文件夹时，强制先调用 searchPersonalMaterial 检索实际切片</li>
+     *   <li>禁止仅基于元信息或系统知识库结构描述用户文件夹内容</li>
+     * </ul>
      */
     private String buildPrompt(OverAllState state) {
         StringBuilder sb = new StringBuilder();
@@ -119,7 +130,23 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
         String materialText = state.value(RouteKeys.MATERIAL_TEXT, "");
         String materialSummary = state.value(RouteKeys.MATERIAL_SUMMARY, "");
         String materialMeta = state.value(RouteKeys.MATERIAL_META, "");
-        if (!materialText.isBlank() || !materialSummary.isBlank() || !materialMeta.isBlank()) {
+        Long folderId = parseLongFromState(state.value(RouteKeys.FOLDER_ID));
+        Long materialId = parseLongFromState(state.value(RouteKeys.MATERIAL_ID));
+
+        boolean hasFolder = folderId != null;
+        boolean hasMaterial = materialId != null;
+        if (hasFolder) {
+            String folderContent = materialContentReader.readFolderContent(
+                    folderId,
+                    parseLongFromState(state.value(RouteKeys.USER_ID)),
+                    10000);
+            sb.append("## 3. 用户文件夹真实资料内容\n");
+            if (folderContent != null && !folderContent.isBlank()) {
+                sb.append(folderContent).append("\n\n");
+            } else {
+                sb.append("文件夹下暂无可用的已处理资料切片。\n\n");
+            }
+        } else if (!materialText.isBlank() || !materialSummary.isBlank() || !materialMeta.isBlank()) {
             sb.append("## 3. 资料向量检索结果\n");
             if (!materialSummary.isBlank()) {
                 sb.append("**资料描述**：").append(truncate(materialSummary, 800)).append("\n\n");
@@ -130,6 +157,10 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
             if (!materialText.isBlank()) {
                 sb.append("**资料摘录**：\n").append(truncate(materialText, MAX_MATERIAL_CHARS)).append("\n\n");
             }
+        } else if (hasMaterial) {
+            sb.append("## 3. 资料向量检索结果\n");
+            sb.append("**当前会话关联了一份资料**（materialId=").append(materialId).append("），");
+            sb.append("尚未预检索切片内容。如需资料内容请先调用 searchPersonalMaterial 工具。\n\n");
         }
         // 3b. 语义检索的历史对话片段
         appendHistoryChunks(sb, state.value(RouteKeys.HISTORY_CHUNKS));
@@ -160,10 +191,39 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
         sb.append("- 用户资料补充检索：searchPersonalMaterial(query, quizType?)\n");
         sb.append("- 当前会话临时资料检索：searchTemporaryMaterial(query)\n");
         sb.append("- 历史对话补充检索：searchConversationHistory(query)\n");
-        sb.append("- 如果上述上下文已足够回答，直接回答；否则先调用工具检索\n");
+        if (hasFolder) {
+            // 关键引导：folderId 存在时强制要求"总结/概括/梳理"类指令必须先检索文件夹内容
+            sb.append("- **当前会话关联了整个文件夹**：当用户请求「总结」「概括」「梳理」「整理」");
+            sb.append("「归纳」整个文件夹或其中内容时，**必须先调用 searchPersonalMaterial 工具");
+            sb.append("检索文件夹实际切片**，可针对不同主题/章节/知识点发起多次检索，");
+            sb.append("再基于检索到的实际内容生成总结。\n");
+            sb.append("- **严禁**仅基于元信息或系统知识库（searchDomainKnowledge 返回的 folderName）");
+            sb.append("描述用户文件夹内容；用户文件夹的实际内容只能通过 searchPersonalMaterial 获取。\n");
+            sb.append("- 若 searchPersonalMaterial 多次检索后仍无结果，明确告知用户");
+            sb.append("「文件夹下暂无可用资料切片」，不要编造文件结构。\n");
+        } else {
+            sb.append("- 如果上述上下文已足够回答，直接回答；否则先调用工具检索\n");
+        }
         sb.append("- 回答末尾列出引用来源清单和下一步学习建议\n");
 
         return sb.toString();
+    }
+
+    /**
+     * 从 state 中安全解析 Long 值（兼容 Number / String 两种存储形式）。
+     */
+    private Long parseLongFromState(Object value) {
+        if (value instanceof Number n) {
+            return n.longValue();
+        }
+        if (value instanceof String s && !s.isBlank()) {
+            try {
+                return Long.parseLong(s);
+            } catch (NumberFormatException ignored) {
+                // ignore
+            }
+        }
+        return null;
     }
 
     /**
@@ -175,6 +235,8 @@ public abstract class AbstractExpertAgentService implements ExpertAgentService {
                 state.value(RouteKeys.USER_ID));
         putIfPresent(context, KnowledgeTools.CONTEXT_MATERIAL_ID,
                 state.value(RouteKeys.MATERIAL_ID));
+        putIfPresent(context, KnowledgeTools.CONTEXT_FOLDER_ID,
+                state.value(RouteKeys.FOLDER_ID));
         putIfPresent(context, KnowledgeTools.CONTEXT_USER_PROFILE,
                 state.value(RouteKeys.COMPRESSED_PROFILE, ""));
         putIfPresent(context, KnowledgeTools.CONTEXT_CONVERSATION_ID,
